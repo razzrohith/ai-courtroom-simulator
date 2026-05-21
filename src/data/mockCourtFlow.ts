@@ -310,6 +310,8 @@ export const MOCK_VERDICT: Verdict = {
     defense: ['Failed to reject acceptance of goods', 'Accepted full value while refusing payment'],
   },
   ruling: 'Judgment for plaintiff. Defendant shall pay $247,500 plus 5% annual interest from July 1, 2024 until paid. Court costs assessed to defendant.',
+  // Phase 10: Witness credibility impact
+  witnessImpact: 'Both witnesses provided credible testimony. Mr. Morrison\'s testimony regarding operational constraints was corroborated by delivery logs. Ms. Patterson\'s claims regarding delay notification were found to lack sufficient documentation. The court credits the prosecution witness testimony more heavily.',
 };
 
 // Helper to generate transcript entries from mock messages

@@ -46,6 +46,14 @@ export function VerdictPanel({ verdict, evidence, objections }: VerdictPanelProp
           <p className="text-sm">{verdict.reasoningSummary}</p>
         </div>
 
+        {/* Witness Testimony Impact - Phase 10 */}
+        {'witnessImpact' in verdict && (
+          <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-3">
+            <h4 className="text-sm font-medium text-blue-400 mb-2">👤 Witness Testimony Impact</h4>
+            <p className="text-xs">{verdict.witnessImpact}</p>
+          </div>
+        )}
+
         {/* Ruling */}
         <div className="bg-yellow-900/30 border border-yellow-600 rounded-lg p-3">
           <h4 className="text-sm font-medium text-yellow-500 mb-1">Court Ruling</h4>

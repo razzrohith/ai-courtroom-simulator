@@ -101,6 +101,25 @@ export interface Evidence {
 // Phase 9: Witness types
 export type WitnessCredibility = 'credible' | 'challenged' | 'inconsistent' | 'corroborated';
 
+// Phase 10: Enhanced credibility scoring
+export type CredibilityScore = 'strong' | 'moderate' | 'weak' | 'challenged';
+
+export interface WitnessEvidenceLink {
+  evidenceId: string;
+  supports: boolean; // true = corroborates, false = contradicts
+  notes?: string;
+}
+
+export interface WitnessQAndA {
+  id: string;
+  witnessId: string;
+  examinerRole: AgentRole; // who asked the question
+  question: string;
+  answer: string;
+  phase: CourtPhase;
+  evidenceIds?: string[]; // evidence referenced
+}
+
 export interface Witness {
   id: string;
   name: string;
@@ -109,6 +128,10 @@ export interface Witness {
   summary: string;
   testimony?: string;
   credibility: WitnessCredibility;
+  // Phase 10: Extended credibility tracking
+  credibilityScore?: CredibilityScore;
+  evidenceLinks?: WitnessEvidenceLink[];
+  qAndAHistory?: WitnessQAndA[];
   // Direct examination by prosecution/defense
   directExamination?: string;
   // Cross-examination by opposing counsel
@@ -141,6 +164,8 @@ export interface Verdict {
   defensePoints: string[];
   weaknesses: { plaintiff: string[]; defense: string[] };
   ruling: string;
+  // Phase 10: Witness credibility impact on verdict
+  witnessImpact?: string;
 }
 
 export interface CaseData {

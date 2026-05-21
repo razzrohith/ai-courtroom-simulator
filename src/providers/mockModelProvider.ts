@@ -120,3 +120,95 @@ export function generateMockResponse(params: {
   
   return mockResponses[phase]?.[role] || `[${role} at ${phase}]`;
 }
+
+/**
+ * Generate witness Q&A - Phase 10
+ * Creates structured question/answer pairs for direct and cross examination
+ */
+export function generateWitnessQAndA(params: {
+  witnessId: string;
+  examinerRole: 'prosecutor' | 'defense' | 'judge';
+  questionType: 'direct' | 'cross' | 'clarification';
+}): {
+  question: string;
+  answer: string;
+  examinerRole: 'prosecutor' | 'defense' | 'judge';
+  evidenceIds?: string[];
+} {
+  const { witnessId, examinerRole, questionType } = params;
+  
+  // Mock Q&A based on witness and question type
+  const mockQA: Record<string, Record<string, { q: string; a: string; evidence?: string[] }>> = {
+    'wit-001': { // James Morrison (prosecution)
+      direct: {
+        q: 'Mr. Morrison, please describe your role at Apex Logistics during the relevant period.',
+        a: 'I was Operations Manager responsible for overseeing all delivery operations and coordinating with Northstar on supply chain matters.',
+        evidence: ['E01'],
+      },
+      cross: {
+        q: 'Mr. Morrison,weren\'t the delivery delays caused by factors beyond Northstar\'s control?',
+        a: 'Objection, Your Honor. Calls for speculation.\n\nSustained. Counsel, rephrase.',
+      },
+      clarification: {
+        q: 'Mr. Morrison, can you clarify the timeline of the first delay notice?',
+        a: 'Yes, Your Honor. The first notice was sent on March 15th, referencing the February delay.',
+      },
+    },
+    'wit-002': { // Linda Patterson (defense)
+      direct: {
+        q: 'Ms. Patterson, what was your understanding of the delivery schedule?',
+        a: 'The contract required delivery within 14 days of order placement. We consistently received late deliveries.',
+      },
+      cross: {
+        q: 'Ms. Patterson, didn\'t Northstar accept late deliveries without complaint for months?',
+        a: 'We documented each late delivery and reserved our rights under Section 4.2 of the contract.',
+      },
+      clarification: {
+        q: 'Ms. Patterson, regarding the payment refusal - what was the basis?',
+        a: 'Section 4.2 Material Breach - we were entitled to withhold payment for continued failures.',
+      },
+    },
+  };
+  
+  const witnessQA = mockQA[witnessId]?.[questionType];
+  if (!witnessQA) {
+    return {
+      question: '[Question]',
+      answer: '[Answer]',
+      examinerRole,
+    };
+  }
+  
+  return {
+    question: witnessQA.q,
+    answer: witnessQA.a,
+    examinerRole,
+    evidenceIds: witnessQA.evidence,
+  };
+}
+
+/**
+ * Calculate credibility score - Phase 10
+ * Simple scoring based on evidence consistency
+ */
+export function calculateCredibilityScore(witness: {
+  consistencyWithEvidence: number; // 0-100
+  contradictions: number;
+  corroborations: number;
+}): {
+  score: 'strong' | 'moderate' | 'weak' | 'challenged';
+  notes: string;
+} {
+  const { consistencyWithEvidence, contradictions, corroborations } = witness;
+  
+  if (contradictions > 2 || consistencyWithEvidence < 30) {
+    return { score: 'challenged', notes: 'Multiple contradictions found in testimony.' };
+  }
+  if (consistencyWithEvidence < 50) {
+    return { score: 'weak', notes: 'Limited consistency with documented evidence.' };
+  }
+  if (consistencyWithEvidence < 75 || corroborations < 1) {
+    return { score: 'moderate', notes: 'Generally consistent but with some gaps.' };
+  }
+  return { score: 'strong', notes: 'Strong consistency with corroborating evidence.' };
+}

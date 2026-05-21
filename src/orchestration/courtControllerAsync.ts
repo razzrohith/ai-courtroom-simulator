@@ -3,12 +3,13 @@
  * Phase 9: Witness testimony and motion flow
  */
 
-import type { CourtState, AgentRole, TranscriptEntry, Evidence, AgentParticipant, ObjectionEvent, Witness } from '../types/courtroom';
+import type { CourtState, AgentRole, TranscriptEntry, Evidence, AgentParticipant, ObjectionEvent, Witness, WitnessQAndA } from '../types/courtroom';
 import { COURT_PHASES } from '../types/courtroom';
 import { SAMPLE_CASE } from '../data/sampleCase';
 import { createMockConfig } from '../providers/modelProviderTypes';
 import { getSpeakersForPhase, getNextSpeaker } from './phaseEngine';
 import { generateAgentResponse, parseEvidenceReferences } from '../providers/agentService';
+import { generateWitnessQAndA, calculateCredibilityScore } from '../providers/mockModelProvider';
 import { JUDGE_TRANSITIONS, shouldTriggerObjection, MOCK_VERDICT } from '../data/mockCourtFlow';
 
 // Sample witnesses for the case
@@ -78,15 +79,111 @@ export async function processNextTurnAsync(state: CourtState): Promise<CourtStat
     const speakers = getSpeakersForPhase(phase);
     if (speakers.length === 0) return advanceToNextPhase(state);
     const nextSpeaker = speakers[0];
+    // Phase 10: Handle witness testimony specially
+    if (phase === 'witness_testimony') {
+      return processWitnessTestimony(await addTranscriptEntryAsync(state, nextSpeaker), nextSpeaker);
+    }
     return addTranscriptEntryAsync(state, nextSpeaker);
   }
   const speakerHasMore = checkSpeakerHasMore(state, currentSpeaker);
   if (!speakerHasMore) {
     const nextSpeaker = getNextSpeaker(phase, currentSpeaker);
-    if (nextSpeaker) return addTranscriptEntryAsync(state, nextSpeaker);
+    if (nextSpeaker) {
+      if (phase === 'witness_testimony') {
+        return processWitnessTestimony(await addTranscriptEntryAsync(state, nextSpeaker), nextSpeaker);
+      }
+      return addTranscriptEntryAsync(state, nextSpeaker);
+    }
     return advanceToNextPhase(state);
   }
+  // Phase 10: Handle witness testimony specially
+  if (phase === 'witness_testimony') {
+    return processWitnessTestimony(await addTranscriptEntryAsync(state, currentSpeaker), currentSpeaker);
+  }
   return addTranscriptEntryAsync(state, currentSpeaker);
+}
+
+/**
+ * Process witness testimony phase - generate Q&A and update credibility
+ * Phase 10: Dynamic witness questions
+ */
+function processWitnessTestimony(state: CourtState, speakerRole: AgentRole): CourtState {
+  // Get current witness based on speaker role
+  const witnessRole = speakerRole === 'prosecutor' ? 'prosecution' : speakerRole === 'defense' ? 'defense' : 'court';
+  const witnessIdx = state.witnesses.findIndex(w => w.role === witnessRole);
+  if (witnessIdx < 0) return state;
+  
+  const witness = state.witnesses[witnessIdx];
+  const questionType = speakerRole === 'judge' ? 'clarification' : speakerRole === 'prosecutor' ? 'direct' : 'cross';
+  
+  const qa = generateWitnessQAndA({
+    witnessId: witness.id,
+    examinerRole: speakerRole,
+    questionType,
+  });
+  
+  // Build Q&A entry
+  const qaId = `qa-${Date.now()}`;
+  const qaEntry: WitnessQAndA = {
+    id: qaId,
+    witnessId: witness.id,
+    examinerRole: speakerRole,
+    question: qa.question,
+    answer: qa.answer,
+    phase: state.currentPhase,
+    evidenceIds: qa.evidenceIds,
+  };
+  
+  // Update witness with Q&A and calculate credibility
+  const updatedWitnesses = [...state.witnesses];
+  const qaHistory = [...(witness.qAndAHistory || []), qaEntry];
+  
+  // Calculate credibility after cross-examination
+  let newScore: Witness['credibilityScore'] = witness.credibilityScore;
+  let newCredibilityNotes = witness.credibilityNotes;
+  
+  if (questionType === 'cross') {
+    const credResult = calculateCredibilityScore({
+      consistencyWithEvidence: 70,
+      contradictions: Math.floor(Math.random() * 2),
+      corroborations: 1,
+    });
+    newScore = credResult.score;
+    newCredibilityNotes = (newCredibilityNotes || '') + '\n' + credResult.notes;
+    
+    // Add evidence links if referenced - cross-examination may contradict
+    if (qa.evidenceIds && qa.evidenceIds.length > 0) {
+      const supports = questionType !== 'cross'; // cross will contradict
+      const evidenceLinks = (witness.evidenceLinks || []).concat(
+        qa.evidenceIds.map(eid => ({
+          evidenceId: eid,
+          supports,
+          notes: '',
+        }))
+      );
+      updatedWitnesses[witnessIdx] = {
+        ...witness,
+        qAndAHistory: qaHistory,
+        credibilityScore: newScore,
+        credibilityNotes: newCredibilityNotes,
+        evidenceLinks,
+      };
+    } else {
+      updatedWitnesses[witnessIdx] = {
+        ...witness,
+        qAndAHistory: qaHistory,
+        credibilityScore: newScore,
+        credibilityNotes: newCredibilityNotes,
+      };
+    }
+  } else {
+    updatedWitnesses[witnessIdx] = {
+      ...witness,
+      qAndAHistory: qaHistory,
+    };
+  }
+  
+  return { ...state, witnesses: updatedWitnesses };
 }
 
 function checkSpeakerHasMore(state: CourtState, speakerRole: AgentRole): boolean {
@@ -115,7 +212,6 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
   
   // Update evidence - status and timeline tracking
   let updatedEvidence = [...state.evidence];
-  const currentPhase = state.currentPhase;
   evidenceRefs.forEach(ref => {
     const idx = state.evidence.findIndex(e => e.id.toUpperCase() === ref.toUpperCase());
     if (idx >= 0) {
@@ -125,7 +221,7 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
         ...ev,
         status: ev.status === 'pending' ? 'introduced' : ev.status,
         referenceCount: newCount,
-        firstReferencedPhase: ev.firstReferencedPhase || currentPhase,
+        firstReferencedPhase: ev.firstReferencedPhase || state.currentPhase,
         lastReferencedBy: speakerRole,
       };
     }

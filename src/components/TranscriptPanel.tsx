@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import type { TranscriptEntry, AgentRole } from '../types/courtroom';
-import { EmptyStatePlaceholder } from './visuals/CourtroomVisuals';
+import { EmptyStatePlaceholder, CourtReporterDeskIllustration, EvidenceChipImproved, LoadingSpinner } from './visuals/CourtroomVisuals';
 
 // Typewriter hook - tracks completion per entry ID
 const typewriterState = new Map<string, { complete: boolean }>();
@@ -75,6 +75,7 @@ export function TranscriptPanel({ transcript, currentPhase }: TranscriptPanelPro
   return (
     <div className="bg-courtroom-card rounded-lg border border-gray-700 flex flex-col h-full">
       <div className="p-3 border-b border-gray-700 bg-gradient-to-r from-gray-900 to-gray-800">
+        <CourtReporterDeskIllustration className="w-12 h-12 mb-2" />
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium text-yellow-500 uppercase tracking-wider flex items-center gap-2">
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
@@ -128,21 +129,21 @@ export function TranscriptPanel({ transcript, currentPhase }: TranscriptPanelPro
                 {entry.evidenceRef && (
                   <div className="mt-2 flex flex-wrap gap-1">
                     {entry.evidenceRef.split(',').map(ref => (
-                      <span key={ref} className="text-xs px-2 py-0.5 rounded bg-amber-900/40 text-amber-400 border border-amber-700/50">
-                        {ref.trim()}
-                      </span>
+                      <EvidenceChipImproved
+                        key={ref}
+                        exhibitNumber={ref.trim()}
+                        title={ref.trim()}
+                        type="evidence"
+                        status="pending"
+                        side="plaintiff"
+                      />
                     ))}
                   </div>
-                )}
-
-                {/* Metadata: provider, model, source */}
-                {(entry.providerUsed || entry.isComplete !== undefined) && (
+                )}{(entry.providerUsed || entry.isComplete !== undefined) && (
                   <div className="mt-2 pt-2 border-t border-gray-700/30 flex flex-wrap gap-1">
                     {/* Streaming/complete status */}
                     {entry.isComplete === false && (
-                      <span className="text-xs px-2 py-0.5 rounded bg-blue-900/40 text-blue-400 animate-pulse">
-                        Generating...
-                      </span>
+                      <LoadingSpinner message="Generating..." />
                     )}
                     {entry.providerUsed && (
                       <span className={`text-xs px-2 py-0.5 rounded font-mono ${

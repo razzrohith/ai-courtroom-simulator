@@ -31,6 +31,7 @@ import {
   filterModels,
   type ModelInfo 
 } from '../providers/modelCatalog';
+import { LoadingSpinner } from './visuals/CourtroomVisuals';
 
 interface ProviderSettingsProps {
   isOpen: boolean;
@@ -387,9 +388,7 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                             </button>
                           )}
                         </div>
-                        {loading ? (
-                          <div className="text-xs text-blue-400">Loading models...</div>
-                        ) : error ? (
+                        {loading ? ( <LoadingSpinner message="Loading models..." /> ) : error ? (
                           <div className="text-xs text-red-400">{error}</div>
                         ) : availableModels.length > 0 ? (
                           <select

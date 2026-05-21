@@ -5,6 +5,7 @@
 
 import type { Evidence } from '../types/courtroom';
 import { EmptyStatePlaceholder } from './visuals/CourtroomVisuals';
+import { EvidenceFolderIllustration, SealedEnvelopeIllustration } from './visuals/CourtroomVisuals';
 
 interface ExhibitPanelProps {
   exhibits: Evidence[];
@@ -82,7 +83,13 @@ export function ExhibitPanel({ exhibits, showRestricted = false }: ExhibitPanelP
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <span className="text-xs text-gray-500 mr-2">{exhibit.exhibitNumber || exhibit.id}</span>
+                  {exhibit.confidentiality === 'sealed' || exhibit.confidentiality === 'confidential' ? (
+                    <SealedEnvelopeIllustration className="w-5 h-5 inline-block mr-1" />
+                  ) : (
+                    <EvidenceFolderIllustration className="w-5 h-5 inline-block mr-1" status={exhibit.status as any} />
+                  )}
                   <span className="text-sm font-medium text-gray-200">{exhibit.title}</span>
+
                 </div>
                 <div className="flex gap-1">
                   <span className={`px-2 py-0.5 rounded text-xs ${confBadge.bg} ${confBadge.text}`}>

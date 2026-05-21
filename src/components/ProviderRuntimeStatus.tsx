@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getProviderRuntimeStatus, ProviderRuntimeStatus, generateResponse } from '../providers/runtime';
+import { LoadingSpinner } from './visuals/CourtroomVisuals';
 import type { AgentModelConfig } from '../types/providers';
 import type { AgentRole, CourtPhase, TranscriptEntry, Evidence } from '../types/courtroom';
 
@@ -145,13 +146,16 @@ export function ProviderRuntimeStatusPanel({ configs }: ProviderRuntimeStatusPro
         <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider">
           🔌 Provider Runtime
         </h3>
-        <button
-          onClick={checkAllStatuses}
-          disabled={loading}
-          className="text-xs px-2 py-1 bg-gray-600 hover:bg-gray-500 rounded disabled:opacity-50"
-        >
-          {loading ? '...' : '↻'}
-        </button>
+        {loading ? (
+          <LoadingSpinner message="Checking providers..." />
+        ) : (
+          <button
+            onClick={checkAllStatuses}
+            className="text-xs px-2 py-1 bg-gray-600 hover:bg-gray-500 rounded"
+          >
+            ↻ Refresh
+          </button>
+        )}
       </div>
       
       <div className="p-3 space-y-3">

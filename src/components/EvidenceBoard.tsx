@@ -3,7 +3,7 @@
  */
 
 import type { Evidence, EvidenceStatus } from '../types/courtroom';
-import { EmptyStatePlaceholder } from './visuals/CourtroomVisuals';
+import { EmptyStatePlaceholder, EvidenceFolderIllustration, SealedEnvelopeIllustration } from './visuals/CourtroomVisuals';
 
 interface EvidenceBoardProps {
   evidence: Evidence[];
@@ -58,6 +58,8 @@ export function EvidenceBoard({ evidence }: EvidenceBoardProps) {
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
+                  <EvidenceFolderIllustration status={['admitted','disputed','excluded','sealed'].includes(item.status) ? item.status as any : undefined} className="w-4 h-4 mr-1" />
+                  {item.confidentiality === 'sealed' && <SealedEnvelopeIllustration className="w-4 h-4 mr-1" />}
                   <span>{typeIcons[item.type]}</span>
                   <span className="text-sm font-medium">{item.title}</span>
                 </div>

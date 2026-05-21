@@ -6,6 +6,7 @@
 import type { AgentRole, AgentParticipant, CourtPhase, Evidence, Verdict } from '../../types/courtroom';
 import { PHASE_LABELS } from '../../types/courtroom';
 import { 
+  CourtroomBackdrop,
   CourtroomAvatar, 
   PhaseBanner, 
   SpeakingIndicator, 
@@ -16,7 +17,10 @@ import {
   WitnessStandSVG,
   CourtroomEmblem,
   EvidenceCard,
-  SpeakingPulseRing
+  SpeakingPulseRing,
+  CourtReporterDeskIllustration,
+  EvidenceFolderIllustration,
+  EvidenceChipImproved
 } from './CourtroomVisuals';
 
 /**
@@ -104,6 +108,7 @@ export function CourtroomStage({
   if (compact) {
     return (
       <div className="relative bg-gradient-to-b from-gray-900 to-gray-800 rounded-lg overflow-hidden border border-gray-700">
+        <CourtReporterDeskIllustration className="w-40 h-10 mx-auto mb-4" />
         {/* Court backdrop pattern */}
         <div className="absolute inset-0 opacity-5">
           <div className="w-full h-full" style={{
@@ -169,7 +174,7 @@ export function CourtroomStage({
   
   // Full cinematic stage
   return (
-    <div className="relative bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 rounded-lg overflow-hidden border-2 border-yellow-600/30 shadow-lg">
+    <CourtroomBackdrop>
       {/* Court backdrop pattern - wood floor effect */}
       <div className="absolute inset-0 opacity-10 pointer-events-none">
         <div className="w-full h-full" style={{
@@ -257,7 +262,7 @@ export function CourtroomStage({
       <div className="absolute bottom-2 right-2 opacity-10 pointer-events-none">
         <CourtroomEmblem className="w-12 h-12" />
       </div>
-    </div>
+    </CourtroomBackdrop>
   );
 }
 
@@ -379,12 +384,20 @@ function WitnessAndEvidenceArea({
         {latestEvidence && (
           <div className="mt-2 max-w-[100px]">
             <EvidenceCard highlighted={false}>
+              <EvidenceFolderIllustration status={['admitted','disputed','excluded','sealed'].includes(latestEvidence.status) ? latestEvidence.status as any : undefined} className="w-5 h-5 inline-block mr-2" />
               <div className="text-xs text-gray-300 truncate">
                 {latestEvidence.exhibitNumber || latestEvidence.id}
               </div>
               <div className="text-[10px] text-gray-500 truncate">
                 {latestEvidence.title}
               </div>
+              <EvidenceChipImproved
+                exhibitNumber={latestEvidence.exhibitNumber || latestEvidence.id}
+                title={latestEvidence.title}
+                type="evidence"
+                status="pending"
+                side="plaintiff"
+              />
             </EvidenceCard>
           </div>
         )}

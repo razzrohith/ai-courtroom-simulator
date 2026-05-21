@@ -2,19 +2,25 @@
  * JudgeBench — AI Courtroom Simulator
  * Main Application Component
  *
- * Phase 5.6: Visible typewriter streaming
+ * Phase 6: Courtroom logic and session persistence
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { CourtroomLayout } from './components/CourtroomLayout';
 import { createInitialState, startSimulation, processNextTurnAsync, resetSimulation, skipToNextPhase } from './orchestration/courtControllerAsync';
+import { saveSession, loadSession, clearSession, hasSavedSession } from './data/sessionPersistence';
 import type { CourtState, TranscriptEntry } from './types/courtroom';
 
 function App() {
   const [state, setState] = useState<CourtState>(() => createInitialState());
   const [isGenerating, setIsGenerating] = useState(false);
-  // Track streaming state for typewriter effect
   const streamRef = useRef<{ abort: boolean }>({ abort: false });
+  const [hasSession, setHasSession] = useState(false);
+
+  // Check for saved session on mount
+  useEffect(() => {
+    setHasSession(hasSavedSession());
+  }, []);
 
   const handleStart = useCallback(() => {
     streamRef.current.abort = false;
@@ -22,16 +28,14 @@ function App() {
   }, [state]);
 
   const handleNextTurn = useCallback(async () => {
-    if (isGenerating) return; // Prevent duplicate
+    if (isGenerating) return;
     streamRef.current.abort = false;
     setIsGenerating(true);
-    
+
     try {
-      // Get current speaker info before async
       const speakerRole = state.currentSpeaker;
       const speakerName = state.participants.find(p => p.role === speakerRole)?.name || 'Unknown';
       
-      // Create empty entry for streaming
       const tempEntry: TranscriptEntry = {
         id: `trans-${Date.now()}-${speakerRole}`,
         speakerRole: speakerRole!,
@@ -43,37 +47,31 @@ function App() {
         providerUsed: 'mock',
         modelUsed: 'streaming...',
         responseSource: 'mock',
-        isComplete: false
+        isComplete: false,
       };
-      
-      // Add partial entry immediately
+
       setState(prev => ({
         ...prev,
-        transcript: [...prev.transcript, tempEntry]
+        transcript: [...prev.transcript, tempEntry],
       }));
-      
-      // Process turn (await full generation)
+
       const newState = await processNextTurnAsync(state);
-      
-      // Check if aborted mid-stream
       if (streamRef.current.abort) return;
-      
-      // Replace partial with complete entry
+
       const finalEntry: TranscriptEntry = {
         ...newState.transcript[newState.transcript.length - 1],
-        isComplete: true
+        isComplete: true,
       };
-      
+
       setState(prev => ({
         ...newState,
-        transcript: [...prev.transcript.slice(0, -1), finalEntry]
+        transcript: [...prev.transcript.slice(0, -1), finalEntry],
       }));
     } catch (err) {
       console.error('Generation error:', err);
-      // On error, remove partial entry
       setState(prev => ({
         ...prev,
-        transcript: prev.transcript.filter((_, i) => i < prev.transcript.length - 1)
+        transcript: prev.transcript.filter((_, i) => i < prev.transcript.length - 1),
       }));
     } finally {
       if (!streamRef.current.abort) {
@@ -91,6 +89,36 @@ function App() {
     streamRef.current.abort = true;
     setIsGenerating(false);
     setState(resetSimulation());
+    setHasSession(false);
+  }, []);
+
+  // Session controls
+  const handleSave = useCallback(() => {
+    saveSession(state);
+    setHasSession(true);
+  }, [state]);
+
+  const handleLoad = useCallback(() => {
+    const saved = loadSession();
+    if (saved) {
+      setState(prev => ({
+        ...prev,
+        currentPhase: saved.currentPhase || prev.currentPhase,
+        currentSpeaker: saved.currentSpeaker || prev.currentSpeaker,
+        transcript: saved.transcript || prev.transcript,
+        evidence: saved.evidence || prev.evidence,
+        verdict: saved.verdict || prev.verdict,
+        isActive: saved.isActive ?? prev.isActive,
+        case: saved.case || prev.case,
+        objectionHistory: saved.objectionHistory || [],
+      }));
+      setHasSession(true);
+    }
+  }, []);
+
+  const handleClear = useCallback(() => {
+    clearSession();
+    setHasSession(false);
   }, []);
 
   return (
@@ -100,6 +128,10 @@ function App() {
       onNextTurn={handleNextTurn}
       onReset={handleReset}
       onSkip={handleSkip}
+      onSave={handleSave}
+      onLoad={handleLoad}
+      onClear={handleClear}
+      hasSavedSession={hasSession}
       isGenerating={isGenerating}
     />
   );

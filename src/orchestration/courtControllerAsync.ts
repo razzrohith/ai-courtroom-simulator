@@ -3,7 +3,7 @@
  * Phase 5.6: Visible typewriter streaming
  */
 
-import type { CourtState, AgentRole, TranscriptEntry, Evidence, AgentParticipant } from '../types/courtroom';
+import type { CourtState, AgentRole, TranscriptEntry, Evidence, AgentParticipant, ObjectionEvent } from '../types/courtroom';
 import { COURT_PHASES } from '../types/courtroom';
 import { SAMPLE_CASE } from '../data/sampleCase';
 import { createMockConfig } from '../providers/modelProviderTypes';
@@ -16,7 +16,7 @@ export function createInitialState(): CourtState {
     { id: 'prosecutor-001', role: 'prosecutor', name: 'Attorney Rebecca Chen', title: 'Counsel for Plaintiff', modelConfig: createMockConfig('prosecutor') },
     { id: 'defense-001', role: 'defense', name: 'Attorney Marcus Williams', title: 'Counsel for Defendant', modelConfig: createMockConfig('defense') },
   ];
-  return { currentPhase: 'case_setup', currentSpeaker: null, participants, transcript: [], evidence: [...SAMPLE_CASE.evidenceItems], verdict: null, case: SAMPLE_CASE, isActive: false };
+  return { currentPhase: 'case_setup', objectionHistory: [], currentSpeaker: null, participants, transcript: [], evidence: [...SAMPLE_CASE.evidenceItems], verdict: null, case: SAMPLE_CASE, isActive: false };
 }
 
 export function startSimulation(state: CourtState): CourtState {
@@ -142,6 +142,53 @@ export function updateEvidenceStatus(state: CourtState, evidenceId: string, stat
 
 export function introduceEvidence(state: CourtState, evidenceId: string): CourtState {
   return updateEvidenceStatus(state, evidenceId, 'introduced');
+}
+// Objection management
+export function recordObjection(
+  state: CourtState,
+  raisedBy: AgentRole,
+  objectionType: string,
+  targetEvidence?: string
+): CourtState {
+  const objection: ObjectionEvent = {
+    id: `obj-${Date.now()}`,
+    raisedBy,
+    type: objectionType,
+    targetEvidence,
+    status: 'pending',
+    timestamp: new Date().toISOString(),
+  };
+  return {
+    ...state,
+    objectionHistory: [...state.objectionHistory, objection],
+  };
+}
+
+export function ruleOnObjection(
+  state: CourtState,
+  objectionId: string,
+  sustained: boolean
+): CourtState {
+  return {
+    ...state,
+    objectionHistory: state.objectionHistory.map(obj =>
+      obj.id === objectionId ? { ...obj, status: sustained ? 'sustained' : 'overruled' } : obj
+    ),
+  };
+}
+
+// Session persistence helpers
+export function getSerializableState(state: CourtState) {
+  return {
+    currentPhase: state.currentPhase,
+    currentSpeaker: state.currentSpeaker,
+    transcript: state.transcript,
+    evidence: state.evidence,
+    verdict: state.verdict,
+    isActive: state.isActive,
+    case: state.case,
+    objectionHistory: state.objectionHistory,
+  };
 }
 
 export function canProceed(_state: CourtState): boolean {

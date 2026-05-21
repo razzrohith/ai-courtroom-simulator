@@ -110,6 +110,7 @@ export interface CaseData {
 }
 
 export interface CourtState {
+  objectionHistory: ObjectionEvent[];
   currentPhase: CourtPhase;
   currentSpeaker: AgentRole | null;
   participants: AgentParticipant[];

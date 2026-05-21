@@ -46,6 +46,7 @@ export function createInitialState(): CourtState {
   ];
 
   return {
+    objectionHistory: [],
     currentPhase: 'case_setup',
     currentSpeaker: null,
     participants,

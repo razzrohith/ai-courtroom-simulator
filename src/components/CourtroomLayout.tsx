@@ -29,10 +29,14 @@ interface CourtroomLayoutProps {
   onNextTurn: () => void;
   onReset: () => void;
   onSkip?: () => void;
+  onSave?: () => void;
+  onLoad?: () => void;
+  onClear?: () => void;
   isGenerating?: boolean;
+  hasSavedSession?: boolean;
 }
 
-export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, isGenerating = false }: CourtroomLayoutProps) {
+export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, onSave, onLoad, onClear, isGenerating = false, hasSavedSession = false }: CourtroomLayoutProps) {
   const { currentPhase, currentSpeaker, participants, transcript, evidence, verdict, case: caseData, isActive } = state;
   const phaseLabel = PHASE_LABELS[currentPhase];
   const [showSettings, setShowSettings] = useState(false);
@@ -99,6 +103,36 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, i
                   className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-medium rounded-lg transition-smooth"
                 >
                   ⏭️ Skip Phase
+                </button>
+              )}
+              
+              {onSave && (
+                <button
+                  onClick={onSave}
+                  disabled={isGenerating}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-smooth"
+                >
+                  💾 Save
+                </button>
+              )}
+              
+              {onLoad && (
+                <button
+                  onClick={onLoad}
+                  disabled={isGenerating}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-lg transition-smooth"
+                >
+                  {hasSavedSession ? '📂 Load' : '📂 Load'}
+                </button>
+              )}
+              
+              {onClear && hasSavedSession && (
+                <button
+                  onClick={onClear}
+                  disabled={isGenerating}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded-lg transition-smooth"
+                >
+                  🗑️ Clear
                 </button>
               )}
               

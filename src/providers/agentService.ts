@@ -1,24 +1,28 @@
 /**
  * Agent Service — Generates agent responses via provider runtime
- * Phase 5: Streaming support
+ * Phase 7: Improved context building with phase instructions and objection awareness
  */
 
-import type { AgentRole, TranscriptEntry, Evidence, CourtPhase, CourtroomContext } from '../types/courtroom';
+import type { AgentRole, TranscriptEntry, Evidence, CourtPhase, CourtroomContext, ObjectionEvent } from '../types/courtroom';
 import type { AgentModelConfig } from '../types/providers';
 import { generateResponse, isProviderReady } from './runtime';
+import { PHASE_INSTRUCTIONS, getJuryInstruction } from '../data/mockCourtFlow';
 
 /**
  * Build a trimmed context window for the agent
+ * Phase 7: Includes objection history and case facts
  */
 export function buildCourtroomContext(params: {
   caseSummary: string;
   phase: CourtPhase;
   transcript: TranscriptEntry[];
   evidence: Evidence[];
+  objectionHistory?: ObjectionEvent[];
+  caseKeyFacts?: string[];
 }): CourtroomContext {
-  const { caseSummary, phase, transcript, evidence } = params;
+  const { caseSummary, phase, transcript, evidence, objectionHistory = [], caseKeyFacts = [] } = params;
 
-  const recentTranscript = transcript.slice(-4);
+  const recentTranscript = transcript.slice(-6); // More recent entries
   const relevantEvidence = evidence.filter(e => e.status !== 'pending');
 
   return {
@@ -26,33 +30,65 @@ export function buildCourtroomContext(params: {
     currentPhase: phase,
     recentTranscript,
     relevantEvidence,
-    objectionHistory: [],
+    caseKeyFacts,
+    objectionHistory,
   };
 }
 
 /**
- * Format context as prompt
+ * Format context as prompt - improved for Phase 7
  */
 export function formatContextAsPrompt(context: CourtroomContext): string {
   let prompt = '';
 
-  prompt += `Case: ${context.caseSummary}\n\n`;
-  prompt += `Current Phase: ${context.currentPhase}\n\n`;
+  prompt += `Case Overview: ${context.caseSummary}\n\n`;
 
-  if (context.recentTranscript.length > 0) {
-    prompt += 'Recent statements:\n';
-    context.recentTranscript.forEach(t => {
-      prompt += `[${t.speakerRole}] ${truncate(t.message, 120)}\n`;
+  // Add case key facts if available
+  if (context.caseKeyFacts && context.caseKeyFacts.length > 0) {
+    prompt += `Key Facts:\n`;
+    context.caseKeyFacts.slice(0, 5).forEach((fact, i) => {
+      prompt += `${i + 1}. ${fact}\n`;
     });
     prompt += '\n';
   }
 
-  if (context.relevantEvidence.length > 0) {
-    prompt += 'Evidence:\n';
-    context.relevantEvidence.forEach(e => {
-      prompt += `- ${e.title} (${e.status})\n`;
+  prompt += `Current Phase: ${context.currentPhase}\n\n`;
+
+  // Add recent transcript entries
+  if (context.recentTranscript.length > 0) {
+    prompt += 'Recent Statements:\n';
+    context.recentTranscript.forEach(t => {
+      const prefix = t.speakerRole === 'judge' ? 'COURT' : t.speakerRole === 'prosecutor' ? 'PLAINTIFF' : 'DEFENSE';
+      prompt += `[${prefix}] ${truncate(t.message, 100)}\n`;
     });
     prompt += '\n';
+  }
+
+  // Add evidence status
+  if (context.relevantEvidence.length > 0) {
+    prompt += 'Evidence Status:\n';
+    context.relevantEvidence.forEach(e => {
+      const statusMarker = e.status === 'disputed' ? '(DISPUTED)' : e.status === 'accepted' ? '(ACCEPTED)' : `(${e.status.toUpperCase()})`;
+      prompt += `- ${e.id}: ${e.title} ${statusMarker}\n`;
+    });
+    prompt += '\n';
+  }
+
+  // Add recent objections/rulings
+  if (context.objectionHistory && context.objectionHistory.length > 0) {
+    const recentObj = context.objectionHistory.slice(-3);
+    prompt += 'Recent Objections:\n';
+    recentObj.forEach(o => {
+      const ruling = o.status === 'sustained' ? 'SUSTAINED' : o.status === 'overruled' ? 'OVERRULED' : 'PENDING';
+      prompt += `- ${o.type.toUpperCase()} by ${o.raisedBy}: ${ruling}\n`;
+    });
+    prompt += '\n';
+  }
+
+  // Add jury instruction if relevant
+  const juryInstr = getJuryInstruction(context.currentPhase);
+  if (juryInstr) {
+    prompt += `[JURY NOTE]: ${juryInstr}\n\n`;
   }
 
   return prompt;
@@ -63,44 +99,66 @@ function truncate(text: string, maxLen: number): string {
 }
 
 /**
- * Get phase instruction by role
+ * Get detailed phase instruction by role - Phase 7 version
  */
 function getPhaseInstruction(phase: CourtPhase, role: AgentRole): string {
+  // Try to get from mockCourtFlow first
+  const phaseInstr = PHASE_INSTRUCTIONS as Record<string, Record<string, string>>;
+  if (phaseInstr[phase]?.[role]) {
+    return phaseInstr[phase][role];
+  }
+
+  // Fallback to simple instructions
   const judgeInstr: Record<CourtPhase, string> = {
-    case_setup: 'Confirm case is ready.',
-    court_opening: 'Open court and call the case.',
-    plaintiff_opening: 'Listen to opening.',
-    defense_opening: 'Listen to defense.',
-    evidence_presentation: 'Admit evidence appropriately.',
-    objection_ruling: 'Rule on objections timely.',
-    cross_examination: 'Oversee examination.',
-    rebuttal: 'Allow rebuttal.',
-    closing_arguments: 'Hear closings.',
-    judge_deliberation: 'Deliberate and prepare verdict.',
-    verdict: 'Deliver verdict.',
-    case_summary: 'Conclude proceedings.',
+    case_setup: 'Confirm case is ready to proceed.',
+    court_opening: 'Open court formally. State case number and nature. Have counsel state appearances.',
+    plaintiff_opening: 'Acknowledge plaintiff opening. Note key points. Invite defense.',
+    defense_opening: 'Acknowledge defense opening. Note position. Move to evidence.',
+    evidence_presentation: 'Oversee evidence introduction. Note relevance. Admit or exclude as appropriate.',
+    objection_ruling: 'Rule on any objections promptly and decisively. State reasoning briefly.',
+    cross_examination: 'Control questioning. Allow relevant queries. Sustain or overrule.',
+    rebuttal: 'Allow rebuttal. Keep focused on disputed facts.',
+    closing_arguments: 'Hear closing summaries. Note key arguments. Prepare deliberation.',
+    judge_deliberation: 'Consider all evidence and arguments. Apply law fairly. Reach just verdict.',
+    verdict: 'Deliver verdict clearly. State reasoning. Issue final ruling.',
+    case_summary: 'Summarize case outcome. Thank counsel. Dismiss court.',
   };
 
   const lawyerInstr: Record<CourtPhase, string> = {
-    case_setup: 'Prepare your case.',
-    court_opening: 'Be ready.',
-    plaintiff_opening: 'State your position.',
-    defense_opening: 'Present defense.',
-    evidence_presentation: 'Submit evidence.',
-    objection_ruling: 'Raise objections if needed.',
-    cross_examination: 'Question witness.',
-    rebuttal: 'Address opposing arguments.',
-    closing_arguments: 'Summarize key points.',
-    judge_deliberation: 'Wait for decision.',
-    verdict: 'Accept verdict.',
-    case_summary: 'Thank the court.',
+    case_setup: 'Be prepared. Know your case facts and evidence.',
+    court_opening: 'Stand ready. State your appearance when recognized.',
+    plaintiff_opening: 'Deliver clear opening. State facts, damages, relief sought. Engage jury.',
+    defense_opening: 'Present defense position. Counter plaintiff claims. Question damages.',
+    evidence_presentation: 'Present compelling evidence. Connect to key facts. Establish foundation.',
+    objection_ruling: 'Knowingly raise valid objections. Cite rules.',
+    cross_examination: 'Question effectively. Establish favourable facts. Impeach credibility.',
+    rebuttal: 'Counter defense arguments with evidence. Address weaknesses.',
+    closing_arguments: 'Summarize favourable evidence. Attack defense case. Request favourable verdict.',
+    judge_deliberation: 'Wait respectfully. Accept verdict.',
+    verdict: 'Accept verdict gracefully. Thank the court.',
+    case_summary: 'Express gratitude for fair proceedings.',
   };
 
   return role === 'judge' ? judgeInstr[phase] : lawyerInstr[phase];
 }
 
 /**
- * Generate agent response
+ * Agent persona instructions - Phase 7: Stronger role adherence
+ */
+function getPersonaInstructions(role: AgentRole): string {
+  const base = role === 'judge' 
+    ? `You are the Presiding Judge. Remain neutral, fair, and Procedural. Control the courtroom firmly but courteously.`
+    : role === 'prosecutor'
+    ? `You are Plaintiff Counsel. Present facts persuasively. Argue vigorously for your client. Build clear narrative.`
+    : `You are Defense Counsel. Challenge opposing evidence. Present alternative interpretation. Protect client interests.`;
+
+  const restrictions = `\n\nIMPORTANT CONSTRAINTS:\n- NEVER give legal advice outside simulation.\n-Cite evidence IDs when discussing evidence (e.g., E01, E02).\n- Stay in character throughout.\n- Use proper courtroom decorum.\n- This is an educational simulation - not real legal counsel.`;
+
+  return base + restrictions;
+}
+
+/**
+ * Generate agent response - improved for Phase 7
  */
 export async function generateAgentResponse(params: {
   role: AgentRole;
@@ -110,13 +168,15 @@ export async function generateAgentResponse(params: {
   evidence: Evidence[];
   caseTitle: string;
   caseSummary: string;
+  objectionHistory?: ObjectionEvent[];
+  caseKeyFacts?: string[];
 }): Promise<{
   message: string;
   providerUsed: string;
   modelUsed: string;
   responseSource: 'mock' | 'real' | 'fallback';
 }> {
-  const { role, config, phase, transcript, evidence, caseTitle:_caseTitle, caseSummary, } = params;
+  const { role, config, phase, transcript, evidence, caseSummary, objectionHistory = [], caseKeyFacts = [] } = params;
   const providerId = (config as any).providerId || 'mock';
 
   const context = buildCourtroomContext({
@@ -124,12 +184,15 @@ export async function generateAgentResponse(params: {
     phase,
     transcript,
     evidence,
+    objectionHistory,
+    caseKeyFacts,
   });
 
   const contextStr = formatContextAsPrompt(context);
   const phaseInstruction = getPhaseInstruction(phase, role);
+  const persona = getPersonaInstructions(role);
 
-  const prompt = `You are ${role === 'judge' ? 'the presiding Judge' : role === 'prosecutor' ? 'the Plaintiff Counsel' : 'the Defense Counsel'} in a simulated courtroom.\n\n${contextStr}${phaseInstruction}\n\nIMPORTANT: This is a simulation. Do not give real legal advice.`;
+  const prompt = `${persona}\n\n${contextStr}\n\nTask: ${phaseInstruction}`;
 
   try {
     const ready = await isProviderReady(providerId);
@@ -188,70 +251,19 @@ export async function generateAgentResponse(params: {
 }
 
 /**
- * Streaming generator for incremental UI display
- * Can be called from UI layer for typewriter effect
- */
-export async function* streamAgentResponse(params: {
-  role: AgentRole;
-  config: AgentModelConfig;
-  phase: CourtPhase;
-  transcript: TranscriptEntry[];
-  evidence: Evidence[];
-  caseTitle: string;
-  caseSummary: string;
-}): AsyncGenerator<{
-  chunk: string;
-  complete: boolean;
-  providerUsed: string;
-  modelUsed: string;
-}> {
-  const result = await generateAgentResponse(params);
-
-  const words = result.message.split(' ');
-  let accumulated = '';
-
-  for (let i = 0; i < words.length; i++) {
-    accumulated += (i === 0 ? '' : ' ') + words[i];
-
-    yield {
-      chunk: accumulated,
-      complete: i === words.length - 1,
-      providerUsed: result.providerUsed,
-      modelUsed: result.modelUsed,
-    };
-
-    if (i < words.length - 1) {
-      await new Promise(r => setTimeout(r, 15));
-    }
-  }
-}
-
-/**
- * Parse evidence references from generated text
- * Looks for patterns like "E1", "Evidence 1", "Exhibit A"
+ * Parse evidence references from message text
  */
 export function parseEvidenceReferences(message: string): string[] {
+  // Match patterns like E01, E1, E02, Evidence-1, etc.
+  const matches = message.matchAll(/(?:E(?:0)?\d+|Evidence[-\s]?\d+|Ex(?:hibit)?\s?[-]?\d+)/gi);
   const refs: string[] = [];
   
-  // Match E1, E2, E3 patterns
-  const ePattern = /\b(E\d+)\b/gi;
-  let match;
-  while ((match = ePattern.exec(message)) !== null) {
-    refs.push(match[1].toUpperCase());
+  for (const match of matches) {
+    const ref = match[0].replace(/[-\s]/i, '').toUpperCase();
+    if (!refs.includes(ref)) {
+      refs.push(ref);
+    }
   }
   
-  // Match Exhibit patterns
-  const exhibitPattern = /\bExhibit\s+([A-Z])\b/gi;
-  while ((match = exhibitPattern.exec(message)) !== null) {
-    refs.push(`E${match[1].charCodeAt(0) - 64}`);
-  }
-  
-  // Match item reference patterns like "Item #1", "Document 2"
-  const itemPattern = /\b(?:item|document|evidence)\s*(?:#|no\.?)?(\d+)\b/gi;
-  while ((match = itemPattern.exec(message)) !== null) {
-    const num = parseInt(match[1], 10);
-    if (num >= 1 && num <= 10) refs.push(`E${num}`);
-  }
-  
-  return [...new Set(refs)];
+  return refs;
 }

@@ -143,11 +143,12 @@ export interface AgentModelConfig {
   mode: 'mock' | 'local' | 'api';
 }
 
-// Courtroom context for memory management (Phase 5)
+// Courtroom context for memory management (Phase 5, enhanced Phase 7)
 export interface CourtroomContext {
   caseSummary: string;
   currentPhase: CourtPhase;
   recentTranscript: TranscriptEntry[];
   relevantEvidence: Evidence[];
+  caseKeyFacts?: string[];
   objectionHistory: ObjectionEvent[];
 }

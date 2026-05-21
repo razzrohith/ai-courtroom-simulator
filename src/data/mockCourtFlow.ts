@@ -1,5 +1,6 @@
 /**
  * Mock Court Flow — Structured mock responses for each phase
+ * Phase 7: Judge transitions, objection logic, improved verdict
  */
 
 import type { CourtPhase, AgentRole, TranscriptEntry, Verdict } from '../types/courtroom';
@@ -19,6 +20,119 @@ export const SPEAKER_ORDER: Record<CourtPhase, AgentRole[]> = {
   verdict: ['judge'],
   case_summary: ['judge'],
 };
+
+// Judge transition messages - announced when entering new phase
+export const JUDGE_TRANSITIONS: Record<CourtPhase, string> = {
+  case_setup: '',
+  court_opening: "The Court will now come to order. This is Case Number 2024-CV-3847: Apex Logistics Inc. v. Northstar Retail Corp. This is a civil contract dispute regarding an alleged breach of supply agreement. Counsel, please state your appearances for the record.",
+  plaintiff_opening: "Thank you, counsel. Now, Ms. Chen, you may deliver your opening statement on behalf of the plaintiff. Jury, pay close attention.",
+  defense_opening: "Thank you, Ms. Chen. Mr. Williams, you may deliver your opening statement on behalf of the defendant.",
+  evidence_presentation: "We will now move to the evidence presentation phase. The parties may present documentary evidence and witnesses may be called. Counsel, approach the evidence board.",
+  objection_ruling: "Before we proceed to cross-examination, the court will hear any objections to evidence already presented. Counsel, state your objections now.",
+  cross_examination: "We will now move to cross-examination. Each counsel may question the other party's witnesses. Objections to questions must be raised immediately.",
+  rebuttal: "Now we move to the rebuttal phase. The plaintiff may respond to the defendant's arguments. The defendant may then provide final countering points.",
+  closing_arguments: "We will now hear closing arguments. Both counsel, summarize your positions. The court will consider all evidence and testimony presented.",
+  judge_deliberation: "The court will now deliberate. All rises, please. This matter is taken under advisement.",
+  verdict: "The Court has reached a decision. All rise for the verdict.",
+  case_summary: "This concludes the proceedings. The Court will now summarize the outcome and issue its final ruling.",
+};
+
+// Phase instruction context for agents - tells each agent what to do
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const PHASE_INSTRUCTIONS: any = {
+  court_opening: {
+    judge: "You are Presiding Judge Sarah Mitchell. Open court, welcome parties, state case info, have counsel state appearances. Be formal and procedural.",
+    prosecutor: "You are Attorney Rebecca Chen for Apex Logistics. Introduce yourself. Wait for your opening statement phase.",
+    defense: "You are Attorney Marcus Williams for Northstar Retail. Wait for your opening statement phase.",
+  },
+  plaintiff_opening: {
+    judge: "You are the judge. Listen to plaintiff's opening. Acknowledge when complete. Then invite defendant.",
+    prosecutor: "Deliver a strong opening. Cover: contract exists, deliveries made, payment refused, damages($247,500). Cite evidence IDs when relevant.",
+    defense: "Wait for your turn after plaintiff completes.",
+  },
+  defense_opening: {
+    judge: "You are the judge. Listen to defendant's opening.",
+    prosecutor: "Listen to defendant's opening. Note their claims.",
+    defense: "Deliver opening arguing: delays were material, contract terms violated, damages claimed are inflated. Counter plaintiff's narrative.",
+  },
+  evidence_presentation: {
+    judge: "You are the judge. Allow evidence introduction. Note any relevance issues. Rule on objections if raised.",
+    prosecutor: "Present evidence supporting your case. Reference E01, E02, E03, E04, E05. Describe each document's significance.",
+    defense: "Challenge evidence validity where possible. Cross-examine plaintiff's evidence. Present your own exhibits.",
+  },
+  cross_examination: {
+    judge: "You are the judge. Control questioning. Allow both sides to test证据 credibility. Rule on objections.",
+    prosecutor: "Question defendant's witnesses. Challenge their credibility. Don't lead inappropriately.",
+    defense: "Same - question plaintiff's witnesses. Challenge account of events.",
+  },
+  closing_arguments: {
+    judge: "You are the judge. Listen to both summaries. Prepare to deliberate.",
+    prosecutor: "Summarize strong evidence, key facts that prove breach, damages. Request judgment.",
+    defense: "Summarize defense strengths, plaintiff's weaknesses. Ask for dismissal.",
+  },
+  verdict: {
+    judge: "You are the judge. Deliver verdict. State findings, analysis, ruling. Thank counsel.",
+    prosecutor: "Wait for verdict.",
+    defense: "Wait for verdict.",
+  },
+};
+
+// Objection types with weight - higher weight = more likely to trigger
+export const OBJECTION_TYPES = {
+  relevance: { weight: 0.15, desc: "irrelevant" },
+  hearsay: { weight: 0.12, desc: "hearsay" },
+  speculation: { weight: 0.10, desc: "speculation" },
+  lack_of_foundation: { weight: 0.15, desc: "lack of foundation" },
+  leading: { weight: 0.10, desc: "leading" },
+  argumentative: { weight: 0.08, desc: "argumentative" },
+  compound: { weight: 0.05, desc: "compound question" },
+  assume_facts: { weight: 0.08, desc: "assumes facts not in evidence" },
+};
+
+// Decide if an objection should occur based on phase and random chance
+export function shouldTriggerObjection(phase: CourtPhase, speakerTurn: number): string | null {
+  // Objections most likely in evidence and cross-examination
+  const likelyPhases = ['evidence_presentation', 'cross_examination'];
+  if (!likelyPhases.includes(phase)) return null;
+  
+  // Only after speaker has said at least one substantive thing
+  if (speakerTurn < 1) return null;
+  
+  // Weighted random chance
+  const rand = Math.random();
+  const threshold = 0.75; // ~25% chance overall
+  
+  if (rand > threshold) {
+    // Pick weighted random objection type
+    const types = Object.keys(OBJECTION_TYPES) as Array<keyof typeof OBJECTION_TYPES>;
+    const totalWeight = types.reduce((sum, t) => sum + OBJECTION_TYPES[t].weight, 0);
+    let cumulative = 0;
+    const pick = Math.random() * totalWeight;
+    
+    for (const objType of types) {
+      cumulative += OBJECTION_TYPES[objType].weight;
+      if (pick <= cumulative) {
+        return OBJECTION_TYPES[objType].desc;
+      }
+    }
+    return "irrelevant";
+  }
+  return null;
+}
+
+// Get jury instructions for trial phases
+export function getJuryInstruction(phase: CourtPhase): string | null {
+  if (phase === 'plaintiff_opening') {
+    return "Jurors, opening statements are not evidence. They arepreview of what each side intends to prove.";
+  }
+  if (phase === 'evidence_presentation') {
+    return "Jurors, consider all evidence. Give appropriate weight. Don't decide until all is presented.";
+  }
+  if (phase === 'closing_arguments') {
+    return "Jurors, closing arguments are not evidence. They'resummary of the case. Decide onfacts presented.";
+  }
+  return null;
+}
 
 // Mock messages for each phase and speaker
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

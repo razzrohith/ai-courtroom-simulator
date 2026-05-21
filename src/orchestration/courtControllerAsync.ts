@@ -1,6 +1,6 @@
 /**
  * Court Controller Async — Async state machine with provider runtime
- * Phase 5.6: Visible typewriter streaming
+ * Phase 7: Judge transitions, objection logic, improved verdict
  */
 
 import type { CourtState, AgentRole, TranscriptEntry, Evidence, AgentParticipant, ObjectionEvent } from '../types/courtroom';
@@ -9,6 +9,7 @@ import { SAMPLE_CASE } from '../data/sampleCase';
 import { createMockConfig } from '../providers/modelProviderTypes';
 import { getSpeakersForPhase, getNextSpeaker } from './phaseEngine';
 import { generateAgentResponse, parseEvidenceReferences } from '../providers/agentService';
+import { JUDGE_TRANSITIONS, shouldTriggerObjection, MOCK_VERDICT } from '../data/mockCourtFlow';
 
 export function createInitialState(): CourtState {
   const participants: AgentParticipant[] = [
@@ -72,7 +73,9 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
     transcript: state.transcript, 
     evidence: state.evidence, 
     caseTitle: state.case.title, 
-    caseSummary: state.case.claimSummary 
+    caseSummary: state.case.claimSummary,
+    objectionHistory: state.objectionHistory,
+    caseKeyFacts: state.case.keyFacts
   });
 
   // Parse evidence references
@@ -86,6 +89,25 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
       updatedEvidence[idx] = { ...updatedEvidence[idx], status: 'introduced' };
     }
   });
+
+  // Check for objection trigger (random chance)
+  const speakerTurn = state.transcript.filter(t => t.phase === state.currentPhase && t.speakerRole === speakerRole).length;
+  const objectionType = shouldTriggerObjection(state.currentPhase, speakerTurn);
+  let updatedObjections = state.objectionHistory;
+  
+  if (objectionType) {
+    // Add objection record
+    const raisedBy = speakerRole === 'prosecutor' ? 'defense' : 'prosecutor';
+    const objection: ObjectionEvent = {
+      id: `obj-${Date.now()}`,
+      raisedBy,
+      type: objectionType,
+      targetEvidence: evidenceRefs[0],
+      status: 'pending',
+      timestamp: new Date().toISOString(),
+    };
+    updatedObjections = [...state.objectionHistory, objection];
+  }
 
   const newEntry: TranscriptEntry = { 
     id: `trans-${Date.now()}-${speakerRole}`, 
@@ -106,30 +128,69 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
     ...state, 
     currentSpeaker: speakerRole, 
     transcript: [...state.transcript, newEntry],
-    evidence: updatedEvidence
+    evidence: updatedEvidence,
+    objectionHistory: updatedObjections
   };
 }
 
 function advanceToNextPhase(state: CourtState): CourtState {
   const currentIndex = COURT_PHASES.indexOf(state.currentPhase);
   const nextPhase = COURT_PHASES[currentIndex + 1];
-  if (!nextPhase) return { ...state, currentPhase: 'case_summary', currentSpeaker: 'judge' };
+  
+  // Get judge transition message for entering new phase
+  const transitionMsg = JUDGE_TRANSITIONS[nextPhase] || '';
+  
+  // Build new transcript with judge transition announcement
+  const transitionEntry: TranscriptEntry = {
+    id: `trans-j-transition-${Date.now()}`,
+    speakerRole: 'judge',
+    speakerName: getParticipantName(state, 'judge'),
+    message: transitionMsg || `We will now proceed to the ${nextPhase.replace('_', ' ')} phase.`,
+    phase: nextPhase,
+    sequenceNumber: state.transcript.length + 1,
+    timestamp: new Date().toISOString(),
+    providerUsed: 'mock',
+    modelUsed: 'judge-reasoner-v1',
+    responseSource: 'mock',
+    isComplete: true,
+  };
+  
+  if (!nextPhase) {
+    // End of trial - case summary phase
+    const summaryEntry: TranscriptEntry = {
+      ...transitionEntry,
+      id: `trans-summary-${Date.now()}`,
+      phase: 'case_summary',
+      message: `This concludes the proceedings in Case 2024-CV-3847. The Court thanks all counsel for their professional conduct. Case dismissed.`,
+    };
+    return { ...state, currentPhase: 'case_summary', currentSpeaker: 'judge', transcript: [...state.transcript, transitionEntry, summaryEntry] };
+  }
+  
   const nextSpeakers = getSpeakersForPhase(nextPhase);
   const firstSpeaker = nextSpeakers.length > 0 ? nextSpeakers[0] : null;
-  if (nextPhase === 'verdict') return { 
+  
+  if (nextPhase === 'verdict') {
+    // Use the improved MOCK_VERDICT
+    const verdictEntry: TranscriptEntry = {
+      ...transitionEntry,
+      message: MOCK_VERDICT.ruling || `The Court finds in favour of ${MOCK_VERDICT.decision === 'plaintiff_wins' ? 'the plaintiff' : 'the defendant'}.`,
+    };
+    return { 
+      ...state, 
+      currentPhase: nextPhase, 
+      currentSpeaker: firstSpeaker,
+      transcript: [...state.transcript, transitionEntry, verdictEntry],
+      verdict: MOCK_VERDICT
+    };
+  }
+  
+  // Normal phase transition with judge announcement
+  return { 
     ...state, 
     currentPhase: nextPhase, 
-    currentSpeaker: firstSpeaker, 
-    verdict: { 
-      decision: 'defense_wins', 
-      reasoningSummary: 'Court finds for defendant.', 
-      plaintiffPoints: ['Contract signed'], 
-      defensePoints: ['Delays were reasonable'], 
-      weaknesses: { plaintiff: [], defense: [] }, 
-      ruling: 'Case dismissed' 
-    } 
+    currentSpeaker: firstSpeaker,
+    transcript: [...state.transcript, transitionEntry]
   };
-  return { ...state, currentPhase: nextPhase, currentSpeaker: firstSpeaker };
 }
 
 export function skipToNextPhase(state: CourtState): CourtState {

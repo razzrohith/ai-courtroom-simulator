@@ -70,6 +70,29 @@ export function VerdictPanel({ verdict, evidence, objections }: VerdictPanelProp
           </div>
         )}
 
+        {/* Deliberation Summary - Phase 12 */}
+        {'deliberationSummary' in verdict && verdict.deliberationSummary && (
+          <div className="bg-indigo-900/20 border border-indigo-700 rounded-lg p-3">
+            <h4 className="text-sm font-medium text-indigo-400 mb-2">⚖️ Deliberation Notes</h4>
+            <p className="text-xs">{verdict.deliberationSummary}</p>
+          </div>
+        )}
+
+        {/* Appeal Grounds - Phase 12 */}
+        {'appealGrounds' in verdict && verdict.appealGrounds && verdict.appealGrounds.length > 0 && (
+          <div className="bg-rose-900/20 border border-rose-700 rounded-lg p-3">
+            <h4 className="text-sm font-medium text-rose-400 mb-2">⚠️ Potential Appeal Grounds</h4>
+            <ul className="text-xs space-y-1">
+              {verdict.appealGrounds.map((ground, i) => (
+                <li key={i} className="flex items-start gap-1">
+                  <span>•</span>
+                  <span>{ground}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* Ruling */}
         <div className="bg-yellow-900/30 border border-yellow-600 rounded-lg p-3">
           <h4 className="text-sm font-medium text-yellow-500 mb-1">Court Ruling</h4>

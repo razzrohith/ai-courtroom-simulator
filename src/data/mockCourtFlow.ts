@@ -320,6 +320,14 @@ export const MOCK_VERDICT: Verdict = {
   // Phase 11: Jury and motion integration
   juryInstructionSummary: 'Burden of proof: preponderance. Evidence consideration: all testimony/documents. Witness credibility: consistency and corroboration. Objections: rulings do not penalize either party.',
   motionImpact: 'Defense motion to dismiss was denied. Prosecution motion to admit Exhibit E03 was granted. The excluded testimony was not considered for credibility.',
+  // Phase 12: Deliberation and appeals
+  deliberationSummary: 'All evidence reviewed. Force majeure claim valid for April delay. Defense waiver through acceptance. Prosecution motion to exclude testimony GRANTED. Both witnesses credible but partially corroborated. Preliminary ruling: plaintiff wins.',
+  appealGrounds: [
+    'Procedural: Timing of objection to Exhibit E04 may have been untimely.',
+    'Evidentiary: Exhibit E02 admitted despite relevance challenge.',
+    'Witness: Defense challenge to Mr. Morrison credibility partially sustained.',
+    'Motion: Prosecution objection to motion for new evidence ruled without full briefing.',
+  ],
 };
 
 // Helper to generate transcript entries from mock messages

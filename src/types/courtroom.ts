@@ -186,6 +186,9 @@ export interface Verdict {
   // Phase 11: Jury and motion integration
   juryInstructionSummary?: string;
   motionImpact?: string;
+  // Phase 12: Deliberation and appeals
+  deliberationSummary?: string;
+  appealGrounds?: string[];
 }
 
 export interface CaseData {

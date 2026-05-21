@@ -21,6 +21,8 @@ import { ObjectionHistoryPanel } from './ObjectionHistoryPanel';
 import { WitnessPanel } from './WitnessPanel';
 import { MotionPanel } from './MotionPanel';
 import { JuryInstructionPanel } from './JuryInstructionPanel';
+import { DeliberationPanel } from './DeliberationPanel';
+import { AppealPanel } from './AppealPanel';
 
 interface AgentModelInfo {
   providerId: string;
@@ -243,6 +245,25 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, o
                   <JuryInstructionPanel instructions={
                     transcript.find(t => t.speakerRole === 'judge' && t.phase === 'jury_instructions')?.message
                   } />
+                )}
+
+                {/* Phase 12: Deliberation Chamber */}
+                {currentPhase === 'judge_deliberation' && (
+                  <DeliberationPanel 
+                    summary={verdict?.deliberationSummary}
+                    evidenceImpact="Exhibits E01-E04 reviewed. Force majeure valid for April."
+                    witnessImpact={verdict?.witnessImpact}
+                    motionImpact={verdict?.motionImpact}
+                    objectionImpact="Prosecution objection to hearsay GRANTED. Defense relevance challenge OVERRULED."
+                  />
+                )}
+
+                {/* Phase 12: Appeal Grounds (show after verdict/case_summary) */}
+                {(currentPhase === 'verdict' || currentPhase === 'case_summary') && (
+                  <AppealPanel 
+                    grounds={verdict?.appealGrounds}
+                    decision={verdict?.decision}
+                  />
                 )}
 
                 {/* Phase 8: Case summary report */}

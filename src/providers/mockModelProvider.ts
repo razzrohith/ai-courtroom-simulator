@@ -91,7 +91,13 @@ export function generateMockResponse(params: {
       defense: 'We ask the court to dismiss the case.',
     },
     judge_deliberation: {
-      judge: 'The court will recess for deliberation.',
+      judge: `The Court will now consider all evidence, testimony, objections, and motions before reaching a verdict. This matter is taken under advisement.
+
+Reviewing: Force majeure claim for April delay. Evidence established delivery logs and email correspondence. Both witnesses examined regarding operational constraints and delay notification.
+
+Preliminary findings: Plaintiff's force majeure claim appears valid for April. Defense acceptance and sale of goods constitutes waiver. Witness Morrison credible with corroboration. Witness Patterson partially credible but lacking documentation. Motion to exclude testimony granted.
+
+Parties will be notified of final ruling.`,
       prosecutor: '',
       defense: '',
     },

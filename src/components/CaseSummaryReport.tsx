@@ -149,6 +149,20 @@ export function CaseSummaryReport({ state }: CaseSummaryReportProps) {
         lines.push(verdict.motionImpact);
         lines.push('');
       }
+      
+      // Phase 12: Deliberation summary
+      if ('deliberationSummary' in verdict && verdict.deliberationSummary) {
+        lines.push('Judge Deliberation Notes:');
+        lines.push(verdict.deliberationSummary);
+        lines.push('');
+      }
+      
+      // Phase 12: Appeal grounds
+      if ('appealGrounds' in verdict && verdict.appealGrounds && verdict.appealGrounds.length > 0) {
+        lines.push('Potential Appeal Grounds:');
+        verdict.appealGrounds.forEach(ground => lines.push(`- ${ground}`));
+        lines.push('');
+      }
     }
     
     // Disclaimer

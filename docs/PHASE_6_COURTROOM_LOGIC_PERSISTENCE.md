@@ -75,6 +75,33 @@ Future: lawyers raise objections during cross-examination.
 - No case editing UI yet
 - Provider test buttons not implemented (exists in ProviderRuntimeStatusPanel)
 
+## Phase 6.5 Changes (Included)
+
+### Case Editor Features
+- Edit button in CaseSetupPanel (shown when onUpdateCase is provided)
+- Editable fields:
+  - Case title
+  - Case type
+  - Plaintiff name
+  - Defense name
+  - Claim summary
+  - Key facts (add/remove/edit)
+  - Evidence items (add/remove/edit)
+- Save/Cancel buttons to confirm or discard changes
+
+### Provider Test Buttons
+- "Test Judge", "Test Prosecutor", "Test Defense" buttons
+- Refresh button in header
+- Test results show:
+  - "✓ Mock Ready" for mock provider
+  - "Missing OpenRouter Key" if no key set
+  - "Ollama Unavailable" if Ollama not running
+  - Various provider ready states
+
+### Persistence
+- Updated session persistence saves edited case
+- Evidence status tracked
+
 ## Phase 7 Next Steps
 - Progressive word-by-word streaming animation
 - Context-aware objections

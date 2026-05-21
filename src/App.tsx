@@ -9,7 +9,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { CourtroomLayout } from './components/CourtroomLayout';
 import { createInitialState, startSimulation, processNextTurnAsync, resetSimulation, skipToNextPhase } from './orchestration/courtControllerAsync';
 import { saveSession, loadSession, clearSession, hasSavedSession } from './data/sessionPersistence';
-import type { CourtState, TranscriptEntry } from './types/courtroom';
+import type { CourtState, TranscriptEntry, CaseData } from './types/courtroom';
 
 function App() {
   const [state, setState] = useState<CourtState>(() => createInitialState());
@@ -121,6 +121,15 @@ function App() {
     setHasSession(false);
   }, []);
 
+  // Handle case updates from case editor
+  const handleCaseUpdate = useCallback((updatedCase: CaseData) => {
+    setState(prev => ({
+      ...prev,
+      case: updatedCase,
+      evidence: updatedCase.evidenceItems,
+    }));
+  }, []);
+
   return (
     <CourtroomLayout
       state={state}
@@ -131,6 +140,7 @@ function App() {
       onSave={handleSave}
       onLoad={handleLoad}
       onClear={handleClear}
+      onCaseUpdate={handleCaseUpdate}
       hasSavedSession={hasSession}
       isGenerating={isGenerating}
     />

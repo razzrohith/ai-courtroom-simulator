@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import type { CourtState } from '../types/courtroom';
+import type { CourtState, CaseData } from '../types/courtroom';
 import { PHASE_LABELS } from '../types/courtroom';
 import type { AgentRole } from '../types/courtroom';
 import { loadCourtroomConfig, CourtroomModelConfig, isProviderPlaceholder, AgentModelConfig, DEFAULT_MODEL_CONFIG } from '../types/providers';
@@ -33,11 +33,12 @@ interface CourtroomLayoutProps {
   onSave?: () => void;
   onLoad?: () => void;
   onClear?: () => void;
+  onCaseUpdate?: (updatedCase: CaseData) => void;
   isGenerating?: boolean;
   hasSavedSession?: boolean;
 }
 
-export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, onSave, onLoad, onClear, isGenerating = false, hasSavedSession = false }: CourtroomLayoutProps) {
+export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, onSave, onLoad, onClear, onCaseUpdate, isGenerating = false, hasSavedSession = false }: CourtroomLayoutProps) {
   const { currentPhase, currentSpeaker, participants, transcript, evidence, verdict, case: caseData, isActive, objectionHistory } = state;
   const phaseLabel = PHASE_LABELS[currentPhase];
   const [showSettings, setShowSettings] = useState(false);
@@ -195,7 +196,7 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, o
 
           <div className="lg:col-span-3 space-y-4">
             {currentPhase === 'case_setup' ? (
-              <CaseSetupPanel caseData={caseData} />
+              <CaseSetupPanel caseData={caseData} onUpdateCase={onCaseUpdate} />
             ) : (
               <>
                 <EvidenceBoard evidence={evidence} />

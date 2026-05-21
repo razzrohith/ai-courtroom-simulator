@@ -1,8 +1,10 @@
 /**
  * AgentPanel — Individual agent display card
+ * Phase 16: Integrated with courtroom avatar visuals
  */
 
 import type { AgentRole, AgentParticipant } from '../types/courtroom';
+import { CourtroomAvatar } from './visuals/CourtroomVisuals';
 
 interface AgentModelInfo {
   providerId: string;
@@ -34,6 +36,13 @@ export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo 
   const colors = roleColors[participant.role];
   const isSpeaking = isActive && isCurrentSpeaker;
 
+  // Build compact provider info string for avatar
+  const providerInfo = modelInfo ? (
+    modelInfo.isPlaceholder 
+      ? `(mock)`
+      : `${modelInfo.providerId}`
+  ) : undefined;
+
   // Get mode badge style
   const getModeBadge = () => {
     if (!modelInfo) {
@@ -41,7 +50,7 @@ export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo 
     }
     
     if (modelInfo.isPlaceholder) {
-      return { label: 'Placeholder', class: 'bg-yellow-700 text-yellow-200' };
+      return { label: 'Fallback', class: 'bg-yellow-700 text-yellow-200' };
     }
     
     switch (modelInfo.mode) {
@@ -62,16 +71,14 @@ export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo 
     <div
       className={`
         ${colors.bg} rounded-lg border ${isSpeaking ? colors.border : 'border-gray-700'}
-        p-4 transition-smooth ${isSpeaking ? 'ring-2 ring-yellow-500/50 animate-pulse-glow' : ''}
+        p-3 transition-smooth ${isSpeaking ? 'ring-2 ring-yellow-500/50' : ''}
       `}
     >
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">{roleIcons[participant.role]}</span>
-          <span className={`text-xs uppercase tracking-wider ${colors.text}`}>
-            {participant.role}
-          </span>
-        </div>
+      <div className="flex items-center gap-3 mb-2">
+        <span className="text-xl">{roleIcons[participant.role]}</span>
+        <span className={`text-xs uppercase tracking-wider ${colors.text}`}>
+          {participant.role}
+        </span>
         {isSpeaking && (
           <span className="px-2 py-0.5 bg-yellow-600 rounded text-xs text-white animate-pulse">
             SPEAKING
@@ -79,11 +86,24 @@ export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo 
         )}
       </div>
 
-      <h4 className="font-semibold text-lg mb-1">{participant.name}</h4>
-      <p className="text-sm text-gray-400 mb-3">{participant.title}</p>
+      <div className="flex items-start gap-2">
+        {/* Small Courtroom Avatar indicator */}
+        <CourtroomAvatar
+          role={participant.role}
+          isSpeaking={isSpeaking}
+          providerInfo={providerInfo}
+          compact={true}
+        />
+        
+        {/* Agent Info */}
+        <div className="flex-1 min-w-0">
+          <h4 className="font-semibold text-base mb-0.5">{participant.name}</h4>
+          <p className="text-xs text-gray-400 mb-2">{participant.title}</p>
+        </div>
+      </div>
 
       {/* Model configuration display */}
-      <div className="text-xs text-gray-500 space-y-1">
+      <div className="text-xs text-gray-500 space-y-1 pt-2 border-t border-gray-700/50">
         <div className="flex items-center justify-between">
           <span>Provider:</span>
           <span className="text-gray-400">
@@ -105,8 +125,8 @@ export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo 
         
         {/* Warning badge if configured but not connected */}
         {modelInfo && modelInfo.isPlaceholder && (
-          <div className="mt-2 text-orange-400">
-            ⚠️ Configured but not connected
+          <div className="mt-1 text-orange-400 text-xs">
+            ⚠️ Not connected
           </div>
         )}
       </div>

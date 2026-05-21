@@ -1,11 +1,11 @@
 /**
  * CourtroomLayout — Main courtroom interface layout
+ * Phase 16: Full courtroom stage integration
  */
 
 import { useState, useEffect } from 'react';
-import type { CourtState, CaseData } from '../types/courtroom';
+import type { CourtState, CaseData, AgentRole } from '../types/courtroom';
 import { PHASE_LABELS } from '../types/courtroom';
-import type { AgentRole } from '../types/courtroom';
 import { loadCourtroomConfig, CourtroomModelConfig, isProviderPlaceholder, AgentModelConfig, DEFAULT_MODEL_CONFIG } from '../types/providers';
 import { AgentPanel } from './AgentPanel';
 import { TranscriptPanel } from './TranscriptPanel';
@@ -24,6 +24,7 @@ import { JuryInstructionPanel } from './JuryInstructionPanel';
 import { DeliberationPanel } from './DeliberationPanel';
 import { AppealPanel } from './AppealPanel';
 import { ExhibitPanel } from './ExhibitPanel';
+import { CourtroomStage } from './visuals/CourtroomStage';
 
 interface AgentModelInfo {
   providerId: string;
@@ -173,6 +174,35 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, o
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Courtroom Stage - Cinematic top */}
+          {isActive && (
+            <div className="lg:col-span-12">
+              <CourtroomStage
+                judge={{
+                  ...participants.find(p => p.role === 'judge')!,
+                  modelInfo: getAgentModelInfo('judge')
+                }}
+                prosecutor={{
+                  ...participants.find(p => p.role === 'prosecutor')!,
+                  modelInfo: getAgentModelInfo('prosecutor')
+                }}
+                defense={{
+                  ...participants.find(p => p.role === 'defense')!,
+                  modelInfo: getAgentModelInfo('defense')
+                }}
+                currentSpeaker={currentSpeaker}
+                isSpeaking={isActive && currentSpeaker !== null}
+                currentPhase={currentPhase}
+                isActive={isActive}
+                evidence={evidence}
+                activeObjection={objectionHistory.find(o => o.status === 'pending')}
+                showVerdict={currentPhase === 'verdict' && !!verdict}
+                verdict={verdict}
+                compact={false}
+              />
+            </div>
+          )}
+          
           <div className="lg:col-span-3 space-y-4">
             <AgentPanel
               participant={participants.find(p => p.role === 'judge')!}

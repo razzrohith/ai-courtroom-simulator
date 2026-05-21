@@ -12,7 +12,7 @@
 - Agent profiles
 - Provider skeleton / API key management
 
-## ✅ Phase 14 — Current
+## ✅ Phase 14 — Complete
 
 Live model catalogs and provider runtimes:
 
@@ -29,26 +29,52 @@ Live model catalogs and provider runtimes:
 
 See PHASE_14_MODEL_CATALOG_RUNTIME.md
 
-## Phase 15 Future
+## ✅ Phase 15 — Complete
+
+Visual component library:
+
+- [x] CourtroomVisual.tsx components
+- [x] CourtroomAvatar for judges/attorneys
+- [x] PhaseBanner for current phase
+- [x] SpeakingIndicator with animation
+- [x] ObjectionAlert notifications
+- [x] EvidenceCard with highlights
+- [x] ExhibitSeal for restricted items
+- [x] VerdictReveal animation
+- [x] SVG components (bench, tables, stand)
+
+See PHASE_15_VISUAL_OVERHAUL.md
+
+## ✅ Phase 16 — Complete
+
+Courtroom stage integration:
+
+- [x] CourtroomStage full component
+- [x] Judge bench positioned top center
+- [x] Attorney tables left/right
+- [x] Witness stand area
+- [x] Evidence counter station
+- [x] Phase banner on stage
+- [x] Active speaker glow
+- [x] Objection alert wired
+- [x] Verdict reveal linked
+- [x] Responsive layout
+
+See PHASE_16_COURTROOM_STAGE_INTEGRATION.md
+
+## Phase 17 Future
 
 ### Provider Enhancements
 
 - [ ] Streaming responses
 - [ ] Token usage tracking
-- [ ] Rate limiting
 - [ ] Cost estimation UI
 
-### Model Management
+### Live Model Selection
 
-- [ ] Fine-tuned model selection
+- [ ] In-app model catalog viewer
+- [ ] Model test chat UI
 - [ ] Favorite models
-- [ ] Model history
-
-### UI/UX
-
-- [ ] Dark/light toggle
-- [ ] Responsive mobile view
-- [ ] Keyboard shortcuts
 
 ### Cases
 

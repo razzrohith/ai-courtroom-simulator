@@ -1,5 +1,6 @@
 /**
- * TranscriptPanel — Live transcript display
+ * TranscriptPanel — Live transcript display with court reporter styling
+ * Phase 15: Visual upgrade
  */
 
 import type { TranscriptEntry, AgentRole } from '../types/courtroom';
@@ -9,20 +10,32 @@ interface TranscriptPanelProps {
   currentPhase: string;
 }
 
-const speakerStyles: Record<AgentRole, { bg: string; border: string; icon: string }> = {
-  judge: { bg: 'bg-blue-900/30', border: 'border-l-blue-500', icon: '⚖️' },
-  prosecutor: { bg: 'bg-emerald-900/30', border: 'border-l-emerald-500', icon: '⚔️' },
-  defense: { bg: 'bg-rose-900/30', border: 'border-l-rose-500', icon: '🛡️' },
+const speakerStyles: Record<AgentRole, { bg: string; border: string; icon: string; label: string }> = {
+  judge: { bg: 'bg-yellow-900/20', border: 'border-l-yellow-500', icon: '', label: 'Hon. Judge' },
+  prosecutor: { bg: 'bg-blue-900/20', border: 'border-l-blue-500', icon: '', label: 'Prosecutor' },
+  defense: { bg: 'bg-green-900/20', border: 'border-l-green-500', icon: '', label: 'Defense' },
+};
+
+const speakerBadges: Record<AgentRole, string> = {
+  judge: 'bg-yellow-600',
+  prosecutor: 'bg-blue-600',
+  defense: 'bg-green-600',
 };
 
 export function TranscriptPanel({ transcript, currentPhase }: TranscriptPanelProps) {
   return (
     <div className="bg-courtroom-card rounded-lg border border-gray-700 flex flex-col h-full">
-      <div className="p-4 border-b border-gray-700">
-        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider">
-          📝 Live Transcript
-        </h3>
-        <p className="text-xs text-gray-500 mt-1">Phase: {currentPhase}</p>
+      <div className="p-3 border-b border-gray-700 bg-gradient-to-r from-gray-900 to-gray-800">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium text-yellow-500 uppercase tracking-wider flex items-center gap-2">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" strokeWidth="1.5"/>
+            </svg>
+            Court Transcript
+          </h3>
+          <span className="text-xs text-gray-500">{currentPhase}</span>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -33,28 +46,32 @@ export function TranscriptPanel({ transcript, currentPhase }: TranscriptPanelPro
         ) : (
           transcript.map((entry) => {
             const style = speakerStyles[entry.speakerRole];
+            const badge = speakerBadges[entry.speakerRole];
             return (
               <div
                 key={entry.id}
-                className={`transcript-entry ${style.bg} border-l-4 ${style.border}`}
+                className={`transcript-entry ${style.bg} border-l-4 ${style.border} rounded-r-md`}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <span>{style.icon}</span>
-                  <span className="text-sm font-medium">
+                  {/* Speaker badge */}
+                  <span className={`px-2 py-0.5 rounded text-xs font-semibold text-white ${badge}`}>
+                    {style.label}
+                  </span>
+                  <span className="text-sm font-medium text-gray-200">
                     {entry.speakerName}
                   </span>
-                  <span className="text-xs text-gray-500 ml-auto">
+                  <span className="text-xs text-gray-500 ml-auto font-mono">
                     #{entry.sequenceNumber}
                   </span>
                 </div>
-                <p className="text-sm leading-relaxed">{entry.message}</p>
+                <p className="text-sm leading-relaxed text-gray-300">{entry.message}</p>
                 
                 {/* Evidence references */}
                 {entry.evidenceRef && (
                   <div className="mt-2 flex flex-wrap gap-1">
                     {entry.evidenceRef.split(',').map(ref => (
-                      <span key={ref} className="text-xs px-2 py-0.5 rounded bg-amber-900/30 text-amber-400">
-                        📎 {ref.trim()}
+                      <span key={ref} className="text-xs px-2 py-0.5 rounded bg-amber-900/40 text-amber-400 border border-amber-700/50">
+                        {ref.trim()}
                       </span>
                     ))}
                   </div>
@@ -65,27 +82,27 @@ export function TranscriptPanel({ transcript, currentPhase }: TranscriptPanelPro
                   <div className="mt-2 pt-2 border-t border-gray-700/30 flex flex-wrap gap-1">
                     {/* Streaming/complete status */}
                     {entry.isComplete === false && (
-                      <span className="text-xs px-2 py-0.5 rounded bg-blue-900/30 text-blue-400 animate-pulse">
-                        ⏳ Generating...
+                      <span className="text-xs px-2 py-0.5 rounded bg-blue-900/40 text-blue-400 animate-pulse">
+                        Generating...
                       </span>
                     )}
                     {entry.providerUsed && (
-                      <span className={`text-xs px-2 py-0.5 rounded ${
-                        entry.responseSource === 'real' ? 'bg-green-900/30 text-green-400' :
-                        entry.responseSource === 'fallback' ? 'bg-orange-900/30 text-orange-400' :
-                        'bg-gray-800 text-gray-400'
+                      <span className={`text-xs px-2 py-0.5 rounded font-mono ${
+                        entry.responseSource === 'real' ? 'bg-green-900/40 text-green-400' :
+                        entry.responseSource === 'fallback' ? 'bg-orange-900/40 text-orange-400' :
+                        'bg-gray-700 text-gray-400'
                       }`}>
-                        {entry.providerUsed}/{entry.modelUsed}
+                        {entry.providerUsed}
                       </span>
                     )}
                     {entry.responseSource === 'fallback' && (
-                      <span className="text-xs px-2 py-0.5 rounded bg-red-900/30 text-red-400">
+                      <span className="text-xs px-2 py-0.5 rounded bg-red-900/40 text-red-400">
                         Fallback
                       </span>
                     )}
                     {entry.isComplete && (
-                      <span className="text-xs px-2 py-0.5 rounded bg-gray-800 text-gray-500">
-                        ✓ Complete
+                      <span className="text-xs px-2 py-0.5 rounded bg-gray-700 text-gray-500">
+                        ✓ Done
                       </span>
                     )}
                   </div>

@@ -4,6 +4,7 @@
  */
 
 import type { Evidence } from '../types/courtroom';
+import { EmptyStatePlaceholder } from './visuals/CourtroomVisuals';
 
 interface ExhibitPanelProps {
   exhibits: Evidence[];
@@ -61,6 +62,13 @@ export function ExhibitPanel({ exhibits, showRestricted = false }: ExhibitPanelP
       </div>
 
       <div className="p-4 space-y-3 max-h-[450px] overflow-y-auto">
+        {sortedExhibits.length === 0 && (
+          <EmptyStatePlaceholder 
+            icon="📁" 
+            title="No Exhibits Yet" 
+            message="Evidence will appear here once introduced during the trial." 
+          />
+        )}
         {sortedExhibits.map((exhibit) => {
           const confBadge = getConfBadge(exhibit.confidentiality);
           const statusBadge = getStatusBadge(exhibit.status);

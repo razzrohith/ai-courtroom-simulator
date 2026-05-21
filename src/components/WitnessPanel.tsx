@@ -4,6 +4,7 @@
  */
 
 import type { Witness, WitnessCredibility, CredibilityScore } from '../types/courtroom';
+import { EmptyStatePlaceholder } from './visuals/CourtroomVisuals';
 
 interface WitnessPanelProps {
   witnesses: Witness[];
@@ -30,7 +31,11 @@ export function WitnessPanel({ witnesses }: WitnessPanelProps) {
         <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-2">
           👤 Witness Testimony
         </h3>
-        <p className="text-xs text-gray-500">No witnesses called yet.</p>
+        <EmptyStatePlaceholder 
+          icon="👤" 
+          title="No Witnesses Called" 
+          message="Witnesses will be called to testify during the trial." 
+        />
       </div>
     );
   }

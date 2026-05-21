@@ -17,8 +17,8 @@ interface ProviderRuntimeStatusProps {
 
 const STATUS_CONFIG: Record<ProviderRuntimeStatus, { label: string; color: string; bg: string }> = {
   mock: { label: '✓ Mock Ready', color: 'text-green-400', bg: 'bg-green-900/30' },
-  openrouter_ready: { label: '✓ OpenRouter Ready', color: 'text-blue-400', bg: 'bg-blue-900/30' },
-  openrouter_missing_key: { label: 'Missing OpenRouter Key', color: 'text-yellow-400', bg: 'bg-yellow-900/30' },
+  openrouter_ready: { label: '✓ Provider Ready', color: 'text-blue-400', bg: 'bg-blue-900/30' },
+  openrouter_missing_key: { label: 'Missing API Key', color: 'text-yellow-400', bg: 'bg-yellow-900/30' },
   ollama_ready: { label: '✓ Ollama Ready', color: 'text-purple-400', bg: 'bg-purple-900/30' },
   ollama_unavailable: { label: 'Ollama Unavailable', color: 'text-orange-400', bg: 'bg-orange-900/30' },
   error_fallback_mock: { label: '⚠ Fallback to Mock', color: 'text-red-400', bg: 'bg-red-900/30' },

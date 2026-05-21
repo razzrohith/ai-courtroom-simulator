@@ -1,40 +1,72 @@
 # Roadmap
 
-## Phase 1 ✓ Complete (Current)
+## ✅ Phase 1-13 Complete
 
-- [x] Project scaffolding (React/TypeScript/Vite/Tailwind)
-- [x] Basic UI components
-- [x] State management (courtController)
-- [x] 12-phase progression
-- [x] Mock transcript data
-- [x] Evidence board
-- [x] Verdict panel
-- [x] Agent profiles
-- [x] Provider skeleton
-- [x] Documentation
+- Project scaffolding (React/TypeScript/Vite/Tailwind)
+- Basic UI components
+- State management (courtController)
+- 15-phase progression
+- Mock transcript data
+- Evidence board
+- Verdict panel
+- Agent profiles
+- Provider skeleton / API key management
 
-## Phase 2 Future
+## ✅ Phase 14 — Current
 
-- [ ] Add real providers:
-  - [ ] OpenRouter connector
-  - [ ] OpenAI connector  
-  - [ ] Anthropic Claude connector
-- [ ] Add environment variable handling
-- [ ] Add provider selection UI
-- [ ] Add model selection dropdown per agent
+Live model catalogs and provider runtimes:
 
-## Phase 3 Future
+- [x] OpenRouter live model catalog (/api/v1/models)
+- [x] Ollama local model catalog (/api/tags)
+- [x] OpenAI direct runtime
+- [x] Anthropic direct runtime  
+- [x] Gemini direct runtime
+- [x] LM Studio / custom endpoint support
+- [x] Model filters (free/paid/vision/search)
+- [x] Dynamic model dropdown
+- [x] Refresh button for model lists
+- [x] Accurate status indicators
 
-- [ ] Multiple case support
-- [ ] Custom case upload/creation
-- [ ] Session history/persistence
-- [ ] Export transcript
+See PHASE_14_MODEL_CATALOG_RUNTIME.md
 
-## Phase 4+ Ideas
+## Phase 15 Future
+
+### Provider Enhancements
+
+- [ ] Streaming responses
+- [ ] Token usage tracking
+- [ ] Rate limiting
+- [ ] Cost estimation UI
+
+### Model Management
+
+- [ ] Fine-tuned model selection
+- [ ] Favorite models
+- [ ] Model history
+
+### UI/UX
+
+- [ ] Dark/light toggle
+- [ ] Responsive mobile view
+- [ ] Keyboard shortcuts
+
+### Cases
+
+- [ ] Multiple case templates
+- [ ] Custom case creation UI
+- [ ] Import/export cases
+
+### Sessions
+
+- [ ] Save/restore sessions
+- [ ] Session history
+- [ ] Transcript PDF export
+
+### Ideas (Unscheduled)
 
 - [ ] Voice/TTS output
 - [ ] Animation/visual avatars
-- [ ] Jury/judge panel expansion
+- [ ] Jury panel expansion
 - [ ] Witness simulation
 - [ ] Real-time scoring
-- [ ] Multi-case辩论 support
+- [ ] Multi-case support

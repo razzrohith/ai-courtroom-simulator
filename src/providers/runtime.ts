@@ -1,7 +1,7 @@
 /**
- * Provider Runtime — Unified runtime that selects between Mock, OpenRouter, Ollama
+ * Provider Runtime — Unified runtime that selects between providers
  * 
- * Phase 3: Runtime foundation
+ * Phase 14: Full provider runtime with OpenAI, Anthropic, Gemini
  */
 
 import type { AgentRole, TranscriptEntry, Evidence, CourtPhase } from '../types/courtroom';
@@ -9,6 +9,9 @@ import type { AgentModelConfig, ProviderId } from '../types/providers';
 import { generateMockResponse } from './mockModelProvider';
 import { generateWithOpenRouter, isOpenRouterConfigured, getOpenRouterStatus } from './openRouterProvider';
 import { generateWithOllama, isOllamaAvailable } from './ollamaProvider';
+import { generateWithOpenAI, isOpenAIConfigured, getOpenAIStatus } from './openAIProvider';
+import { generateWithAnthropic, isAnthropicConfigured, getAnthropicStatus } from './anthropicProvider';
+import { generateWithGemini, isGeminiConfigured, getGeminiStatus } from './geminiProvider';
 
 // Provider status for UI
 export type ProviderRuntimeStatus = 
@@ -35,6 +38,24 @@ export async function getProviderRuntimeStatus(providerId: ProviderId): Promise<
       const available = await isOllamaAvailable();
       if (!available) return 'ollama_unavailable';
       return 'ollama_ready';
+    }
+    
+    case 'openai': {
+      const status = getOpenAIStatus();
+      if (status.missingKey) return 'openrouter_missing_key'; // reuse status type
+      return 'openrouter_ready';
+    }
+    
+    case 'anthropic': {
+      const status = getAnthropicStatus();
+      if (status.missingKey) return 'openrouter_missing_key';
+      return 'openrouter_ready';
+    }
+    
+    case 'gemini': {
+      const status = getGeminiStatus();
+      if (status.missingKey) return 'openrouter_missing_key';
+      return 'openrouter_ready';
     }
     
     default:
@@ -104,6 +125,72 @@ export async function generateResponse(params: {
     }
   }
   
+  // OpenAI Direct
+  if (providerId === 'openai') {
+    if (!isOpenAIConfigured()) {
+      console.warn('OpenAI API key not configured, falling back to mock');
+      return generateMockResponse({ role, phase, prompt });
+    }
+    
+    try {
+      return await generateWithOpenAI({
+        role,
+        model: config.model,
+        phase,
+        transcript: params.transcript,
+        evidence: params.evidence,
+        prompt,
+      });
+    } catch (error) {
+      console.error('OpenAI error, falling back to mock:', error);
+      return generateMockResponse({ role, phase, prompt });
+    }
+  }
+  
+  // Anthropic
+  if (providerId === 'anthropic') {
+    if (!isAnthropicConfigured()) {
+      console.warn('Anthropic API key not configured, falling back to mock');
+      return generateMockResponse({ role, phase, prompt });
+    }
+    
+    try {
+      return await generateWithAnthropic({
+        role,
+        model: config.model,
+        phase,
+        transcript: params.transcript,
+        evidence: params.evidence,
+        prompt,
+      });
+    } catch (error) {
+      console.error('Anthropic error, falling back to mock:', error);
+      return generateMockResponse({ role, phase, prompt });
+    }
+  }
+  
+  // Gemini
+  if (providerId === 'gemini') {
+    if (!isGeminiConfigured()) {
+      console.warn('Gemini API key not configured, falling back to mock');
+      return generateMockResponse({ role, phase, prompt });
+    }
+    
+    try {
+      return await generateWithGemini({
+        role,
+        model: config.model,
+        phase,
+        transcript: params.transcript,
+        evidence: params.evidence,
+        prompt,
+      });
+    } catch (error) {
+      console.error('Gemini error, falling back to mock:', error);
+      return generateMockResponse({ role, phase, prompt });
+    }
+  }
+  
   // Unknown provider, use mock
   console.warn(`Unknown provider ${providerId}, using mock`);
   return generateMockResponse({ role, phase, prompt });
@@ -118,6 +205,12 @@ export async function isProviderReady(providerId: ProviderId): Promise<boolean> 
       return isOpenRouterConfigured();
     case 'ollama':
       return isOllamaAvailable();
+    case 'openai':
+      return isOpenAIConfigured();
+    case 'anthropic':
+      return isAnthropicConfigured();
+    case 'gemini':
+      return isGeminiConfigured();
     default:
       return false;
   }

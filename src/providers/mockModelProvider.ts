@@ -100,6 +100,17 @@ export function generateMockResponse(params: {
       prosecutor: '',
       defense: '',
     },
+    // Phase 9: New phases
+    witness_testimony: {
+      judge: 'The court will now take testimony. Please proceed with direct examination.',
+      prosecutor: 'I call my witness to the stand.',
+      defense: 'I will cross-examine this witness.',
+    },
+    motion_hearing: {
+      judge: 'The court will hear any motions at this time.',
+      prosecutor: 'Your Honor, we make a motion to admit Exhibit E03.',
+      defense: 'Your Honor, we make a motion to dismiss.',
+    },
     case_summary: {
       judge: 'This concludes the proceedings.',
       prosecutor: '',

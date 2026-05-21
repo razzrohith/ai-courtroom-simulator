@@ -14,6 +14,8 @@ export const SPEAKER_ORDER: Record<CourtPhase, AgentRole[]> = {
   evidence_presentation: ['prosecutor', 'defense'],
   objection_ruling: ['judge'],
   cross_examination: ['prosecutor', 'defense'],
+  witness_testimony: ['prosecutor', 'defense', 'judge'],
+  motion_hearing: ['prosecutor', 'defense', 'judge'],
   rebuttal: ['prosecutor', 'defense'],
   closing_arguments: ['prosecutor', 'defense'],
   judge_deliberation: ['judge'],
@@ -30,6 +32,8 @@ export const JUDGE_TRANSITIONS: Record<CourtPhase, string> = {
   evidence_presentation: "We will now move to the evidence presentation phase. The parties may present documentary evidence and witnesses may be called. Counsel, approach the evidence board.",
   objection_ruling: "Before we proceed to cross-examination, the court will hear any objections to evidence already presented. Counsel, state your objections now.",
   cross_examination: "We will now move to cross-examination. Each counsel may question the other party's witnesses. Objections to questions must be raised immediately.",
+  witness_testimony: "We will now take witness testimony. The court calls its first witness. Counsel, you may conduct direct examination. The opposing counsel will have opportunity for cross-examination.",
+  motion_hearing: "The court will now hear any motions. Counsel, if you wish to make a motion to strike, dismiss, or regarding evidence, state your motion now.",
   rebuttal: "Now we move to the rebuttal phase. The plaintiff may respond to the defendant's arguments. The defendant may then provide final countering points.",
   closing_arguments: "We will now hear closing arguments. Both counsel, summarize your positions. The court will consider all evidence and testimony presented.",
   judge_deliberation: "The court will now deliberate. All rises, please. This matter is taken under advisement.",
@@ -37,9 +41,14 @@ export const JUDGE_TRANSITIONS: Record<CourtPhase, string> = {
   case_summary: "This concludes the proceedings. The Court will now summarize the outcome and issue its final ruling.",
 };
 
-// Phase instruction context for agents - tells each agent what to do
+// Phase instruction context for agents
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const PHASE_INSTRUCTIONS: any = {
+  case_setup: {
+    judge: 'You are the judge. Begin case setup.',
+    prosecutor: 'Prepare your case materials.',
+    defense: 'Prepare your defense.',
+  },
   court_opening: {
     judge: "You are Presiding Judge Sarah Mitchell. Open court, welcome parties, state case info, have counsel state appearances. Be formal and procedural.",
     prosecutor: "You are Attorney Rebecca Chen for Apex Logistics. Introduce yourself. Wait for your opening statement phase.",
@@ -64,6 +73,16 @@ export const PHASE_INSTRUCTIONS: any = {
     judge: "You are the judge. Control questioning. Allow both sides to test证据 credibility. Rule on objections.",
     prosecutor: "Question defendant's witnesses. Challenge their credibility. Don't lead inappropriately.",
     defense: "Same - question plaintiff's witnesses. Challenge account of events.",
+  },
+  witness_testimony: {
+    judge: "You are the judge. Conduct witness examination. Allow direct and cross examination. Assess credibility.",
+    prosecutor: "Call your witness for direct examination. Establish key facts. Present testimony favorable to your case.",
+    defense: "Cross-examine opposing witness. Challenge inconsistencies. Attack credibility.",
+  },
+  motion_hearing: {
+    judge: "You are the judge. Hear motions. Consider legal basis. Rule on each motion.",
+    prosecutor: "Make any necessary motions: motion to admit evidence, motion to exclude, motion to strike improper testimony.",
+    defense: "Present your motions: motion to dismiss, motion to exclude, motion to strike.",
   },
   closing_arguments: {
     judge: "You are the judge. Listen to both summaries. Prepare to deliberate.",

@@ -18,6 +18,8 @@ import { CaseSummaryReport } from './CaseSummaryReport';
 import { ProviderSettings } from './ProviderSettings';
 import { ProviderRuntimeStatusPanel } from './ProviderRuntimeStatus';
 import { ObjectionHistoryPanel } from './ObjectionHistoryPanel';
+import { WitnessPanel } from './WitnessPanel';
+import { MotionPanel } from './MotionPanel';
 
 interface AgentModelInfo {
   providerId: string;
@@ -42,7 +44,7 @@ interface CourtroomLayoutProps {
 }
 
 export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, onSave, onLoad, onClear, onCaseUpdate, onObjectionRuling, isGenerating = false, hasSavedSession = false }: CourtroomLayoutProps) {
-  const { currentPhase, currentSpeaker, participants, transcript, evidence, verdict, case: caseData, isActive, objectionHistory } = state;
+  const { currentPhase, currentSpeaker, participants, transcript, evidence, verdict, case: caseData, isActive, objectionHistory, witnesses, motionHistory } = state;
   const phaseLabel = PHASE_LABELS[currentPhase];
   const [showSettings, setShowSettings] = useState(false);
   const [showTimeline, setShowTimeline] = useState(false);
@@ -220,7 +222,21 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, o
                 )}
                 
                 <ObjectionHistoryPanel objections={objectionHistory} onRuling={onObjectionRuling} />
-                
+
+                {/* Phase 9: Witness and Motion panels */}
+                {(currentPhase === 'witness_testimony' || currentPhase === 'motion_hearing' || currentPhase === 'cross_examination') && (
+                  <>
+                    <WitnessPanel witnesses={witnesses} />
+                    <MotionPanel 
+                      motions={motionHistory} 
+                      onRuling={(mid, granted) => { 
+                        // Simple handler - will integrate with parent
+                        console.log('Motion ruling:', mid, granted); 
+                      }} 
+                    />
+                  </>
+                )}
+
                 {/* Phase 8: Case summary report */}
                 <CaseSummaryReport state={state} />
               </>

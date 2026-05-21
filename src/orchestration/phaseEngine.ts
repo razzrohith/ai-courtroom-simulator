@@ -55,6 +55,8 @@ export function getSpeakersForPhase(phase: CourtPhase): AgentRole[] {
     evidence_presentation: ['prosecutor', 'judge', 'defense', 'judge'],
     objection_ruling: ['judge'],
     cross_examination: ['prosecutor', 'defense', 'judge'],
+    witness_testimony: ['prosecutor', 'defense', 'judge'],
+    motion_hearing: ['prosecutor', 'defense', 'judge'],
     rebuttal: ['prosecutor', 'defense'],
     closing_arguments: ['prosecutor', 'defense'],
     judge_deliberation: ['judge'],

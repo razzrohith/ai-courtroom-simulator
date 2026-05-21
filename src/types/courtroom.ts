@@ -10,6 +10,8 @@ export type CourtPhase =
   | 'evidence_presentation'
   | 'objection_ruling'
   | 'cross_examination'
+  | 'witness_testimony'
+  | 'motion_hearing'
   | 'rebuttal'
   | 'closing_arguments'
   | 'judge_deliberation'
@@ -24,6 +26,8 @@ export const COURT_PHASES: CourtPhase[] = [
   'evidence_presentation',
   'objection_ruling',
   'cross_examination',
+  'witness_testimony',
+  'motion_hearing',
   'rebuttal',
   'closing_arguments',
   'judge_deliberation',
@@ -39,6 +43,8 @@ export const PHASE_LABELS: Record<CourtPhase, string> = {
   evidence_presentation: 'Evidence Presentation',
   objection_ruling: 'Objection & Ruling',
   cross_examination: 'Cross Examination',
+  witness_testimony: 'Witness Testimony',
+  motion_hearing: 'Motion Hearing',
   rebuttal: 'Rebuttal',
   closing_arguments: 'Closing Arguments',
   judge_deliberation: 'Judge Deliberation',
@@ -89,6 +95,41 @@ export interface Evidence {
   lastReferencedBy?: AgentRole;
   referenceCount?: number;
   objectionId?: string; // linked objection if status changed from ruling
+  motionId?: string; // linked motion if status changed from motion
+}
+
+// Phase 9: Witness types
+export type WitnessCredibility = 'credible' | 'challenged' | 'inconsistent' | 'corroborated';
+
+export interface Witness {
+  id: string;
+  name: string;
+  role: 'prosecution' | 'defense' | 'court';
+  title: string;
+  summary: string;
+  testimony?: string;
+  credibility: WitnessCredibility;
+  // Direct examination by prosecution/defense
+  directExamination?: string;
+  // Cross-examination by opposing counsel
+  crossExamination?: string;
+  // Credibility notes
+  credibilityNotes?: string;
+}
+
+// Phase 9: Motion types
+export type MotionType = 'motion_to_strike' | 'motion_to_dismiss' | 'motion_to_admit_evidence' | 'motion_to_exclude_evidence';
+export type MotionStatus = 'pending' | 'granted' | 'denied';
+
+export interface MotionEvent {
+  id: string;
+  motionType: MotionType;
+  raisedBy: AgentRole;
+  reason: string;
+  targetEvidence?: string;
+  status: MotionStatus;
+  rulingNote?: string;
+  phase: CourtPhase;
 }
 
 export type VerdictDecision = 'plaintiff_wins' | 'defense_wins' | 'partial_verdict' | 'dismissed';
@@ -116,6 +157,9 @@ export interface CaseData {
 
 export interface CourtState {
   objectionHistory: ObjectionEvent[];
+  // Phase 9: Witnesses and motions
+  witnesses: Witness[];
+  motionHistory: MotionEvent[];
   currentPhase: CourtPhase;
   currentSpeaker: AgentRole | null;
   participants: AgentParticipant[];

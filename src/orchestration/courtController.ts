@@ -9,13 +9,34 @@ import type {
   AgentRole, 
   TranscriptEntry, 
   Evidence,
-  AgentParticipant 
+  AgentParticipant,
+  Witness 
 } from '../types/courtroom';
 import { COURT_PHASES } from '../types/courtroom';
 import { SAMPLE_CASE } from '../data/sampleCase';
 import { MOCK_MESSAGES, MOCK_VERDICT } from '../data/mockCourtFlow';
 import { createMockConfig } from '../providers/modelProviderTypes';
 import { getSpeakersForPhase, getNextSpeaker } from './phaseEngine';
+
+// Sample witnesses - Phase 9
+const DEFAULT_WITNESSES: Witness[] = [
+  {
+    id: 'wit-001',
+    name: 'James Morrison',
+    role: 'prosecution',
+    title: 'Apex Logistics Operations Manager',
+    summary: 'Managing delivery operations for Apex during relevant period.',
+    credibility: 'credible',
+  },
+  {
+    id: 'wit-002',
+    name: 'Linda Patterson',
+    role: 'defense',
+    title: 'Northstar Procurement Director',
+    summary: 'In charge of procurement at Northstar during contract period.',
+    credibility: 'credible',
+  },
+];
 
 /**
  * Initial court state
@@ -47,6 +68,8 @@ export function createInitialState(): CourtState {
 
   return {
     objectionHistory: [],
+    witnesses: [...DEFAULT_WITNESSES],
+    motionHistory: [],
     currentPhase: 'case_setup',
     currentSpeaker: null,
     participants,

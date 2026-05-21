@@ -1,9 +1,9 @@
 /**
  * Court Controller Async — Async state machine with provider runtime
- * Phase 7: Judge transitions, objection logic, improved verdict
+ * Phase 9: Witness testimony and motion flow
  */
 
-import type { CourtState, AgentRole, TranscriptEntry, Evidence, AgentParticipant, ObjectionEvent } from '../types/courtroom';
+import type { CourtState, AgentRole, TranscriptEntry, Evidence, AgentParticipant, ObjectionEvent, Witness } from '../types/courtroom';
 import { COURT_PHASES } from '../types/courtroom';
 import { SAMPLE_CASE } from '../data/sampleCase';
 import { createMockConfig } from '../providers/modelProviderTypes';
@@ -11,13 +11,45 @@ import { getSpeakersForPhase, getNextSpeaker } from './phaseEngine';
 import { generateAgentResponse, parseEvidenceReferences } from '../providers/agentService';
 import { JUDGE_TRANSITIONS, shouldTriggerObjection, MOCK_VERDICT } from '../data/mockCourtFlow';
 
+// Sample witnesses for the case
+const DEFAULT_WITNESSES: Witness[] = [
+  {
+    id: 'wit-001',
+    name: 'James Morrison',
+    role: 'prosecution',
+    title: 'Apex Logistics Operations Manager',
+    summary: 'Managing delivery operations and logistics for Apex during the relevant period.',
+    credibility: 'credible',
+  },
+  {
+    id: 'wit-002',
+    name: 'Linda Patterson',
+    role: 'defense',
+    title: 'Northstar Procurement Director',
+    summary: 'In charge of procurement and vendor relations at Northstar during the contract period.',
+    credibility: 'credible',
+  },
+];
+
 export function createInitialState(): CourtState {
   const participants: AgentParticipant[] = [
     { id: 'judge-001', role: 'judge', name: 'Honorable Sarah Mitchell', title: 'Presiding Judge', modelConfig: createMockConfig('judge') },
     { id: 'prosecutor-001', role: 'prosecutor', name: 'Attorney Rebecca Chen', title: 'Counsel for Plaintiff', modelConfig: createMockConfig('prosecutor') },
     { id: 'defense-001', role: 'defense', name: 'Attorney Marcus Williams', title: 'Counsel for Defendant', modelConfig: createMockConfig('defense') },
   ];
-  return { currentPhase: 'case_setup', objectionHistory: [], currentSpeaker: null, participants, transcript: [], evidence: [...SAMPLE_CASE.evidenceItems], verdict: null, case: SAMPLE_CASE, isActive: false };
+  return {
+    currentPhase: 'case_setup',
+    objectionHistory: [],
+    witnesses: [...DEFAULT_WITNESSES],
+    motionHistory: [],
+    currentSpeaker: null,
+    participants,
+    transcript: [],
+    evidence: [...SAMPLE_CASE.evidenceItems],
+    verdict: null,
+    case: SAMPLE_CASE,
+    isActive: false
+  };
 }
 
 export function startSimulation(state: CourtState): CourtState {

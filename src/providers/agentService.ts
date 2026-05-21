@@ -109,7 +109,7 @@ function getPhaseInstruction(phase: CourtPhase, role: AgentRole): string {
   }
 
   // Fallback to simple instructions
-  const judgeInstr: Record<CourtPhase, string> = {
+  const judgeInstr = {
     case_setup: 'Confirm case is ready to proceed.',
     court_opening: 'Open court formally. State case number and nature. Have counsel state appearances.',
     plaintiff_opening: 'Acknowledge plaintiff opening. Note key points. Invite defense.',
@@ -117,14 +117,16 @@ function getPhaseInstruction(phase: CourtPhase, role: AgentRole): string {
     evidence_presentation: 'Oversee evidence introduction. Note relevance. Admit or exclude as appropriate.',
     objection_ruling: 'Rule on any objections promptly and decisively. State reasoning briefly.',
     cross_examination: 'Control questioning. Allow relevant queries. Sustain or overrule.',
+    witness_testimony: 'Supervise testimony. Allow examination. Assess credibility.',
+    motion_hearing: 'Hear motions. Consider legal basis. Rule.',
     rebuttal: 'Allow rebuttal. Keep focused on disputed facts.',
     closing_arguments: 'Hear closing summaries. Note key arguments. Prepare deliberation.',
     judge_deliberation: 'Consider all evidence and arguments. Apply law fairly. Reach just verdict.',
     verdict: 'Deliver verdict clearly. State reasoning. Issue final ruling.',
     case_summary: 'Summarize case outcome. Thank counsel. Dismiss court.',
-  };
+  } as const;
 
-  const lawyerInstr: Record<CourtPhase, string> = {
+  const lawyerInstr = {
     case_setup: 'Be prepared. Know your case facts and evidence.',
     court_opening: 'Stand ready. State your appearance when recognized.',
     plaintiff_opening: 'Deliver clear opening. State facts, damages, relief sought. Engage jury.',
@@ -132,6 +134,8 @@ function getPhaseInstruction(phase: CourtPhase, role: AgentRole): string {
     evidence_presentation: 'Present compelling evidence. Connect to key facts. Establish foundation.',
     objection_ruling: 'Knowingly raise valid objections. Cite rules.',
     cross_examination: 'Question effectively. Establish favourable facts. Impeach credibility.',
+    witness_testimony: 'Conduct direct or cross-examination. Establish facts.',
+    motion_hearing: 'Make appropriate motions. Cite legal grounds.',
     rebuttal: 'Counter defense arguments with evidence. Address weaknesses.',
     closing_arguments: 'Summarize favourable evidence. Attack defense case. Request favourable verdict.',
     judge_deliberation: 'Wait respectfully. Accept verdict.',

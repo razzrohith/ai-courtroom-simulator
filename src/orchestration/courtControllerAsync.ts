@@ -1,6 +1,6 @@
 /**
  * Court Controller Async — Async state machine with provider runtime
- * Phase 5: Evidence parsing and streaming
+ * Phase 5.6: Visible typewriter streaming
  */
 
 import type { CourtState, AgentRole, TranscriptEntry, Evidence, AgentParticipant } from '../types/courtroom';
@@ -75,7 +75,7 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
     caseSummary: state.case.claimSummary 
   });
 
-  // Parse evidence references from message
+  // Parse evidence references
   const evidenceRefs = parseEvidenceReferences(result.message);
 
   // Update evidence status

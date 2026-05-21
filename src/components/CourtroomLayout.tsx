@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import type { CourtState } from '../types/courtroom';
 import { PHASE_LABELS } from '../types/courtroom';
 import type { AgentRole } from '../types/courtroom';
-import { loadCourtroomConfig, CourtroomModelConfig, isProviderPlaceholder, AgentModelConfig } from '../types/providers';
+import { loadCourtroomConfig, CourtroomModelConfig, isProviderPlaceholder, AgentModelConfig, DEFAULT_MODEL_CONFIG } from '../types/providers';
 import { AgentPanel } from './AgentPanel';
 import { TranscriptPanel } from './TranscriptPanel';
 import { EvidenceBoard } from './EvidenceBoard';
@@ -14,6 +14,7 @@ import { PhaseTimeline } from './PhaseTimeline';
 import { VerdictPanel } from './VerdictPanel';
 import { CaseSetupPanel } from './CaseSetupPanel';
 import { ProviderSettings } from './ProviderSettings';
+import { ProviderRuntimeStatusPanel } from './ProviderRuntimeStatus';
 
 interface AgentModelInfo {
   providerId: string;
@@ -165,6 +166,9 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset }: Courtro
           setModelConfig(loadCourtroomConfig());
         }} 
       />
+      
+      {/* Provider Runtime Status */}
+      <ProviderRuntimeStatusPanel configs={modelConfig !== null ? modelConfig : DEFAULT_MODEL_CONFIG} />
     </div>
   );
 }

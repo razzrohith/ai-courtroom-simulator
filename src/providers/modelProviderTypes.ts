@@ -33,7 +33,7 @@ export interface IModelProvider {
    * @param config - Model configuration
    * @returns Generated text response
    */
-  generate(prompt: string, config: AgentModelConfig): Promise<string>;
+  generate(prompt: string): Promise<string>;
   
   /**
    * Check if provider is healthy/available

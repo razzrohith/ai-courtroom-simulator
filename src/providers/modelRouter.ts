@@ -44,26 +44,26 @@ export async function routeGenerate(
   
   if (!provider) {
     console.warn(`Provider ${config.provider.id} not found, falling back to mock`);
-    return mockProvider.generate(prompt, config);
+    return mockProvider.generate(prompt);
   }
   
   // Check mode - only mock is functional right now
   if (config.mode === 'mock') {
-    return provider.generate(prompt, config);
+    return provider.generate(prompt);
   }
   
   // For other modes (local/api), show placeholder message
   if (config.mode === 'api') {
     console.log(`[Router] API mode requested for ${config.provider.name} - using mock fallback`);
-    return mockProvider.generate(prompt, config);
+    return mockProvider.generate(prompt);
   }
   
   if (config.mode === 'local') {
     console.log(`[Router] Local mode requested for ${config.provider.name} - using mock fallback`);
-    return mockProvider.generate(prompt, config);
+    return mockProvider.generate(prompt);
   }
   
-  return provider.generate(prompt, config);
+  return provider.generate(prompt);
 }
 
 /**

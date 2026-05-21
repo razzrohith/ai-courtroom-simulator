@@ -84,6 +84,11 @@ export interface Evidence {
   introducedBy: AgentRole;
   status: EvidenceStatus;
   content: string;
+  // Phase 8: Timeline tracking (optional for backward compat)
+  firstReferencedPhase?: CourtPhase;
+  lastReferencedBy?: AgentRole;
+  referenceCount?: number;
+  objectionId?: string; // linked objection if status changed from ruling
 }
 
 export type VerdictDecision = 'plaintiff_wins' | 'defense_wins' | 'partial_verdict' | 'dismissed';

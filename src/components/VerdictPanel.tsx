@@ -1,11 +1,14 @@
 /**
  * VerdictPanel — Display final verdict and reasoning
+ * Phase 8: Enhanced with evidence and objection impact
  */
 
-import type { Verdict, VerdictDecision } from '../types/courtroom';
+import type { Verdict, VerdictDecision, Evidence, ObjectionEvent } from '../types/courtroom';
 
 interface VerdictPanelProps {
   verdict: Verdict;
+  evidence?: Evidence[];
+  objections?: ObjectionEvent[];
 }
 
 const decisionLabels: Record<VerdictDecision, { label: string; class: string }> = {
@@ -15,8 +18,13 @@ const decisionLabels: Record<VerdictDecision, { label: string; class: string }> 
   dismissed: { label: 'Case Dismissed', class: 'bg-gray-700 text-white' },
 };
 
-export function VerdictPanel({ verdict }: VerdictPanelProps) {
+export function VerdictPanel({ verdict, evidence, objections }: VerdictPanelProps) {
   const decision = decisionLabels[verdict.decision];
+  
+  // Count evidence by status
+  const acceptedCount = evidence?.filter(e => e.status === 'accepted').length || 0;
+  const disputedCount = evidence?.filter(e => e.status === 'disputed').length || 0;
+  const objectionImpact = objections?.filter(o => o.status !== 'pending').length || 0;
 
   return (
     <div className="bg-courtroom-card rounded-lg border border-gray-700">
@@ -107,6 +115,24 @@ export function VerdictPanel({ verdict }: VerdictPanelProps) {
             </ul>
           </div>
         </div>
+
+        {/* Phase 8: Evidence and objection impact */}
+        {(acceptedCount > 0 || disputedCount > 0 || objectionImpact > 0) && (
+          <div className="pt-3 border-t border-gray-700">
+            <h4 className="text-sm font-medium text-gray-400 mb-2">📊 Evidence Impact</h4>
+            <div className="flex gap-4 text-xs">
+              {acceptedCount > 0 && (
+                <span className="text-green-400">✓ Accepted: {acceptedCount}</span>
+              )}
+              {disputedCount > 0 && (
+                <span className="text-red-400">✗ Disputed: {disputedCount}</span>
+              )}
+              {objectionImpact > 0 && (
+                <span className="text-yellow-400">⚖️ Rulings: {objectionImpact}</span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

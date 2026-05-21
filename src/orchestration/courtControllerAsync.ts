@@ -80,13 +80,22 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
 
   // Parse evidence references
   const evidenceRefs = parseEvidenceReferences(result.message);
-
-  // Update evidence status
+  
+  // Update evidence - status and timeline tracking
   let updatedEvidence = [...state.evidence];
+  const currentPhase = state.currentPhase;
   evidenceRefs.forEach(ref => {
     const idx = state.evidence.findIndex(e => e.id.toUpperCase() === ref.toUpperCase());
-    if (idx >= 0 && state.evidence[idx].status === 'pending') {
-      updatedEvidence[idx] = { ...updatedEvidence[idx], status: 'introduced' };
+    if (idx >= 0) {
+      const ev = state.evidence[idx];
+      const newCount = (ev.referenceCount || 0) + 1;
+      updatedEvidence[idx] = {
+        ...ev,
+        status: ev.status === 'pending' ? 'introduced' : ev.status,
+        referenceCount: newCount,
+        firstReferencedPhase: ev.firstReferencedPhase || currentPhase,
+        lastReferencedBy: speakerRole,
+      };
     }
   });
 

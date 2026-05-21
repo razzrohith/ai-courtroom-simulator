@@ -29,6 +29,7 @@ export const SAMPLE_CASE: CaseData = {
       type: 'document',
       summary: 'Master supply contract signed March 15, 2024 between both parties outlining delivery terms, payment schedule (Net 45), and force majeure clause.',
       introducedBy: 'prosecutor',
+      referenceCount: 0,
       status: 'pending',
       content: 'This Supply Agreement ("Agreement") is entered into by and between Apex Logistics Inc. ("Supplier") and Northstar Retail Corp. ("Buyer")... Section 4.2 Delivery Schedule: Supplier shall deliver monthly shipments by the 15th of each calendar quarter... Section 7.1 Force Majeure: Neither party shall be liable for delays caused by circumstances beyond reasonable control...'
     },
@@ -38,6 +39,7 @@ export const SAMPLE_CASE: CaseData = {
       type: 'document',
       summary: 'Official delivery confirmation records showing dates and signatures for all Q2 2024 shipments.',
       introducedBy: 'prosecutor',
+      referenceCount: 0,
       status: 'pending',
       content: 'Delivery Log - Q2 2024: [Apr] Shipment #A-4521 - Ship Date: Apr 19 (Delayed) - Received: Apr 19 - Notes: Weather-related delay at origin... [May] Shipment #A-4632 - Ship Date: May 13 (On Schedule) - Received: May 14 - Weather hold... [Jun] Shipment #A-4745 - Ship Date: Jun 12 (On Time) - Received: Jun 12 - Full delivery.'
     },
@@ -47,6 +49,7 @@ export const SAMPLE_CASE: CaseData = {
       type: 'email',
       summary: 'Email from Apex to Northstar notifying of April delay with force majeure documentation attached.',
       introducedBy: 'prosecutor',
+      referenceCount: 0,
       status: 'pending',
       content: 'From: john.smith@apexlogistics.com To: procurement@northstarretail.com Date: April 16, 2024 Subject: Force Majeure Notice - Q2 Deliveries Dear Northstar Team, We are writing to notify you that our April shipment will be delayed by approximately 4 days due to an unforeseen manufacturing issue at our primary supplier facility. Please find attached the force majeure documentation. We appreciate your understanding.'
     },
@@ -56,6 +59,7 @@ export const SAMPLE_CASE: CaseData = {
       type: 'document',
       summary: 'Formal letter from Northstar refusing payment citing breach due to consistent delivery delays.',
       introducedBy: 'defense',
+      referenceCount: 0,
       status: 'pending',
       content: 'June 30, 2024 Apex Logistics Inc. Attn: Accounts Receivable Re: Payment Refusal - Invoice #INV-2024-Q2 Dear Apex, After careful review, Northstar Retail must refuse payment for Q2 2024 shipments. Consistent delivery delays constitute material breach of our Supply Agreement. Total withheld: $247,500. We reserve all rights under Section 9.3 of the Agreement.'
     },
@@ -65,6 +69,7 @@ export const SAMPLE_CASE: CaseData = {
       type: 'document',
       summary: 'Internal Northstar memo showing received inventory was sold during dispute period.',
       introducedBy: 'defense',
+      referenceCount: 0,
       status: 'pending',
       content: 'Internal Memo - July 5, 2024 From: Operations Manager To: Legal Department RE: Inventory Status Note: All Q2 shipments from Apex have been received and processed. Inventory currently allocated to: - Store distribution: 60% - Online fulfillment: 25% - Returned to warehouse: 15% Total retail value of received goods: ~$310,000'
     },

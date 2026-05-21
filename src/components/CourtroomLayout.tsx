@@ -10,9 +10,11 @@ import { loadCourtroomConfig, CourtroomModelConfig, isProviderPlaceholder, Agent
 import { AgentPanel } from './AgentPanel';
 import { TranscriptPanel } from './TranscriptPanel';
 import { EvidenceBoard } from './EvidenceBoard';
+import { EvidenceTimeline } from './EvidenceTimeline';
 import { PhaseTimeline } from './PhaseTimeline';
 import { VerdictPanel } from './VerdictPanel';
 import { CaseSetupPanel } from './CaseSetupPanel';
+import { CaseSummaryReport } from './CaseSummaryReport';
 import { ProviderSettings } from './ProviderSettings';
 import { ProviderRuntimeStatusPanel } from './ProviderRuntimeStatus';
 import { ObjectionHistoryPanel } from './ObjectionHistoryPanel';
@@ -43,6 +45,7 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, o
   const { currentPhase, currentSpeaker, participants, transcript, evidence, verdict, case: caseData, isActive, objectionHistory } = state;
   const phaseLabel = PHASE_LABELS[currentPhase];
   const [showSettings, setShowSettings] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(false);
   const [modelConfig, setModelConfig] = useState<CourtroomModelConfig | null>(null);
 
   useEffect(() => {
@@ -188,7 +191,7 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, o
             <PhaseTimeline currentPhase={currentPhase} />
             <div className="h-[500px]">
               {verdict && currentPhase === 'verdict' ? (
-                <VerdictPanel verdict={verdict} />
+                <VerdictPanel verdict={verdict} evidence={evidence} objections={objectionHistory} />
               ) : (
                 <TranscriptPanel transcript={currentPhaseTranscript} currentPhase={phaseLabel} />
               )}
@@ -200,8 +203,26 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, o
               <CaseSetupPanel caseData={caseData} onUpdateCase={onCaseUpdate} />
             ) : (
               <>
-                <EvidenceBoard evidence={evidence} />
+                {/* Phase 8: Add toggle for evidence timeline or standard view */}
+                <div className="flex gap-2 mb-2">
+                  <button
+                    onClick={() => setShowTimeline(!showTimeline)}
+                    className={`text-xs px-2 py-1 rounded ${showTimeline ? 'bg-blue-700' : 'bg-gray-700'} text-gray-300`}
+                  >
+                    {showTimeline ? '📊 Timeline' : '📋 Evidence'}
+                  </button>
+                </div>
+                
+                {showTimeline ? (
+                  <EvidenceTimeline evidence={evidence} />
+                ) : (
+                  <EvidenceBoard evidence={evidence} />
+                )}
+                
                 <ObjectionHistoryPanel objections={objectionHistory} onRuling={onObjectionRuling} />
+                
+                {/* Phase 8: Case summary report */}
+                <CaseSummaryReport state={state} />
               </>
             )}
           </div>

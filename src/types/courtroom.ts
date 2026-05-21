@@ -69,6 +69,9 @@ export interface TranscriptEntry {
   providerUsed?: string;
   modelUsed?: string;
   responseSource?: 'mock' | 'real' | 'fallback';
+  // Streaming metadata (Phase 5)
+  isComplete?: boolean;
+  streamedChars?: number;
 }
 
 export type EvidenceStatus = 'pending' | 'introduced' | 'disputed' | 'accepted' | 'rejected';
@@ -137,4 +140,13 @@ export interface AgentModelConfig {
   provider: ModelProviderType;
   model: string;
   mode: 'mock' | 'local' | 'api';
+}
+
+// Courtroom context for memory management (Phase 5)
+export interface CourtroomContext {
+  caseSummary: string;
+  currentPhase: CourtPhase;
+  recentTranscript: TranscriptEntry[];
+  relevantEvidence: Evidence[];
+  objectionHistory: ObjectionEvent[];
 }

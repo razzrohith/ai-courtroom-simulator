@@ -87,7 +87,7 @@ export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo 
         <div className="flex items-center justify-between">
           <span>Provider:</span>
           <span className="text-gray-400">
-            {modelInfo?.providerId || participant.modelConfig.provider.name}
+            {modelInfo?.providerId || participant.modelConfig.model}
           </span>
         </div>
         <div className="flex items-center justify-between">

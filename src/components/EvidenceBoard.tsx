@@ -3,6 +3,7 @@
  */
 
 import type { Evidence, EvidenceStatus } from '../types/courtroom';
+import { EmptyStatePlaceholder } from './visuals/CourtroomVisuals';
 
 interface EvidenceBoardProps {
   evidence: Evidence[];
@@ -37,7 +38,13 @@ export function EvidenceBoard({ evidence }: EvidenceBoardProps) {
       </div>
 
       <div className="p-4 grid gap-3 max-h-[400px] overflow-y-auto">
-        {evidence.map((item) => {
+        {evidence.length === 0 ? (
+          <EmptyStatePlaceholder 
+            icon="📋" 
+            title="No Evidence Yet" 
+            message="Evidence will be introduced during the trial." 
+          />
+        ) : evidence.map((item) => {
           const status = statusStyles[item.status];
           return (
             <div

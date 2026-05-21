@@ -10,8 +10,8 @@ import type { TranscriptEntry, AgentRole } from '../types/courtroom';
 const typewriterState = new Map<string, { complete: boolean }>();
 
 function useTypewriter(fullText: string, entryId: string) {
-  const [displayedText, setDisplayedText] = useState(fullText);
-  const [isComplete, setIsComplete] = useState(true);
+  const [displayedText, setDisplayedText] = useState('');
+  const [isComplete, setIsComplete] = useState(false);
   const stateRef = useRef(typewriterState.get(entryId));
 
   useEffect(() => {

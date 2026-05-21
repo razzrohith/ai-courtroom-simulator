@@ -225,3 +225,33 @@ export async function* streamAgentResponse(params: {
     }
   }
 }
+
+/**
+ * Parse evidence references from generated text
+ * Looks for patterns like "E1", "Evidence 1", "Exhibit A"
+ */
+export function parseEvidenceReferences(message: string): string[] {
+  const refs: string[] = [];
+  
+  // Match E1, E2, E3 patterns
+  const ePattern = /\b(E\d+)\b/gi;
+  let match;
+  while ((match = ePattern.exec(message)) !== null) {
+    refs.push(match[1].toUpperCase());
+  }
+  
+  // Match Exhibit patterns
+  const exhibitPattern = /\bExhibit\s+([A-Z])\b/gi;
+  while ((match = exhibitPattern.exec(message)) !== null) {
+    refs.push(`E${match[1].charCodeAt(0) - 64}`);
+  }
+  
+  // Match item reference patterns like "Item #1", "Document 2"
+  const itemPattern = /\b(?:item|document|evidence)\s*(?:#|no\.?)?(\d+)\b/gi;
+  while ((match = itemPattern.exec(message)) !== null) {
+    const num = parseInt(match[1], 10);
+    if (num >= 1 && num <= 10) refs.push(`E${num}`);
+  }
+  
+  return [...new Set(refs)];
+}

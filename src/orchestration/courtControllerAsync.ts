@@ -1,6 +1,6 @@
 /**
  * Court Controller Async — Async state machine with provider runtime
- * Phase 4: Runtime integration
+ * Phase 5: Evidence parsing and streaming
  */
 
 import type { CourtState, AgentRole, TranscriptEntry, Evidence, AgentParticipant } from '../types/courtroom';
@@ -8,7 +8,7 @@ import { COURT_PHASES } from '../types/courtroom';
 import { SAMPLE_CASE } from '../data/sampleCase';
 import { createMockConfig } from '../providers/modelProviderTypes';
 import { getSpeakersForPhase, getNextSpeaker } from './phaseEngine';
-import { generateAgentResponse } from '../providers/agentService';
+import { generateAgentResponse, parseEvidenceReferences } from '../providers/agentService';
 
 export function createInitialState(): CourtState {
   const participants: AgentParticipant[] = [
@@ -64,9 +64,50 @@ function checkSpeakerHasMore(state: CourtState, speakerRole: AgentRole): boolean
 async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole): Promise<CourtState> {
   const speakerName = getParticipantName(state, speakerRole);
   const config = getParticipantConfig(state, speakerRole);
-  const result = await generateAgentResponse({ role: speakerRole, config, phase: state.currentPhase, transcript: state.transcript, evidence: state.evidence, caseTitle: state.case.title, caseSummary: state.case.claimSummary });
-  const newEntry: TranscriptEntry = { id: `trans-$Date.now()}-$speakerRole}`, speakerRole, speakerName, message: result.message, phase: state.currentPhase, sequenceNumber: state.transcript.length + 1, timestamp: new Date().toISOString(), providerUsed: result.providerUsed, modelUsed: result.modelUsed, responseSource: result.responseSource };
-  return { ...state, currentSpeaker: speakerRole, transcript: [...state.transcript, newEntry] };
+
+  const result = await generateAgentResponse({ 
+    role: speakerRole, 
+    config, 
+    phase: state.currentPhase, 
+    transcript: state.transcript, 
+    evidence: state.evidence, 
+    caseTitle: state.case.title, 
+    caseSummary: state.case.claimSummary 
+  });
+
+  // Parse evidence references from message
+  const evidenceRefs = parseEvidenceReferences(result.message);
+
+  // Update evidence status
+  let updatedEvidence = [...state.evidence];
+  evidenceRefs.forEach(ref => {
+    const idx = state.evidence.findIndex(e => e.id.toUpperCase() === ref.toUpperCase());
+    if (idx >= 0 && state.evidence[idx].status === 'pending') {
+      updatedEvidence[idx] = { ...updatedEvidence[idx], status: 'introduced' };
+    }
+  });
+
+  const newEntry: TranscriptEntry = { 
+    id: `trans-${Date.now()}-${speakerRole}`, 
+    speakerRole, 
+    speakerName, 
+    message: result.message, 
+    phase: state.currentPhase, 
+    sequenceNumber: state.transcript.length + 1, 
+    timestamp: new Date().toISOString(),
+    evidenceRef: evidenceRefs.length > 0 ? evidenceRefs.join(',') : undefined,
+    providerUsed: result.providerUsed, 
+    modelUsed: result.modelUsed, 
+    responseSource: result.responseSource,
+    isComplete: true 
+  };
+
+  return { 
+    ...state, 
+    currentSpeaker: speakerRole, 
+    transcript: [...state.transcript, newEntry],
+    evidence: updatedEvidence
+  };
 }
 
 function advanceToNextPhase(state: CourtState): CourtState {
@@ -75,7 +116,19 @@ function advanceToNextPhase(state: CourtState): CourtState {
   if (!nextPhase) return { ...state, currentPhase: 'case_summary', currentSpeaker: 'judge' };
   const nextSpeakers = getSpeakersForPhase(nextPhase);
   const firstSpeaker = nextSpeakers.length > 0 ? nextSpeakers[0] : null;
-  if (nextPhase === 'verdict') return { ...state, currentPhase: nextPhase, currentSpeaker: firstSpeaker, verdict: { decision: 'defense_wins', reasoningSummary: 'Court finds for defendant.', plaintiffPoints: ['Contract signed'], defensePoints: ['Delays were reasonable'], weaknesses: { plaintiff: [], defense: [] }, ruling: 'Case dismissed' } };
+  if (nextPhase === 'verdict') return { 
+    ...state, 
+    currentPhase: nextPhase, 
+    currentSpeaker: firstSpeaker, 
+    verdict: { 
+      decision: 'defense_wins', 
+      reasoningSummary: 'Court finds for defendant.', 
+      plaintiffPoints: ['Contract signed'], 
+      defensePoints: ['Delays were reasonable'], 
+      weaknesses: { plaintiff: [], defense: [] }, 
+      ruling: 'Case dismissed' 
+    } 
+  };
   return { ...state, currentPhase: nextPhase, currentSpeaker: firstSpeaker };
 }
 

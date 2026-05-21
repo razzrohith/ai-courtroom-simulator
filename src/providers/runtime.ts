@@ -2,6 +2,7 @@
  * Provider Runtime — Unified runtime that selects between providers
  * 
  * Phase 14: Full provider runtime with OpenAI, Anthropic, Gemini
+ * Phase 17: Enhanced with token usage tracking
  */
 
 import type { AgentRole, TranscriptEntry, Evidence, CourtPhase } from '../types/courtroom';
@@ -12,6 +13,22 @@ import { generateWithOllama, isOllamaAvailable } from './ollamaProvider';
 import { generateWithOpenAI, isOpenAIConfigured, getOpenAIStatus } from './openAIProvider';
 import { generateWithAnthropic, isAnthropicConfigured, getAnthropicStatus } from './anthropicProvider';
 import { generateWithGemini, isGeminiConfigured, getGeminiStatus } from './geminiProvider';
+
+/**
+ * Response metadata from provider calls
+ */
+export interface ResponseMetadata {
+  providerUsed: string;
+  modelUsed: string;
+  fallbackUsed: boolean;
+  errorMessage?: string;
+  latencyMs?: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  inputCost?: number;
+  outputCost?: number;
+}
 
 // Provider status for UI
 export type ProviderRuntimeStatus = 

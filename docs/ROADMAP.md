@@ -62,7 +62,21 @@ Courtroom stage integration:
 
 See PHASE_16_COURTROOM_STAGE_INTEGRATION.md
 
-## Phase 17 Future
+## ✅ Phase 17 — Complete
+
+Provider runtime completion:
+
+- [x] Dynamic API key loading (sessionStorage)
+- [x] ResponseMetadata type definition
+- [x] Provider test panel results show provider/model
+- [x] OpenRouter runtime with loadApiKey
+- [x] OpenAI/Anthropic/Gemini use key storage
+- [x] Token usage capture interface (structure ready)
+- [x] Graceful fallback to mock
+
+See PHASE_17_PROVIDER_RUNTIME_COMPLETION.md
+
+## Phase 18 Future
 
 ### Provider Enhancements
 

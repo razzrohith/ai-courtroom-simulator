@@ -5,19 +5,24 @@
  */
 
 import type { AgentRole, TranscriptEntry, Evidence, CourtPhase } from '../types/courtroom';
+import { loadApiKey } from '../types/providers';
 
-// Environment configuration
-const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || '';
-const OPENROUTER_BASE_URL = import.meta.env.VITE_OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1';
+// Base URL configuration
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
-// Check if OpenRouter is configured
+/**
+ * Check if OpenRouter is configured using dynamic key storage
+ */
 export function isOpenRouterConfigured(): boolean {
-  return !!OPENROUTER_API_KEY && OPENROUTER_API_KEY.length > 0;
+  const apiKey = loadApiKey('openrouter');
+  return !!apiKey && apiKey.length > 0;
 }
 
-// Get status for UI display
+/**
+ * Get status for UI display
+ */
 export function getOpenRouterStatus(): { label: string; ready: boolean; missingKey: boolean } {
-  if (!OPENROUTER_API_KEY) {
+  if (!isOpenRouterConfigured()) {
     return { label: 'OpenRouter Missing Key', ready: false, missingKey: true };
   }
   return { label: 'OpenRouter Ready', ready: true, missingKey: false };
@@ -64,7 +69,8 @@ export async function generateWithOpenRouter(params: {
   evidence: Evidence[];
   prompt: string;
 }): Promise<string> {
-  if (!isOpenRouterConfigured()) {
+  const apiKey = loadApiKey('openrouter');
+  if (!apiKey) {
     throw new Error('OpenRouter API key not configured');
   }
 
@@ -83,7 +89,7 @@ export async function generateWithOpenRouter(params: {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'HTTP-Referer': window.location.origin,
         'X-Title': 'JudgeBench',
       },

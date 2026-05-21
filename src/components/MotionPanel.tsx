@@ -3,7 +3,8 @@
  * Phase 9: Motion flow system
  */
 
-import type { MotionEvent, MotionType, MotionStatus /* AgentRole removed - unused */ } from '../types/courtroom';
+import type { MotionEvent, MotionType, MotionStatus } from '../types/courtroom';
+import { EmptyStatePlaceholder } from './visuals/CourtroomVisuals';
 
 interface MotionPanelProps {
   motions: MotionEvent[];
@@ -33,7 +34,11 @@ export function MotionPanel({ motions, onRuling }: MotionPanelProps) {
         <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-2">
           ⚡ Motions
         </h3>
-        <p className="text-xs text-gray-500">No motions raised yet.</p>
+        <EmptyStatePlaceholder 
+          icon="⚡" 
+          title="No Motions Filed" 
+          message="Attorneys may file motions during the trial." 
+        />
       </div>
     );
   }

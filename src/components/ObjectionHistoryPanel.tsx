@@ -4,6 +4,7 @@
  */
 
 import type { ObjectionEvent } from '../types/courtroom';
+import { EmptyStatePlaceholder } from './visuals/CourtroomVisuals';
 
 interface ObjectionHistoryPanelProps {
   objections: ObjectionEvent[];
@@ -22,7 +23,11 @@ export function ObjectionHistoryPanel({ objections, onRuling }: ObjectionHistory
     return (
       <div className="bg-courtroom-card border border-gray-700 rounded-lg p-4">
         <h3 className="text-sm font-semibold text-gray-300 mb-2">⚖️ Objection History</h3>
-        <p className="text-xs text-gray-500">No objections recorded yet.</p>
+        <EmptyStatePlaceholder 
+          icon="⚖️" 
+          title="No Objections Yet" 
+          message="Objections will appear when attorneys raise them during trial." 
+        />
       </div>
     );
   }

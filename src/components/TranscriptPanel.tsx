@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import type { TranscriptEntry, AgentRole } from '../types/courtroom';
+import { EmptyStatePlaceholder } from './visuals/CourtroomVisuals';
 
 // Typewriter hook - tracks completion per entry ID
 const typewriterState = new Map<string, { complete: boolean }>();
@@ -88,9 +89,11 @@ export function TranscriptPanel({ transcript, currentPhase }: TranscriptPanelPro
 
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {transcript.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">
-            Waiting for transcript to begin...
-          </p>
+          <EmptyStatePlaceholder 
+            icon="📜" 
+            title="Awaiting Trial Transcript" 
+            message="The court reporter will record proceedings as they unfold." 
+          />
         ) : (
           transcript.map((entry) => {
             const style = speakerStyles[entry.speakerRole];

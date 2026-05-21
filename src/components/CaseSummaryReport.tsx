@@ -128,6 +128,27 @@ export function CaseSummaryReport({ state }: CaseSummaryReportProps) {
         verdict.defensePoints.forEach(p => lines.push(`- ${p}`));
         lines.push('');
       }
+      
+      // Phase 10: Witness credibility impact
+      if ('witnessImpact' in verdict && verdict.witnessImpact) {
+        lines.push('Witness Testimony Impact:');
+        lines.push(verdict.witnessImpact);
+        lines.push('');
+      }
+      
+      // Phase 11: Jury instructions impact
+      if ('juryInstructionSummary' in verdict && verdict.juryInstructionSummary) {
+        lines.push('Jury Instructions:');
+        lines.push(verdict.juryInstructionSummary);
+        lines.push('');
+      }
+      
+      // Phase 11: Motion impact
+      if ('motionImpact' in verdict && verdict.motionImpact) {
+        lines.push('Motion Rulings Impact:');
+        lines.push(verdict.motionImpact);
+        lines.push('');
+      }
     }
     
     // Disclaimer

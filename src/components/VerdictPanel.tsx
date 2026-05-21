@@ -54,6 +54,22 @@ export function VerdictPanel({ verdict, evidence, objections }: VerdictPanelProp
           </div>
         )}
 
+        {/* Jury Instruction Summary - Phase 11 */}
+        {'juryInstructionSummary' in verdict && (
+          <div className="bg-purple-900/20 border border-purple-700 rounded-lg p-3">
+            <h4 className="text-sm font-medium text-purple-400 mb-2">⚖️ Jury Instructions</h4>
+            <p className="text-xs">{verdict.juryInstructionSummary}</p>
+          </div>
+        )}
+
+        {/* Motion Impact - Phase 11 */}
+        {'motionImpact' in verdict && (
+          <div className="bg-orange-900/20 border border-orange-700 rounded-lg p-3">
+            <h4 className="text-sm font-medium text-orange-400 mb-2">📋 Motion Rulings Impact</h4>
+            <p className="text-xs">{verdict.motionImpact}</p>
+          </div>
+        )}
+
         {/* Ruling */}
         <div className="bg-yellow-900/30 border border-yellow-600 rounded-lg p-3">
           <h4 className="text-sm font-medium text-yellow-500 mb-1">Court Ruling</h4>

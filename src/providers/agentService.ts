@@ -124,6 +124,7 @@ function getPhaseInstruction(phase: CourtPhase, role: AgentRole): string {
     judge_deliberation: 'Consider all evidence and arguments. Apply law fairly. Reach just verdict.',
     verdict: 'Deliver verdict clearly. State reasoning. Issue final ruling.',
     case_summary: 'Summarize case outcome. Thank counsel. Dismiss court.',
+    jury_instructions: 'Provide jury instructions on burden of proof, evidence evaluation, witness credibility, and objection treatment. Remind this is educational only.',
   } as const;
 
   const lawyerInstr = {
@@ -136,6 +137,7 @@ function getPhaseInstruction(phase: CourtPhase, role: AgentRole): string {
     cross_examination: 'Question effectively. Establish favourable facts. Impeach credibility.',
     witness_testimony: 'Conduct direct or cross-examination. Establish facts.',
     motion_hearing: 'Make appropriate motions. Cite legal grounds.',
+    jury_instructions: 'Listen to jury instructions. Note how they should evaluate evidence.',
     rebuttal: 'Counter defense arguments with evidence. Address weaknesses.',
     closing_arguments: 'Summarize favourable evidence. Attack defense case. Request favourable verdict.',
     judge_deliberation: 'Wait respectfully. Accept verdict.',

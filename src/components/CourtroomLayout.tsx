@@ -20,6 +20,7 @@ import { ProviderRuntimeStatusPanel } from './ProviderRuntimeStatus';
 import { ObjectionHistoryPanel } from './ObjectionHistoryPanel';
 import { WitnessPanel } from './WitnessPanel';
 import { MotionPanel } from './MotionPanel';
+import { JuryInstructionPanel } from './JuryInstructionPanel';
 
 interface AgentModelInfo {
   providerId: string;
@@ -235,6 +236,13 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, o
                       }} 
                     />
                   </>
+                )}
+
+                {/* Phase 11: Jury Instructions */}
+                {currentPhase === 'jury_instructions' && (
+                  <JuryInstructionPanel instructions={
+                    transcript.find(t => t.speakerRole === 'judge' && t.phase === 'jury_instructions')?.message
+                  } />
                 )}
 
                 {/* Phase 8: Case summary report */}

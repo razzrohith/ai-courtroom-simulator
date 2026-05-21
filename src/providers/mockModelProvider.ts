@@ -111,6 +111,20 @@ export function generateMockResponse(params: {
       prosecutor: 'Your Honor, we make a motion to admit Exhibit E03.',
       defense: 'Your Honor, we make a motion to dismiss.',
     },
+    // Phase 11: Jury instructions
+    jury_instructions: {
+      judge: `Members of the jury, at this time the Court will provide you with instructions on the law. This is a fictional educational simulation and does not constitute legal advice.
+
+BURDEN OF PROOF: The plaintiff bears the burden of proving their claims by a preponderance of the evidence. This means it's more likely than not that the plaintiff's claims are true.
+
+EVIDENCE CONSIDERATION: You must consider all testimony and documents presented. Evaluate witness credibility based on consistency, potential bias, and corroboration.
+
+OBJECTIONS: Any objections raised during trial were ruled upon by the Court. You should not penalize a party for having an objection sustained or overruled.
+
+FINALLY: This simulation is for educational purposes only. Do not use this as legal advice in any real matter.`,
+      prosecutor: '',
+      defense: '',
+    },
     case_summary: {
       judge: 'This concludes the proceedings.',
       prosecutor: '',

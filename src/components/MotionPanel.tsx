@@ -15,6 +15,7 @@ const motionTypeLabels: Record<MotionType, string> = {
   motion_to_dismiss: 'Motion to Dismiss',
   motion_to_admit_evidence: 'Motion to Admit Evidence',
   motion_to_exclude_evidence: 'Motion to Exclude Evidence',
+  motion_for_directed_verdict: 'Motion for Directed Verdict',
 };
 
 const motionStatusStyles: Record<MotionStatus, { label: string; class: string }> = {
@@ -64,9 +65,22 @@ export function MotionPanel({ motions, onRuling }: MotionPanelProps) {
               
               <p className="text-xs text-gray-400 mb-1">Reason: {motion.reason}</p>
               
+              {/* Phase 11: Enhanced fields */}
+              {motion.argumentSummary && (
+                <p className="text-xs text-blue-300 mt-1">Argument: {motion.argumentSummary}</p>
+              )}
+              {motion.oppositionResponse && (
+                <p className="text-xs text-red-300 mt-1">Opposition: {motion.oppositionResponse}</p>
+              )}
+              {motion.rulingReason && (
+                <p className="text-xs text-purple-300 mt-1">Reasoning: {motion.rulingReason}</p>
+              )}
+              
               <div className="text-xs text-gray-500 flex gap-3">
                 <span>Raised by: {motion.raisedBy}</span>
-                {motion.targetEvidence && <span>Evidence: {motion.targetEvidence}</span>}
+                {motion.targetEvidence && <span>Target: {motion.targetEvidence}</span>}
+                {motion.targetWitness && <span>Witness: {motion.targetWitness}</span>}
+                {motion.affectedEvidenceId && <span>Affected: {motion.affectedEvidenceId}</span>}
               </div>
               
               {motion.rulingNote && (

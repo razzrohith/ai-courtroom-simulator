@@ -16,6 +16,7 @@ export const SPEAKER_ORDER: Record<CourtPhase, AgentRole[]> = {
   cross_examination: ['prosecutor', 'defense'],
   witness_testimony: ['prosecutor', 'defense', 'judge'],
   motion_hearing: ['prosecutor', 'defense', 'judge'],
+  jury_instructions: ['judge'],
   rebuttal: ['prosecutor', 'defense'],
   closing_arguments: ['prosecutor', 'defense'],
   judge_deliberation: ['judge'],
@@ -34,6 +35,7 @@ export const JUDGE_TRANSITIONS: Record<CourtPhase, string> = {
   cross_examination: "We will now move to cross-examination. Each counsel may question the other party's witnesses. Objections to questions must be raised immediately.",
   witness_testimony: "We will now take witness testimony. The court calls its first witness. Counsel, you may conduct direct examination. The opposing counsel will have opportunity for cross-examination.",
   motion_hearing: "The court will now hear any motions. Counsel, if you wish to make a motion to strike, dismiss, or regarding evidence, state your motion now.",
+  jury_instructions: "Before closing arguments, the Court will now instruct the jury on the law. This is a fictional simulation for educational purposes only and does not constitute legal advice.",
   rebuttal: "Now we move to the rebuttal phase. The plaintiff may respond to the defendant's arguments. The defendant may then provide final countering points.",
   closing_arguments: "We will now hear closing arguments. Both counsel, summarize your positions. The court will consider all evidence and testimony presented.",
   judge_deliberation: "The court will now deliberate. All rises, please. This matter is taken under advisement.",
@@ -148,13 +150,16 @@ export function shouldTriggerObjection(phase: CourtPhase, speakerTurn: number, e
 // Get jury instructions for trial phases
 export function getJuryInstruction(phase: CourtPhase): string | null {
   if (phase === 'plaintiff_opening') {
-    return "Jurors, opening statements are not evidence. They arepreview of what each side intends to prove.";
+    return "Jurors, opening statements are not evidence. They are a preview of what each side intends to prove.";
   }
   if (phase === 'evidence_presentation') {
     return "Jurors, consider all evidence. Give appropriate weight. Don't decide until all is presented.";
   }
+  if (phase === 'jury_instructions') {
+    return "Members of the jury, this is a fictional educational simulation. The plaintiff must prove claims by preponderance. Consider all testimony and evidence. Evaluate witness credibility. Objections were ruled upon by the Court.";
+  }
   if (phase === 'closing_arguments') {
-    return "Jurors, closing arguments are not evidence. They'resummary of the case. Decide onfacts presented.";
+    return "Jurors, closing arguments are not evidence. They are a summary of the case. Decide on the facts presented.";
   }
   return null;
 }
@@ -312,6 +317,9 @@ export const MOCK_VERDICT: Verdict = {
   ruling: 'Judgment for plaintiff. Defendant shall pay $247,500 plus 5% annual interest from July 1, 2024 until paid. Court costs assessed to defendant.',
   // Phase 10: Witness credibility impact
   witnessImpact: 'Both witnesses provided credible testimony. Mr. Morrison\'s testimony regarding operational constraints was corroborated by delivery logs. Ms. Patterson\'s claims regarding delay notification were found to lack sufficient documentation. The court credits the prosecution witness testimony more heavily.',
+  // Phase 11: Jury and motion integration
+  juryInstructionSummary: 'Burden of proof: preponderance. Evidence consideration: all testimony/documents. Witness credibility: consistency and corroboration. Objections: rulings do not penalize either party.',
+  motionImpact: 'Defense motion to dismiss was denied. Prosecution motion to admit Exhibit E03 was granted. The excluded testimony was not considered for credibility.',
 };
 
 // Helper to generate transcript entries from mock messages

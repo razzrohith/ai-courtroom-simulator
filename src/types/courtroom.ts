@@ -12,6 +12,7 @@ export type CourtPhase =
   | 'cross_examination'
   | 'witness_testimony'
   | 'motion_hearing'
+  | 'jury_instructions'
   | 'rebuttal'
   | 'closing_arguments'
   | 'judge_deliberation'
@@ -28,6 +29,7 @@ export const COURT_PHASES: CourtPhase[] = [
   'cross_examination',
   'witness_testimony',
   'motion_hearing',
+  'jury_instructions',
   'rebuttal',
   'closing_arguments',
   'judge_deliberation',
@@ -45,6 +47,7 @@ export const PHASE_LABELS: Record<CourtPhase, string> = {
   cross_examination: 'Cross Examination',
   witness_testimony: 'Witness Testimony',
   motion_hearing: 'Motion Hearing',
+  jury_instructions: 'Jury Instructions',
   rebuttal: 'Rebuttal',
   closing_arguments: 'Closing Arguments',
   judge_deliberation: 'Judge Deliberation',
@@ -140,16 +143,30 @@ export interface Witness {
   credibilityNotes?: string;
 }
 
-// Phase 9: Motion types
-export type MotionType = 'motion_to_strike' | 'motion_to_dismiss' | 'motion_to_admit_evidence' | 'motion_to_exclude_evidence';
+// Phase 9: Motion types (enhanced in Phase 11)
+export type MotionType = 
+  | 'motion_to_strike' 
+  | 'motion_to_dismiss' 
+  | 'motion_to_admit_evidence' 
+  | 'motion_to_exclude_evidence'
+  | 'motion_for_directed_verdict'; // Phase 11
+
 export type MotionStatus = 'pending' | 'granted' | 'denied';
 
+// Enhanced Motion Event - Phase 11 with full argument structure
 export interface MotionEvent {
   id: string;
   motionType: MotionType;
   raisedBy: AgentRole;
   reason: string;
+  // Phase 11: Enhanced arguments
+  argumentSummary?: string;
+  oppositionResponse?: string;
+  rulingReason?: string;
   targetEvidence?: string;
+  targetWitness?: string;
+  affectedEvidenceId?: string;
+  affectedWitnessId?: string;
   status: MotionStatus;
   rulingNote?: string;
   phase: CourtPhase;
@@ -166,6 +183,9 @@ export interface Verdict {
   ruling: string;
   // Phase 10: Witness credibility impact on verdict
   witnessImpact?: string;
+  // Phase 11: Jury and motion integration
+  juryInstructionSummary?: string;
+  motionImpact?: string;
 }
 
 export interface CaseData {

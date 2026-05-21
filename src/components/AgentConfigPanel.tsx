@@ -1,8 +1,16 @@
 /**
- * AgentConfigPanel — Display agent model configurations
+ * AgentConfigPanel — Display agent model configurations from localStorage
  */
 
+import { useState, useEffect } from 'react';
 import type { AgentParticipant } from '../types/courtroom';
+import { 
+  CourtroomModelConfig, 
+  loadCourtroomConfig, 
+  isProviderPlaceholder,
+  PROVIDER_REGISTRY,
+  ProviderId 
+} from '../types/providers';
 
 interface AgentConfigPanelProps {
   participants: AgentParticipant[];
@@ -10,17 +18,51 @@ interface AgentConfigPanelProps {
 }
 
 export function AgentConfigPanel({ participants, currentSpeaker }: AgentConfigPanelProps) {
+  const [config, setConfig] = useState<CourtroomModelConfig | null>(null);
+
+  // Load config on mount
+  useEffect(() => {
+    const loaded = loadCourtroomConfig();
+    setConfig(loaded);
+  }, []);
+
+  // Get provider label
+  const getProviderLabel = (providerId: ProviderId): string => {
+    const entry = PROVIDER_REGISTRY[providerId];
+    return entry ? `${entry.icon} ${entry.label}` : providerId;
+  };
+
   return (
     <div className="bg-courtroom-card rounded-lg border border-gray-700">
       <div className="p-4 border-b border-gray-700">
         <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider">
-          🤖 Agent Model Configuration Preview
+          🤖 Agent Model Configuration
         </h3>
       </div>
 
       <div className="p-4 space-y-3">
         {participants.map((participant) => {
+          const role = participant.role;
+          const agentConfig = config ? config[role] : null;
           const isActive = currentSpeaker === participant.role;
+          
+          // Determine status
+          const getStatus = () => {
+            if (!agentConfig) return { label: 'Loading...', class: 'bg-gray-700' };
+            
+            if (agentConfig.providerId === 'mock') {
+              return { label: '✓ Mock Active', class: 'bg-green-700' };
+            }
+            
+            if (isProviderPlaceholder(agentConfig.providerId)) {
+              return { label: '⚠ Placeholder', class: 'bg-yellow-700' };
+            }
+            
+            return { label: 'Active', class: 'bg-blue-700' };
+          };
+
+          const status = getStatus();
+
           return (
             <div
               key={participant.id}
@@ -45,28 +87,24 @@ export function AgentConfigPanel({ participants, currentSpeaker }: AgentConfigPa
                 <div>
                   <span className="text-gray-500">Provider:</span>
                   <span className="ml-1 text-gray-300">
-                    {participant.modelConfig.provider.name}
+                    {agentConfig ? getProviderLabel(agentConfig.providerId) : '...'}
                   </span>
                 </div>
                 <div>
                   <span className="text-gray-500">Model:</span>
                   <span className="ml-1 text-gray-300">
-                    {participant.modelConfig.model}
+                    {agentConfig?.model || '...'}
                   </span>
                 </div>
                 <div>
                   <span className="text-gray-500">Mode:</span>
-                  <span className={`ml-1 px-1.5 py-0.5 rounded ${
-                    participant.modelConfig.mode === 'mock'
-                      ? 'bg-gray-700'
-                      : 'bg-blue-700'
-                  }`}>
-                    {participant.modelConfig.mode}
+                  <span className={`ml-1 px-1.5 py-0.5 rounded ${status.class}`}>
+                    {status.label}
                   </span>
                 </div>
                 <div>
                   <span className="text-gray-500">Status:</span>
-                  <span className="ml-1 text-green-400">✓ Ready</span>
+                  <span className="ml-1 text-green-400">✓ Saved</span>
                 </div>
               </div>
             </div>

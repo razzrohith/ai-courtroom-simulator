@@ -10,6 +10,7 @@ A realistic multi-agent AI courtroom simulator with a visual courtroom interface
 - **Evidence Board** — Track evidence introduction and status
 - **Verdict Panel** — Detailed verdict with reasoning after trial
 - **Mock Mode** — All responses are simulated for demonstration (no real API calls)
+- **Provider Configuration** — Configurable provider/model per agent (Phase 2)
 
 ## Tech Stack
 

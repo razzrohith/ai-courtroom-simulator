@@ -258,3 +258,92 @@ export async function isProviderReady(providerId: ProviderId): Promise<boolean> 
       return false;
   }
 }
+
+/**
+ * Generate response with full metadata including token usage
+ */
+export async function generateResponseWithMetadata(params: {
+  role: AgentRole;
+  config: AgentModelConfig;
+  phase: CourtPhase;
+  transcript: TranscriptEntry[];
+  evidence: Evidence[];
+  prompt: string;
+}): Promise<{ message: string; metadata: ResponseMetadata }> {
+  const { role, config, phase, transcript, evidence, prompt } = params;
+  const startTime = Date.now();
+  const providerId = config.providerId;
+  const modelName = config.model;
+  
+  const message = await generateResponse({
+    role,
+    config,
+    phase,
+    transcript,
+    evidence,
+    prompt,
+  });
+  const latencyMs = Date.now() - startTime;
+  
+  // Determine if fallback was used
+  const fallbackUsed = message.startsWith('[Mock') || message.startsWith('Mock');
+  
+  // Estimate token counts (basic approximation based on message length)
+  const estimatedCompletion = Math.ceil(message.length / 4);
+  const estimatedPrompt = Math.ceil(prompt.length / 4);
+  
+  const metadata: ResponseMetadata = {
+    providerUsed: fallbackUsed ? 'mock' : providerId,
+    modelUsed: fallbackUsed ? 'mock' : modelName,
+    fallbackUsed,
+    latencyMs,
+    promptTokens: fallbackUsed ? undefined : estimatedPrompt,
+    completionTokens: fallbackUsed ? undefined : estimatedCompletion,
+    totalTokens: fallbackUsed ? undefined : (estimatedPrompt + estimatedCompletion),
+  };
+  
+  // Add cost estimation if available
+  if (!fallbackUsed && modelName) {
+    const pricing = getModelPricing(modelName, providerId);
+    if (pricing) {
+      metadata.inputCost = (estimatedPrompt / 1_000_000) * pricing.inputPerMillion;
+      metadata.outputCost = (estimatedCompletion / 1_000_000) * pricing.outputPerMillion;
+    }
+  }
+  
+  return { message, metadata };
+}
+
+/**
+ * Rough pricing estimates per 1M tokens
+ * In production, use actual OpenRouter pricing metadata
+ */
+function getModelPricing(model: string, _provider: string): { inputPerMillion: number; outputPerMillion: number } | null {
+  // Free models have $0 pricing
+  const freeModels = ['free', 'gpt-3.5-turbo', 'gpt-3.5-turbo-0613', 'llama-3.1-8b-instruct', 'mistral-7b-instruct'];
+  const isFree = freeModels.some(f => model.toLowerCase().includes(f));
+  
+  if (isFree) {
+    return { inputPerMillion: 0, outputPerMillion: 0 };
+  }
+  
+  // Rough estimates for common models
+  const pricing: Record<string, { inputPerMillion: number; outputPerMillion: number }> = {
+    'gpt-4': { inputPerMillion: 30, outputPerMillion: 60 },
+    'gpt-4-turbo': { inputPerMillion: 10, outputPerMillion: 30 },
+    'gpt-4o': { inputPerMillion: 5, outputPerMillion: 15 },
+    'claude-3-opus': { inputPerMillion: 15, outputPerMillion: 75 },
+    'claude-3-sonnet': { inputPerMillion: 3, outputPerMillion: 15 },
+    'claude-3-5-sonnet': { inputPerMillion: 3, outputPerMillion: 15 },
+    'gemini-pro': { inputPerMillion: 1.25, outputPerMillion: 5 },
+    'gemini-1.5-pro': { inputPerMillion: 1.25, outputPerMillion: 5 },
+  };
+  
+  for (const [key, val] of Object.entries(pricing)) {
+    if (model.toLowerCase().includes(key.toLowerCase())) {
+      return val;
+    }
+  }
+  
+  return null;
+}

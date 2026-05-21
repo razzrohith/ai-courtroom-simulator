@@ -1,9 +1,57 @@
 /**
  * TranscriptPanel — Live transcript display with court reporter styling
- * Phase 15: Visual upgrade
+ * Phase 18: Streaming typewriter and token usage display
  */
 
+import { useState, useEffect, useRef } from 'react';
 import type { TranscriptEntry, AgentRole } from '../types/courtroom';
+
+// Typewriter hook - tracks completion per entry ID
+const typewriterState = new Map<string, { complete: boolean }>();
+
+function useTypewriter(fullText: string, entryId: string) {
+  const [displayedText, setDisplayedText] = useState(fullText);
+  const [isComplete, setIsComplete] = useState(true);
+  const stateRef = useRef(typewriterState.get(entryId));
+
+  useEffect(() => {
+    // Check if we've seen this entry before
+    if (stateRef.current?.complete) {
+      setDisplayedText(fullText);
+      setIsComplete(true);
+      return;
+    }
+    
+    // First time seeing this entry - animate it
+    typewriterState.set(entryId, { complete: false });
+    stateRef.current = { complete: false };
+    setDisplayedText('');
+    setIsComplete(false);
+    
+    if (!fullText) {
+      setDisplayedText(fullText);
+      setIsComplete(true);
+      typewriterState.set(entryId, { complete: true });
+      return;
+    }
+
+    let index = 0;
+    const interval = setInterval(() => {
+      if (index < fullText.length) {
+        setDisplayedText(fullText.slice(0, index + 1));
+        index++;
+      } else {
+        setIsComplete(true);
+        typewriterState.set(entryId, { complete: true });
+        clearInterval(interval);
+      }
+    }, 15);
+
+    return () => clearInterval(interval);
+  }, [fullText, entryId]);
+
+  return { displayedText, isComplete };
+}
 
 interface TranscriptPanelProps {
   transcript: TranscriptEntry[];
@@ -47,6 +95,10 @@ export function TranscriptPanel({ transcript, currentPhase }: TranscriptPanelPro
           transcript.map((entry) => {
             const style = speakerStyles[entry.speakerRole];
             const badge = speakerBadges[entry.speakerRole];
+            
+            // Auto-animate each entry on first render
+            const { displayedText, isComplete } = useTypewriter(entry.message, entry.id);
+            
             return (
               <div
                 key={entry.id}
@@ -64,7 +116,10 @@ export function TranscriptPanel({ transcript, currentPhase }: TranscriptPanelPro
                     #{entry.sequenceNumber}
                   </span>
                 </div>
-                <p className="text-sm leading-relaxed text-gray-300">{entry.message}</p>
+                <p className="text-sm leading-relaxed text-gray-300">
+                  {displayedText}
+                  {!isComplete && <span className="animate-pulse">▊</span>}
+                </p>
                 
                 {/* Evidence references */}
                 {entry.evidenceRef && (

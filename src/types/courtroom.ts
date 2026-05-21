@@ -1,0 +1,136 @@
+/**
+ * Courtroom Types — Core TypeScript definitions for the courtroom simulation
+ */
+
+export type CourtPhase =
+  | 'case_setup'
+  | 'court_opening'
+  | 'plaintiff_opening'
+  | 'defense_opening'
+  | 'evidence_presentation'
+  | 'objection_ruling'
+  | 'cross_examination'
+  | 'rebuttal'
+  | 'closing_arguments'
+  | 'judge_deliberation'
+  | 'verdict'
+  | 'case_summary';
+
+export const COURT_PHASES: CourtPhase[] = [
+  'case_setup',
+  'court_opening',
+  'plaintiff_opening',
+  'defense_opening',
+  'evidence_presentation',
+  'objection_ruling',
+  'cross_examination',
+  'rebuttal',
+  'closing_arguments',
+  'judge_deliberation',
+  'verdict',
+  'case_summary',
+];
+
+export const PHASE_LABELS: Record<CourtPhase, string> = {
+  case_setup: 'Case Setup',
+  court_opening: 'Court Opening',
+  plaintiff_opening: 'Plaintiff Opening Statement',
+  defense_opening: 'Defense Opening Statement',
+  evidence_presentation: 'Evidence Presentation',
+  objection_ruling: 'Objection & Ruling',
+  cross_examination: 'Cross Examination',
+  rebuttal: 'Rebuttal',
+  closing_arguments: 'Closing Arguments',
+  judge_deliberation: 'Judge Deliberation',
+  verdict: 'Verdict',
+  case_summary: 'Case Summary',
+};
+
+export type AgentRole = 'judge' | 'prosecutor' | 'defense';
+
+export interface AgentParticipant {
+  id: string;
+  role: AgentRole;
+  name: string;
+  title: string;
+  modelConfig: AgentModelConfig;
+}
+
+export interface TranscriptEntry {
+  id: string;
+  speakerRole: AgentRole;
+  speakerName: string;
+  message: string;
+  phase: CourtPhase;
+  sequenceNumber: number;
+  timestamp: string;
+  evidenceRef?: string;
+}
+
+export type EvidenceStatus = 'pending' | 'introduced' | 'disputed' | 'accepted' | 'rejected';
+
+export interface Evidence {
+  id: string;
+  title: string;
+  type: 'document' | 'email' | 'report' | 'physical' | 'testimony';
+  summary: string;
+  introducedBy: AgentRole;
+  status: EvidenceStatus;
+  content: string;
+}
+
+export type VerdictDecision = 'plaintiff_wins' | 'defense_wins' | 'partial_verdict' | 'dismissed';
+
+export interface Verdict {
+  decision: VerdictDecision;
+  reasoningSummary: string;
+  plaintiffPoints: string[];
+  defensePoints: string[];
+  weaknesses: { plaintiff: string[]; defense: string[] };
+  ruling: string;
+}
+
+export interface CaseData {
+  id: string;
+  title: string;
+  caseType: string;
+  plaintiffSide: string;
+  defenseSide: string;
+  claimSummary: string;
+  keyFacts: string[];
+  evidenceItems: Evidence[];
+  legalQuestions: string[];
+}
+
+export interface CourtState {
+  currentPhase: CourtPhase;
+  currentSpeaker: AgentRole | null;
+  participants: AgentParticipant[];
+  transcript: TranscriptEntry[];
+  evidence: Evidence[];
+  verdict: Verdict | null;
+  case: CaseData;
+  isActive: boolean;
+}
+
+export interface ObjectionEvent {
+  id: string;
+  raisedBy: AgentRole;
+  type: string;
+  targetEvidence?: string;
+  status: 'pending' | 'sustained' | 'overruled';
+  timestamp: string;
+}
+
+// Agent model configuration (placeholder for future providers)
+export interface ModelProviderType {
+  id: string;
+  name: string;
+  status: 'mock' | 'planned';
+}
+
+export interface AgentModelConfig {
+  provider: ModelProviderType;
+  model: string;
+  mode: 'mock' | 'local' | 'api';
+}

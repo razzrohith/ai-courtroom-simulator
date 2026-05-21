@@ -28,9 +28,11 @@ interface CourtroomLayoutProps {
   onStart: () => void;
   onNextTurn: () => void;
   onReset: () => void;
+  onSkip?: () => void;
+  isGenerating?: boolean;
 }
 
-export function CourtroomLayout({ state, onStart, onNextTurn, onReset }: CourtroomLayoutProps) {
+export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, isGenerating = false }: CourtroomLayoutProps) {
   const { currentPhase, currentSpeaker, participants, transcript, evidence, verdict, case: caseData, isActive } = state;
   const phaseLabel = PHASE_LABELS[currentPhase];
   const [showSettings, setShowSettings] = useState(false);
@@ -80,15 +82,29 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset }: Courtro
             <>
               <button
                 onClick={onNextTurn}
-                disabled={!canAdvance}
+                disabled={!canAdvance || isGenerating}
                 className={`px-6 py-2 font-medium rounded-lg transition-smooth ${
-                  canAdvance ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  canAdvance && !isGenerating 
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white' 
+                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                 }`}
               >
-                Next Turn ➡️
+                {isGenerating ? '⏳ Generating...' : 'Next Turn ➡️'}
               </button>
+              
+              {onSkip && (
+                <button
+                  onClick={onSkip}
+                  disabled={isGenerating}
+                  className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-medium rounded-lg transition-smooth"
+                >
+                  ⏭️ Skip Phase
+                </button>
+              )}
+              
               <button
                 onClick={onReset}
+                disabled={isGenerating}
                 className="px-6 py-2 bg-gray-600 hover:bg-gray-500 text-white font-medium rounded-lg transition-smooth"
               >
                 🔄 Reset

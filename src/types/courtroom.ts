@@ -65,6 +65,10 @@ export interface TranscriptEntry {
   sequenceNumber: number;
   timestamp: string;
   evidenceRef?: string;
+  // Provider metadata (Phase 4)
+  providerUsed?: string;
+  modelUsed?: string;
+  responseSource?: 'mock' | 'real' | 'fallback';
 }
 
 export type EvidenceStatus = 'pending' | 'introduced' | 'disputed' | 'accepted' | 'rejected';

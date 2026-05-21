@@ -5,7 +5,6 @@
  * Actual API implementations will be added in future phases.
  */
 
-import type { AgentModelConfig, ModelProviderType } from '../types/courtroom';
 
 /**
  * Model Provider Adapter Interface
@@ -139,22 +138,12 @@ export interface ProviderInfo {
 /**
  * Create a default mock config for an agent
  */
-export function createMockConfig(role: 'judge' | 'prosecutor' | 'defense'): AgentModelConfig {
-  const mockProvider: ModelProviderType = {
-    id: 'mock',
-    name: 'Mock Provider',
-    status: 'mock',
-  };
-  
-  const modelMap = {
-    judge: 'judge-reasoner-v1',
-    prosecutor: 'prosecutor-advocate-v1',
-    defense: 'defense-strategist-v1',
-  };
-  
+export function createMockConfig(role: "judge" | "prosecutor" | "defense"): any {
   return {
-    provider: mockProvider,
-    model: modelMap[role],
-    mode: 'mock',
+    providerId: "mock",
+    model: role === "judge" ? "judge-reasoner-v1" :
+           role === "prosecutor" ? "prosecutor-advocate-v1" :
+           "defense-strategist-v1",
+    mode: "mock",
   };
 }

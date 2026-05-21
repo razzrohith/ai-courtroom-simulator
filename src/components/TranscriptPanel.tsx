@@ -48,6 +48,22 @@ export function TranscriptPanel({ transcript, currentPhase }: TranscriptPanelPro
                   </span>
                 </div>
                 <p className="text-sm leading-relaxed">{entry.message}</p>
+                {entry.providerUsed && (
+                  <div className="mt-2 pt-2 border-t border-gray-700/30 flex flex-wrap gap-1">
+                    <span className={`text-xs px-2 py-0.5 rounded ${
+                      entry.responseSource === 'real' ? 'bg-green-900/30 text-green-400' :
+                      entry.responseSource === 'fallback' ? 'bg-orange-900/30 text-orange-400' :
+                      'bg-gray-800 text-gray-400'
+                    }`}>
+                      {entry.providerUsed}/{entry.modelUsed}
+                    </span>
+                    {entry.responseSource === 'fallback' && (
+                      <span className="text-xs px-2 py-0.5 rounded bg-red-900/30 text-red-400">
+                        Fallback
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })

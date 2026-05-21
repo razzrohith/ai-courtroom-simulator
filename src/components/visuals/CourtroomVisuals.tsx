@@ -415,3 +415,301 @@ export function CourtroomEmblem({ className }: { className?: string }) {
     </svg>
   );
 }
+
+// ============================================
+// Phase 19: Enhanced Visual Components
+// ============================================
+
+/**
+ * CourtroomBackdrop — Layered courtroom background effect
+ */
+export function CourtroomBackdrop({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 rounded-lg">
+      {/* Wood floor pattern */}
+      <div className="absolute inset-0 opacity-10" style={{
+        backgroundImage: `repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 48px,
+          rgba(139,90,43,0.3) 48px,
+          rgba(139,90,43,0.3) 50px
+        )`
+      }} />
+      {/* Ambient light beams */}
+      <div className="absolute inset-0 opacity-5 bg-gradient-to-b from-yellow-500/20 via-transparent to-transparent" />
+      {/* Depth overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20" />
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * JudgeBenchIllustration — Rich judge bench SVG
+ */
+export function JudgeBenchIllustration({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 120 60">
+      {/* Bench base */}
+      <rect x="10" y="35" width="100" height="20" rx="2" fill="#4a3728" />
+      {/* Bench top surface */}
+      <rect x="5" y="30" width="110" height="8" rx="2" fill="#6b4423" />
+      {/* Wood grain lines */}
+      <path d="M15 40h90" stroke="#5a4738" strokeWidth="0.5" opacity="0.5" />
+      <path d="M15 45h90" stroke="#5a4738" strokeWidth="0.5" opacity="0.5" />
+      {/* Judge seat behind bench */}
+      <rect x="45" y="5" width="30" height="25" rx="3" fill="#2a2320" />
+      {/* Judge chair back */}
+      <rect x="50" y="8" width="20" height="20" rx="2" fill="#3a3330" stroke="#D4AF37" strokeWidth="1" />
+      {/* Flag placeholder left */}
+      <rect x="8" y="15" width="3" height="20" fill="#D4AF37" opacity="0.7" />
+      {/* Flag placeholder right */}
+      <rect x="109" y="15" width="3" height="20" fill="#D4AF37" opacity="0.7" />
+    </svg>
+  );
+}
+
+/**
+ * AttorneyTableIllustration — Lawyer table SVG
+ */
+export function AttorneyTableIllustration({ className }: { className?: string; side?: 'left' | 'right' }) {
+  return (
+    <svg className={className} viewBox="0 0 40 30">
+      {/* Table surface */}
+      <rect x="2" y="12" width="36" height="14" rx="2" fill="#5a4a3a" stroke="#8a7a6a" strokeWidth="1" />
+      {/* Table edge highlight */}
+      <rect x="4" y="14" width="32" height="3" fill="#6a5a4a" />
+      {/* Papers */}
+      <rect x="8" y="8" width="8" height="6" fill="#e8e4dc" rx="0.5" />
+      <rect x="18" y="6" width="10" height="8" fill="#e8e4dc" rx="0.5" />
+      {/* Name plate */}
+      <rect x="12" y="20" width="16" height="3" fill="#3a332a" />
+    </svg>
+  );
+}
+
+/**
+ * WitnessStandIllustration — Witness stand SVG
+ */
+export function WitnessStandIllustration({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 40 50">
+      {/* Stand base */}
+      <rect x="5" y="35" width="30" height="12" fill="#4a3a2a" />
+      {/* Podium */}
+      <rect x="8" y="20" width="24" height="18" fill="#5a4a3a" stroke="#6a5a4a" strokeWidth="1" />
+      {/* Microphone */}
+      <circle cx="20" cy="15" r="3" fill="#2a2a2a" stroke="#4a4a4a" strokeWidth="1" />
+      <rect x="19" y="18" width="2" height="5" fill="#3a3a3a" />
+      {/* Light indicator */}
+      <circle cx="20" cy="10" r="2" fill="#22c55e" opacity="0.8">
+        <animate attributeName="opacity" values="0.8;0.4;0.8" dur="2s" repeatCount="indefinite" />
+      </circle>
+    </svg>
+  );
+}
+
+/**
+ * EvidenceFolderIllustration — Evidence folder visual
+ */
+export function EvidenceFolderIllustration({ className, status = 'normal' }: { className?: string; status?: 'normal' | 'admitted' | 'disputed' | 'excluded' | 'sealed' }) {
+  const statusColors: Record<string, string> = {
+    normal: '#64748b',
+    admitted: '#22c55e',
+    disputed: '#f59e0b',
+    excluded: '#ef4444',
+    sealed: '#7c3aed',
+  };
+  const color = statusColors[status] || statusColors.normal;
+  
+  return (
+    <svg className={className} viewBox="0 0 24 24">
+      {/* Folder back */}
+      <path d="M2 6a2 2 0 012-2h6l2 2h8a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" fill="#e8e4dc" />
+      {/* Tab */}
+      <path d="M2 4h6l2 2h-8z" fill="#d4d0c4" />
+      {/* Paper edges */}
+      <path d="M5 10h14M5 14h14M5 18h10" stroke="#94a3b8" strokeWidth="0.5" />
+      {/* Status badge */}
+      <circle cx="19" cy="19" r="4" fill={color} />
+    </svg>
+  );
+}
+
+/**
+ * SealedEnvelopeIllustration — Sealed evidence envelope
+ */
+export function SealedEnvelopeIllustration({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24">
+      {/* Envelope body */}
+      <rect x="2" y="6" width="20" height="14" rx="2" fill="#fef3c7" stroke="#d97706" strokeWidth="1" />
+      {/* Flap */}
+      <path d="M2 6l10 8L22 6" fill="#fcd34d" stroke="#d97706" strokeWidth="0.5" />
+      {/* Seal wax */}
+      <circle cx="12" cy="14" r="3" fill="#dc2626" opacity="0.9" />
+      <circle cx="12" cy="14" r="2" fill="none" stroke="#991b1b" strokeWidth="0.5" />
+    </svg>
+  );
+}
+
+/**
+ * SpeakingPulseRing — Active speaker animation
+ */
+export function SpeakingPulseRing({ active, role }: { active: boolean; role: AgentRole }) {
+  if (!active) return null;
+  
+  const colors: Record<AgentRole, string> = {
+    judge: 'rgba(234, 179, 8, 0.4)',
+    prosecutor: 'rgba(59, 130, 246, 0.4)',
+    defense: 'rgba(34, 197, 94, 0.4)',
+  };
+  const color = colors[role] || colors.judge;
+  
+  return (
+    <span className="relative inline-flex">
+      <span className="absolute inline-flex h-full w-full rounded-full animate-ping opacity-75" style={{ backgroundColor: color }} />
+      <span className="relative inline-flex rounded-full h-3 w-3" style={{ backgroundColor: color.replace('0.4', '0.6') }} />
+    </span>
+  );
+}
+
+/**
+ * RulingStampVisual — Sustained/Overruled stamp effect
+ */
+export function RulingStampVisual({ ruling }: { ruling: 'sustained' | 'overruled' | 'granted' | 'denied' }) {
+  const isPositive = ruling === 'sustained' || ruling === 'granted';
+  
+  return (
+    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded border-2 font-bold uppercase tracking-wider ${
+      isPositive 
+        ? 'bg-green-900/50 border-green-500 text-green-400' 
+        : 'bg-red-900/50 border-red-500 text-red-400'
+    }`}>
+      <svg className="w-4 h-4" viewBox="0 0 24 24">
+        {isPositive ? (
+          <path d="M5 12l5 5L19 7" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        ) : (
+          <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" />
+        )}
+      </svg>
+      {ruling}
+    </div>
+  );
+}
+
+/**
+ * CourtReporterDesk — Court reporter station
+ */
+export function CourtReporterDeskIllustration({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 40 30">
+      {/* Desk surface */}
+      <rect x="2" y="15" width="36" height="12" fill="#4a4035" stroke="#6a6050" strokeWidth="1" />
+      {/* Keyboard area */}
+      <rect x="5" y="12" width="30" height="4" fill="#2a2520" />
+      {/* Typewriter keys */}
+      <rect x="8" y="10" width="3" height="2" fill="#3a3530" />
+      <rect x="13" y="10" width="3" height="2" fill="#3a3530" />
+      <rect x="18" y="10" width="3" height="2" fill="#3a3530" />
+      <rect x="23" y="10" width="3" height="2" fill="#3a3530" />
+      <rect x="28" y="10" width="3" height="2" fill="#3a3530" />
+      {/* Monitor/screen */}
+      <rect x="8" y="2" width="24" height="6" fill="#1a1815" stroke="#3a3530" strokeWidth="1" />
+      <rect x="10" y="4" width="20" height="3" fill="#22c55e" opacity="0.6" />
+      {/* Lamp */}
+      <path d="M32 2v8M32 10L30 12M32 10L34 12" stroke="#D4AF37" strokeWidth="1.5" fill="none" />
+    </svg>
+  );
+}
+
+/**
+ * VerdictStampAnimation — Final verdict reveal animation
+ */
+export function VerdictStampAnimation({ show, verdict }: { show: boolean; verdict?: string }) {
+  if (!show) return null;
+  
+  return (
+    <div className="animate-scale-in">
+      <div className="bg-yellow-600/20 border-4 border-yellow-500 rounded-lg p-4 rotate-[-5deg]">
+        <div className="text-yellow-500 font-bold text-2xl uppercase tracking-widest text-center">
+          {verdict || 'VERDICT'}
+        </div>
+        <div className="text-yellow-400/60 text-sm text-center mt-1">
+          Court of JudgeBench
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * EmptyStatePlaceholder — Consistent empty state visual
+ */
+export function EmptyStatePlaceholder({ 
+  icon = '📋', 
+  title, 
+  message 
+}: { 
+  icon?: string; 
+  title: string; 
+  message: string 
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-8 text-center">
+      <div className="text-4xl mb-3 opacity-50">{icon}</div>
+      <div className="text-gray-400 font-medium mb-1">{title}</div>
+      <div className="text-gray-500 text-sm max-w-xs">{message}</div>
+    </div>
+  );
+}
+
+/**
+ * LoadingSpinner — Polished loading animation
+ */
+export function LoadingSpinner({ message = 'Loading...' }: { message?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-6">
+      <div className="w-8 h-8 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin" />
+      <div className="text-gray-400 text-sm mt-2">{message}</div>
+    </div>
+  );
+}
+
+/**
+ * EvidenceChipImproved — Better evidence chip with status
+ */
+export function EvidenceChipImproved({ 
+  exhibitNumber, 
+  title, 
+  type, 
+  status = 'pending',
+  side
+}: { 
+  exhibitNumber: string; 
+  title: string; 
+  type: string;
+  status?: 'pending' | 'offered' | 'admitted' | 'disputed' | 'excluded' | 'sealed';
+  side: 'plaintiff' | 'defense';
+}) {
+  const statusConfig: Record<string, { bg: string; text: string; icon: string }> = {
+    pending: { bg: 'bg-gray-700', text: 'text-gray-400', icon: '⏳' },
+    offered: { bg: 'bg-blue-900/40', text: 'text-blue-400', icon: '📤' },
+    admitted: { bg: 'bg-green-900/40', text: 'text-green-400', icon: '✅' },
+    disputed: { bg: 'bg-yellow-900/40', text: 'text-yellow-400', icon: '⚠️' },
+    excluded: { bg: 'bg-red-900/40', text: 'text-red-400', icon: '❌' },
+    sealed: { bg: 'bg-purple-900/40', text: 'text-purple-400', icon: '🔒' },
+  };
+  const config = statusConfig[status] || statusConfig.pending;
+  const sideColor = side === 'plaintiff' ? 'border-l-blue-400' : 'border-l-green-400';
+  
+  return (
+    <div className={`flex items-center gap-2 px-3 py-2 rounded border-l-3 ${config.bg} ${config.text} ${sideColor} border-l-2`}>
+      <span className="font-bold text-sm">{exhibitNumber}</span>
+      <span className="text-xs opacity-75">{type}</span>
+      <span className="text-xs truncate flex-1">{title}</span>
+      <span className="text-xs">{config.icon}</span>
+    </div>
+  );
+}

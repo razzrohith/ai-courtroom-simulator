@@ -1,12 +1,12 @@
 /**
  * ProviderRuntimeStatus — Shows provider runtime connection status
- * Phase 17: Streamlined test functionality
+ * Phase 17.5: Real provider test calls
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { getProviderRuntimeStatus, ProviderRuntimeStatus } from '../providers/runtime';
+import { getProviderRuntimeStatus, ProviderRuntimeStatus, generateResponse } from '../providers/runtime';
 import type { AgentModelConfig } from '../types/providers';
-import type { AgentRole } from '../types/courtroom';
+import type { AgentRole, CourtPhase, TranscriptEntry, Evidence } from '../types/courtroom';
 
 interface ProviderRuntimeStatusProps {
   configs: {
@@ -30,24 +30,59 @@ const STATUS_CONFIG: Record<ProviderRuntimeStatus, { label: string; color: strin
  */
 function TestResultDisplay({ role, config }: { role: AgentRole; config: AgentModelConfig }) {
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{success: boolean; message: string} | null>(null);
+  const [testResult, setTestResult] = useState<{success: boolean; message: string; fallback: boolean} | null>(null);
 
   const runTest = useCallback(async () => {
     setTesting(true);
     setTestResult(null);
 
+    const startTime = Date.now();
+    let usedFallback = false;
+    
     try {
-      // Simulated timing for configuration check
-      const latency = Math.floor(Math.random() * 50 + 10); 
+      // Test with a simple prompt matching the role
+      let prompt = '';
+      switch (role) {
+        case 'judge':
+          prompt = 'State a brief procedurally correct ruling.';
+          break;
+        case 'prosecutor':
+          prompt = 'Give your opening statement.';
+          break;
+        case 'defense':
+          prompt = 'Present your defense opening.';
+          break;
+      }
 
+      const response = await generateResponse({
+        role,
+        config,
+        phase: 'court_opening' as CourtPhase,
+        transcript: [] as TranscriptEntry[],
+        evidence: [] as Evidence[],
+        prompt,
+      });
+
+      // Check if we got mock fallback
+      if (response.startsWith('[Mock') || response.startsWith('Mock')) {
+        usedFallback = true;
+      }
+
+      const latency = Date.now() - startTime;
+      const preview = response.substring(0, 50).replace(/\n/g, ' ');
+      
       setTestResult({
-        success: true,
-        message: `${config.providerId}/${config.model} - ${latency}ms`,
+        success: !usedFallback,
+        message: `${config.providerId}/${config.model} - ${latency}ms - "${preview}..."`,
+        fallback: usedFallback,
       });
     } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Test failed';
+      
       setTestResult({
         success: false,
-        message: err instanceof Error ? err.message : 'Test failed',
+        message: `Error: ${errorMsg.substring(0, 40)}`,
+        fallback: true, // If error, we'll fall back to mock
       });
     } finally {
       setTesting(false);
@@ -61,7 +96,7 @@ function TestResultDisplay({ role, config }: { role: AgentRole; config: AgentMod
       className="w-full text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50 text-left"
     >
       {testing ? 'Testing...' : testResult ? (
-        <span className={testResult.success ? 'text-green-400' : 'text-red-400'}>
+        <span className={testResult.success ? 'text-green-400' : testResult.fallback ? 'text-yellow-400' : 'text-red-400'}>
           {testResult.message}
         </span>
       ) : (

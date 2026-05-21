@@ -76,13 +76,23 @@ Provider runtime completion:
 
 See PHASE_17_PROVIDER_RUNTIME_COMPLETION.md
 
+## ✅ Phase 17.5 — Complete
+
+Provider verification and completion:
+
+- [x] Provider audit (all 7 providers verified)
+- [x] Real provider test calls implemented
+- [x] LM Studio local provider added
+- [x] Accurate fallback display
+- [x] Secret safety confirmed
+
+See PHASE_17_5_PROVIDER_VERIFICATION.md
+
 ## Phase 18 Future
 
 ### Provider Enhancements
 
-- [ ] Streaming responses
-- [ ] Token usage tracking
-- [ ] Cost estimation UI
+- [ ] Wire token usage from API responses
 
 ### Live Model Selection
 

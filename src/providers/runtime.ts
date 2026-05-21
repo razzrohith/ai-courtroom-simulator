@@ -13,6 +13,7 @@ import { generateWithOllama, isOllamaAvailable } from './ollamaProvider';
 import { generateWithOpenAI, isOpenAIConfigured, getOpenAIStatus } from './openAIProvider';
 import { generateWithAnthropic, isAnthropicConfigured, getAnthropicStatus } from './anthropicProvider';
 import { generateWithGemini, isGeminiConfigured, getGeminiStatus } from './geminiProvider';
+import { generateWithLMStudio, isLMStudioAvailable } from './lmStudioProvider';
 
 /**
  * Response metadata from provider calls
@@ -208,6 +209,29 @@ export async function generateResponse(params: {
     }
   }
   
+  // LM Studio (local)
+  if (providerId === 'lmstudio') {
+    const available = await isLMStudioAvailable();
+    if (!available) {
+      console.warn('LM Studio unavailable, falling back to mock');
+      return generateMockResponse({ role, phase, prompt });
+    }
+    
+    try {
+      return await generateWithLMStudio({
+        role,
+        model: config.model,
+        phase,
+        transcript: params.transcript,
+        evidence: params.evidence,
+        prompt,
+      });
+    } catch (error) {
+      console.error('LM Studio error, falling back to mock:', error);
+      return generateMockResponse({ role, phase, prompt });
+    }
+  }
+  
   // Unknown provider, use mock
   console.warn(`Unknown provider ${providerId}, using mock`);
   return generateMockResponse({ role, phase, prompt });
@@ -228,6 +252,8 @@ export async function isProviderReady(providerId: ProviderId): Promise<boolean> 
       return isAnthropicConfigured();
     case 'gemini':
       return isGeminiConfigured();
+    case 'lmstudio':
+      return isLMStudioAvailable();
     default:
       return false;
   }

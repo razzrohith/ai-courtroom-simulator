@@ -90,9 +90,9 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
     }
   });
 
-  // Check for objection trigger (random chance)
+  // Check for objection trigger (context-aware)
   const speakerTurn = state.transcript.filter(t => t.phase === state.currentPhase && t.speakerRole === speakerRole).length;
-  const objectionType = shouldTriggerObjection(state.currentPhase, speakerTurn);
+  const objectionType = shouldTriggerObjection(state.currentPhase, speakerTurn, state.objectionHistory, evidenceRefs);
   let updatedObjections = state.objectionHistory;
   
   if (objectionType) {
@@ -228,13 +228,48 @@ export function recordObjection(
 export function ruleOnObjection(
   state: CourtState,
   objectionId: string,
-  sustained: boolean
+  sustained: boolean,
+  targetEvidence?: string
 ): CourtState {
+  const objStatus = sustained ? 'sustained' : 'overruled';
+  const rulingMessage = sustained 
+    ? `The objection is SUSTAINED. The evidence in question is hereby excluded/motion granted.` 
+    : `The objection is OVERRULED. The evidence stands/motion denied.`;
+  
+  // Create judge ruling transcript entry
+  const rulingEntry: TranscriptEntry = {
+    id: `trans-ruling-${Date.now()}`,
+    speakerRole: 'judge',
+    speakerName: getParticipantName(state, 'judge'),
+    message: rulingMessage,
+    phase: state.currentPhase,
+    sequenceNumber: state.transcript.length + 1,
+    timestamp: new Date().toISOString(),
+    providerUsed: 'mock',
+    modelUsed: 'judge-reasoner-v1',
+    responseSource: 'mock',
+    isComplete: true,
+  };
+  
+  // Update evidence status if target evidence exists
+  let updatedEvidence = [...state.evidence];
+  if (targetEvidence) {
+    const evidenceRef = targetEvidence.toUpperCase().replace(/[-\s]/g, '');
+    const idx = state.evidence.findIndex(e => e.id.toUpperCase() === evidenceRef);
+    if (idx >= 0) {
+      const newStatus: Evidence['status'] = sustained ? 'disputed' : 'accepted';
+      updatedEvidence[idx] = { ...updatedEvidence[idx], status: newStatus };
+    }
+  }
+  
   return {
     ...state,
+    currentSpeaker: 'judge',
+    transcript: [...state.transcript, rulingEntry],
     objectionHistory: state.objectionHistory.map(obj =>
-      obj.id === objectionId ? { ...obj, status: sustained ? 'sustained' : 'overruled' } : obj
+      obj.id === objectionId ? { ...obj, status: objStatus } : obj
     ),
+    evidence: updatedEvidence,
   };
 }
 

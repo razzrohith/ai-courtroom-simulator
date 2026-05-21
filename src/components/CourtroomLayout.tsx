@@ -34,11 +34,12 @@ interface CourtroomLayoutProps {
   onLoad?: () => void;
   onClear?: () => void;
   onCaseUpdate?: (updatedCase: CaseData) => void;
+  onObjectionRuling?: (objectionId: string, sustained: boolean, targetEvidence?: string) => void;
   isGenerating?: boolean;
   hasSavedSession?: boolean;
 }
 
-export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, onSave, onLoad, onClear, onCaseUpdate, isGenerating = false, hasSavedSession = false }: CourtroomLayoutProps) {
+export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, onSave, onLoad, onClear, onCaseUpdate, onObjectionRuling, isGenerating = false, hasSavedSession = false }: CourtroomLayoutProps) {
   const { currentPhase, currentSpeaker, participants, transcript, evidence, verdict, case: caseData, isActive, objectionHistory } = state;
   const phaseLabel = PHASE_LABELS[currentPhase];
   const [showSettings, setShowSettings] = useState(false);
@@ -200,7 +201,7 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, o
             ) : (
               <>
                 <EvidenceBoard evidence={evidence} />
-                <ObjectionHistoryPanel objections={objectionHistory} />
+                <ObjectionHistoryPanel objections={objectionHistory} onRuling={onObjectionRuling} />
               </>
             )}
           </div>

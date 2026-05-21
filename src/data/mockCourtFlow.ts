@@ -3,7 +3,7 @@
  * Phase 7: Judge transitions, objection logic, improved verdict
  */
 
-import type { CourtPhase, AgentRole, TranscriptEntry, Verdict } from '../types/courtroom';
+import type { CourtPhase, AgentRole, TranscriptEntry, Verdict, ObjectionEvent } from '../types/courtroom';
 
 // Agent speaking order per phase
 export const SPEAKER_ORDER: Record<CourtPhase, AgentRole[]> = {
@@ -90,7 +90,8 @@ export const OBJECTION_TYPES = {
 };
 
 // Decide if an objection should occur based on phase and random chance
-export function shouldTriggerObjection(phase: CourtPhase, speakerTurn: number): string | null {
+// Phase 7.5: More deterministic - reduce duplicates and use smarter triggers
+export function shouldTriggerObjection(phase: CourtPhase, speakerTurn: number, existingObjections: ObjectionEvent[], evidenceRefs: string[]): string | null {
   // Objections most likely in evidence and cross-examination
   const likelyPhases = ['evidence_presentation', 'cross_examination'];
   if (!likelyPhases.includes(phase)) return null;
@@ -98,24 +99,29 @@ export function shouldTriggerObjection(phase: CourtPhase, speakerTurn: number): 
   // Only after speaker has said at least one substantive thing
   if (speakerTurn < 1) return null;
   
-  // Weighted random chance
+  // Don't trigger if there's already a pending objection
+  const hasPending = existingObjections.some(o => o.status === 'pending');
+  if (hasPending) return null;
+  
+  // Check recent objections to help avoid repeats (variable kept for potential future logic)
+  
+  // unused but available for future use
+  
+  // Random probability lower now
   const rand = Math.random();
-  const threshold = 0.75; // ~25% chance overall
+  const threshold = 0.80; // ~20% chance if all conditions met
   
   if (rand > threshold) {
-    // Pick weighted random objection type
-    const types = Object.keys(OBJECTION_TYPES) as Array<keyof typeof OBJECTION_TYPES>;
-    const totalWeight = types.reduce((sum, t) => sum + OBJECTION_TYPES[t].weight, 0);
-    let cumulative = 0;
-    const pick = Math.random() * totalWeight;
-    
-    for (const objType of types) {
-      cumulative += OBJECTION_TYPES[objType].weight;
-      if (pick <= cumulative) {
-        return OBJECTION_TYPES[objType].desc;
-      }
+    // Choose objection based on whether evidence was referenced
+    if (evidenceRefs.length > 0) {
+      // Evidence was mentioned - might trigger relevance or foundation
+      const evidenceObjTypes = ['relevance', 'lack_of_foundation', 'hearsay'];
+      return evidenceObjTypes[Math.floor(Math.random() * evidenceObjTypes.length)];
+    } else {
+      // No evidence - might trigger procedural
+      const noEvTypes = ['argumentative', 'speculation', 'leading'];
+      return noEvTypes[Math.floor(Math.random() * noEvTypes.length)];
     }
-    return "irrelevant";
   }
   return null;
 }

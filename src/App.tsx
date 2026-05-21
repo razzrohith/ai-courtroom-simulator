@@ -7,7 +7,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { CourtroomLayout } from './components/CourtroomLayout';
-import { createInitialState, startSimulation, processNextTurnAsync, resetSimulation, skipToNextPhase } from './orchestration/courtControllerAsync';
+import { createInitialState, startSimulation, processNextTurnAsync, resetSimulation, skipToNextPhase, ruleOnObjection } from './orchestration/courtControllerAsync';
 import { saveSession, loadSession, clearSession, hasSavedSession } from './data/sessionPersistence';
 import type { CourtState, TranscriptEntry, CaseData } from './types/courtroom';
 
@@ -130,6 +130,11 @@ function App() {
     }));
   }, []);
 
+  // Handle objection ruling from ObjectionHistoryPanel
+  const handleRuling = useCallback((objectionId: string, sustained: boolean, targetEvidence?: string) => {
+    setState(prev => ruleOnObjection(prev, objectionId, sustained, targetEvidence));
+  }, []);
+
   return (
     <CourtroomLayout
       state={state}
@@ -141,6 +146,7 @@ function App() {
       onLoad={handleLoad}
       onClear={handleClear}
       onCaseUpdate={handleCaseUpdate}
+      onObjectionRuling={handleRuling}
       hasSavedSession={hasSession}
       isGenerating={isGenerating}
     />

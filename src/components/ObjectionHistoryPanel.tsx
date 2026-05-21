@@ -4,7 +4,7 @@
  */
 
 import type { ObjectionEvent } from '../types/courtroom';
-import { EmptyStatePlaceholder } from './visuals/CourtroomVisuals';
+import { EmptyStatePlaceholder, RulingStampVisual } from './visuals/CourtroomVisuals';
 
 interface ObjectionHistoryPanelProps {
   objections: ObjectionEvent[];
@@ -79,11 +79,7 @@ export function ObjectionHistoryPanel({ objections, onRuling }: ObjectionHistory
               }`}>
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-gray-300 capitalize">{obj.raisedBy}</span>
-                  <span className={`px-1.5 py-0.5 rounded text-xs ${
-                    obj.status === 'sustained' ? 'bg-red-900 text-red-200' : 'bg-green-900 text-green-200'
-                  }`}>
-                    {obj.status.toUpperCase()}
-                  </span>
+                  <RulingStampVisual ruling={obj.status === 'sustained' ? 'sustained' : 'overruled'} />
                 </div>
                 <p className="text-gray-400 mt-1">{obj.type}</p>
                 {obj.targetEvidence && (

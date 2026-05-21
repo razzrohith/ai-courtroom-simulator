@@ -4,7 +4,7 @@
  */
 
 import type { MotionEvent, MotionType, MotionStatus } from '../types/courtroom';
-import { EmptyStatePlaceholder } from './visuals/CourtroomVisuals';
+import { EmptyStatePlaceholder, RulingStampVisual } from './visuals/CourtroomVisuals';
 
 interface MotionPanelProps {
   motions: MotionEvent[];
@@ -63,9 +63,13 @@ export function MotionPanel({ motions, onRuling }: MotionPanelProps) {
                 <span className="text-xs font-medium text-gray-300 uppercase">
                   {motionTypeLabels[motion.motionType]}
                 </span>
-                <span className={`text-xs px-2 py-0.5 rounded ${status.class}`}>
-                  {status.label}
-                </span>
+                {motion.status !== 'pending' ? (
+                  <RulingStampVisual ruling={motion.status === 'granted' ? 'granted' : 'denied'} />
+                ) : (
+                  <span className={`text-xs px-2 py-0.5 rounded ${status.class}`}>
+                    {status.label}
+                  </span>
+                )}
               </div>
               
               <p className="text-xs text-gray-400 mb-1">Reason: {motion.reason}</p>

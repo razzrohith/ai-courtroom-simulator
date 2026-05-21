@@ -4,6 +4,7 @@
  */
 
 import type { Verdict, VerdictDecision, Evidence, ObjectionEvent } from '../types/courtroom';
+import { VerdictStampAnimation } from './visuals/CourtroomVisuals';
 
 interface VerdictPanelProps {
   verdict: Verdict;
@@ -38,6 +39,11 @@ export function VerdictPanel({ verdict, evidence, objections }: VerdictPanelProp
         {/* Decision banner */}
         <div className={`text-center py-4 rounded-lg ${decision.class}`}>
           <span className="text-xl font-bold">{decision.label}</span>
+        </div>
+
+        {/* Verdict Stamp Animation */}
+        <div className="flex justify-center my-4">
+          <VerdictStampAnimation show={true} verdict={decision.label} />
         </div>
 
         {/* Reasoning */}

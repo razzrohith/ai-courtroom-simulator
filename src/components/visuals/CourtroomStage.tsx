@@ -15,7 +15,8 @@ import {
   AttorneyTableSVG,
   WitnessStandSVG,
   CourtroomEmblem,
-  EvidenceCard
+  EvidenceCard,
+  SpeakingPulseRing
 } from './CourtroomVisuals';
 
 /**
@@ -281,6 +282,9 @@ function JudgeStation({
       {/* Judge Bench SVG */}
       <JudgeBenchSVG className="w-32 h-16 mb-1" />
       
+      {/* Speaking Pulse Ring when active */}
+      {isSpeaking && <SpeakingPulseRing active={true} role="judge" />}
+      
       {/* Judge Avatar */}
       <CourtroomAvatar 
         role="judge"
@@ -321,6 +325,9 @@ function AttorneyStation({
     `}>
       {/* Table SVG */}
       <AttorneyTableSVG className="w-20 h-12 mb-1" />
+      
+      {/* Speaking Pulse Ring when active */}
+      {isSpeaking && <SpeakingPulseRing active={true} role={role} />}
       
       {/* Attorney Avatar */}
       <CourtroomAvatar 

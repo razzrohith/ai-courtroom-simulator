@@ -15,6 +15,7 @@ import { VerdictPanel } from './VerdictPanel';
 import { CaseSetupPanel } from './CaseSetupPanel';
 import { ProviderSettings } from './ProviderSettings';
 import { ProviderRuntimeStatusPanel } from './ProviderRuntimeStatus';
+import { ObjectionHistoryPanel } from './ObjectionHistoryPanel';
 
 interface AgentModelInfo {
   providerId: string;
@@ -37,7 +38,7 @@ interface CourtroomLayoutProps {
 }
 
 export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, onSave, onLoad, onClear, isGenerating = false, hasSavedSession = false }: CourtroomLayoutProps) {
-  const { currentPhase, currentSpeaker, participants, transcript, evidence, verdict, case: caseData, isActive } = state;
+  const { currentPhase, currentSpeaker, participants, transcript, evidence, verdict, case: caseData, isActive, objectionHistory } = state;
   const phaseLabel = PHASE_LABELS[currentPhase];
   const [showSettings, setShowSettings] = useState(false);
   const [modelConfig, setModelConfig] = useState<CourtroomModelConfig | null>(null);
@@ -196,7 +197,10 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, o
             {currentPhase === 'case_setup' ? (
               <CaseSetupPanel caseData={caseData} />
             ) : (
-              <EvidenceBoard evidence={evidence} />
+              <>
+                <EvidenceBoard evidence={evidence} />
+                <ObjectionHistoryPanel objections={objectionHistory} />
+              </>
             )}
           </div>
         </div>

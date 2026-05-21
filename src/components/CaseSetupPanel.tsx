@@ -55,6 +55,7 @@ export function CaseSetupPanel({ caseData, onUpdateCase }: CaseSetupPanelProps) 
       id: newId,
       title: 'New Evidence',
       type: 'document',
+      confidentiality: 'public',
       summary: 'Enter evidence summary',
       content: '',
       introducedBy: 'prosecutor',

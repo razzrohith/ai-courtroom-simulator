@@ -23,6 +23,7 @@ import { MotionPanel } from './MotionPanel';
 import { JuryInstructionPanel } from './JuryInstructionPanel';
 import { DeliberationPanel } from './DeliberationPanel';
 import { AppealPanel } from './AppealPanel';
+import { ExhibitPanel } from './ExhibitPanel';
 
 interface AgentModelInfo {
   providerId: string;
@@ -51,6 +52,7 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, o
   const phaseLabel = PHASE_LABELS[currentPhase];
   const [showSettings, setShowSettings] = useState(false);
   const [showTimeline, setShowTimeline] = useState(false);
+  const [showExhibitView, setShowExhibitView] = useState(false);
   const [modelConfig, setModelConfig] = useState<CourtroomModelConfig | null>(null);
 
   useEffect(() => {
@@ -214,12 +216,20 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, o
                     onClick={() => setShowTimeline(!showTimeline)}
                     className={`text-xs px-2 py-1 rounded ${showTimeline ? 'bg-blue-700' : 'bg-gray-700'} text-gray-300`}
                   >
-                    {showTimeline ? '📊 Timeline' : '📋 Evidence'}
+                    {showTimeline ? 'Timeline' : 'Evidence'}
+                  </button>
+                  <button
+                    onClick={() => setShowExhibitView(!showExhibitView)}
+                    className={`text-xs px-2 py-1 rounded ${showExhibitView ? 'bg-purple-700' : 'bg-gray-700'} text-gray-300`}
+                  >
+                    Exhibits
                   </button>
                 </div>
                 
                 {showTimeline ? (
                   <EvidenceTimeline evidence={evidence} />
+                ) : showExhibitView ? (
+                  <ExhibitPanel exhibits={evidence} showRestricted={false} />
                 ) : (
                   <EvidenceBoard evidence={evidence} />
                 )}

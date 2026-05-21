@@ -10,10 +10,11 @@ interface EvidenceBoardProps {
 
 const statusStyles: Record<EvidenceStatus, { label: string; class: string }> = {
   pending: { label: 'Pending', class: 'bg-gray-700 text-gray-300' },
-  introduced: { label: 'Introduced', class: 'bg-blue-700 text-blue-200' },
+  offered: { label: 'Offered', class: 'bg-blue-700 text-blue-200' },
+  admitted: { label: 'Admitted', class: 'bg-green-700 text-green-200' },
   disputed: { label: 'Disputed', class: 'bg-red-700 text-red-200' },
-  accepted: { label: 'Accepted', class: 'bg-green-700 text-green-200' },
-  rejected: { label: 'Rejected', class: 'bg-red-800 text-red-300' },
+  excluded: { label: 'Excluded', class: 'bg-red-800 text-red-300' },
+  sealed: { label: 'Sealed', class: 'bg-purple-700 text-purple-200' },
 };
 
 const typeIcons: Record<Evidence['type'], string> = {
@@ -22,6 +23,7 @@ const typeIcons: Record<Evidence['type'], string> = {
   report: '📊',
   physical: '📦',
   testimony: '👤',
+  digital: '💻',
 };
 
 export function EvidenceBoard({ evidence }: EvidenceBoardProps) {
@@ -42,7 +44,7 @@ export function EvidenceBoard({ evidence }: EvidenceBoardProps) {
               key={item.id}
               className={`
                 evidence-card 
-                ${item.status === 'introduced' ? 'evidence-introduced' : ''}
+                ${item.status === 'offered' ? 'evidence-introduced' : ''}
                 ${item.status === 'disputed' ? 'evidence-disputed' : ''}
                 ${item.status === 'pending' ? 'evidence-pending' : ''}
               `}

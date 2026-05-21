@@ -65,7 +65,7 @@ export function CaseSummaryReport({ state }: CaseSummaryReportProps) {
     addSep(lines, '-'.repeat(30));
     lines.push(`Total Items: ${evidence.length}`);
     const introducedCount = evidence.filter(e => e.status !== 'pending').length;
-    const acceptedCount = evidence.filter(e => e.status === 'accepted').length;
+    const acceptedCount = evidence.filter(e => e.status === 'admitted').length;
     const disputedCount = evidence.filter(e => e.status === 'disputed').length;
     lines.push(`Introduced: ${introducedCount}`);
     lines.push(`Accepted: ${acceptedCount}`);

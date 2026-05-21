@@ -83,12 +83,16 @@ export interface TranscriptEntry {
   streamedChars?: number;
 }
 
-export type EvidenceStatus = 'pending' | 'introduced' | 'disputed' | 'accepted' | 'rejected';
+export type EvidenceStatus = 'pending' | 'offered' | 'admitted' | 'disputed' | 'excluded' | 'sealed';
 
 export interface Evidence {
   id: string;
   title: string;
-  type: 'document' | 'email' | 'report' | 'physical' | 'testimony';
+  // Phase 13: Exhibit management
+  exhibitNumber?: string;
+  type: 'document' | 'email' | 'report' | 'physical' | 'testimony' | 'digital';
+  // Phase 13: Confidentiality
+  confidentiality: 'public' | 'confidential' | 'sealed';
   summary: string;
   introducedBy: AgentRole;
   status: EvidenceStatus;
@@ -99,6 +103,11 @@ export interface Evidence {
   referenceCount?: number;
   objectionId?: string; // linked objection if status changed from ruling
   motionId?: string; // linked motion if status changed from motion
+  // Phase 13: Additional exhibit tracking
+  admittedBy?: AgentRole; // judge ruling
+  admittedAtPhase?: CourtPhase;
+  sealedSummary?: string; // Restricted view when sealed
+  notes?: string;
 }
 
 // Phase 9: Witness types

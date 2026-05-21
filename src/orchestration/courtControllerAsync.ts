@@ -219,7 +219,7 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
       const newCount = (ev.referenceCount || 0) + 1;
       updatedEvidence[idx] = {
         ...ev,
-        status: ev.status === 'pending' ? 'introduced' : ev.status,
+        status: ev.status === 'pending' ? 'offered' : ev.status,
         referenceCount: newCount,
         firstReferencedPhase: ev.firstReferencedPhase || state.currentPhase,
         lastReferencedBy: speakerRole,
@@ -339,7 +339,7 @@ export function updateEvidenceStatus(state: CourtState, evidenceId: string, stat
 }
 
 export function introduceEvidence(state: CourtState, evidenceId: string): CourtState {
-  return updateEvidenceStatus(state, evidenceId, 'introduced');
+  return updateEvidenceStatus(state, evidenceId, 'offered');
 }
 // Objection management
 export function recordObjection(
@@ -394,7 +394,7 @@ export function ruleOnObjection(
     const evidenceRef = targetEvidence.toUpperCase().replace(/[-\s]/g, '');
     const idx = state.evidence.findIndex(e => e.id.toUpperCase() === evidenceRef);
     if (idx >= 0) {
-      const newStatus: Evidence['status'] = sustained ? 'disputed' : 'accepted';
+      const newStatus: Evidence['status'] = sustained ? 'disputed' : 'admitted';
       updatedEvidence[idx] = { ...updatedEvidence[idx], status: newStatus };
     }
   }

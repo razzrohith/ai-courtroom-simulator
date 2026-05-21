@@ -68,7 +68,7 @@ export function formatContextAsPrompt(context: CourtroomContext): string {
   if (context.relevantEvidence.length > 0) {
     prompt += 'Evidence Status:\n';
     context.relevantEvidence.forEach(e => {
-      const statusMarker = e.status === 'disputed' ? '(DISPUTED)' : e.status === 'accepted' ? '(ACCEPTED)' : `(${e.status.toUpperCase()})`;
+      const statusMarker = e.status === 'disputed' ? '(DISPUTED)' : e.status === 'admitted' ? '(ACCEPTED)' : `(${e.status.toUpperCase()})`;
       prompt += `- ${e.id}: ${e.title} ${statusMarker}\n`;
     });
     prompt += '\n';

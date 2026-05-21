@@ -11,18 +11,20 @@ interface EvidenceTimelineProps {
 
 const statusLabels: Record<EvidenceStatus, string> = {
   pending: 'Pending',
-  introduced: 'Introduced',
+  offered: 'Offered',
+  admitted: 'Admitted',
   disputed: 'Disputed',
-  accepted: 'Accepted',
-  rejected: 'Rejected',
+  excluded: 'Excluded',
+  sealed: 'Sealed',
 };
 
 const statusColors: Record<EvidenceStatus, string> = {
   pending: 'text-gray-400',
-  introduced: 'text-blue-400',
+  offered: 'text-blue-400',
+  admitted: 'text-green-400',
   disputed: 'text-red-400',
-  accepted: 'text-green-400',
-  rejected: 'text-red-500',
+  excluded: 'text-red-500',
+  sealed: 'text-purple-400',
 };
 
 export function EvidenceTimeline({ evidence }: EvidenceTimelineProps) {
@@ -70,9 +72,9 @@ export function EvidenceTimeline({ evidence }: EvidenceTimelineProps) {
               <div key={item.id} className="relative pl-8">
                 {/* Timeline dot */}
                 <div className={`absolute left-1.5 w-3 h-3 rounded-full border-2 border-gray-900 ${
-                  item.status === 'accepted' ? 'bg-green-500' :
+                  item.status === 'admitted' ? 'bg-green-500' :
                   item.status === 'disputed' ? 'bg-red-500' :
-                  item.status === 'introduced' ? 'bg-blue-500' :
+                  item.status === 'offered' ? 'bg-blue-500' :
                   'bg-gray-600'
                 }`}></div>
 

@@ -255,7 +255,7 @@ export function updateEvidenceStatus(
  * Introduce evidence into the case
  */
 export function introduceEvidence(state: CourtState, evidenceId: string): CourtState {
-  return updateEvidenceStatus(state, evidenceId, 'introduced');
+  return updateEvidenceStatus(state, evidenceId, 'offered');
 }
 
 /**

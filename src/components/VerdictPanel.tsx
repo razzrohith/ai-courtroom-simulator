@@ -22,7 +22,7 @@ export function VerdictPanel({ verdict, evidence, objections }: VerdictPanelProp
   const decision = decisionLabels[verdict.decision];
   
   // Count evidence by status
-  const acceptedCount = evidence?.filter(e => e.status === 'accepted').length || 0;
+  const acceptedCount = evidence?.filter(e => e.status === 'admitted').length || 0;
   const disputedCount = evidence?.filter(e => e.status === 'disputed').length || 0;
   const objectionImpact = objections?.filter(o => o.status !== 'pending').length || 0;
 

@@ -44,8 +44,8 @@ const AGENT_LABELS: Record<AgentRole, string> = {
 };
 
 const STATUS_BADGES = {
-  connected: { bg: 'bg-green-900/50', text: 'text-green-400', label: 'Connected' },
-  missing: { bg: 'bg-red-900/50', text: 'text-red-400', label: 'Not configured' },
+  connected: { bg: 'bg-green-900/50', text: 'text-green-400', label: 'API Key Configured' },
+  missing: { bg: 'bg-red-900/50', text: 'text-red-400', label: 'Missing API Key' },
   loading: { bg: 'bg-blue-900/50', text: 'text-blue-400', label: 'Loading...' },
   error: { bg: 'bg-red-900/50', text: 'text-red-400', label: 'Error' },
 };
@@ -130,6 +130,15 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
       newStatus[pid] = isProviderConfigured(pid) ? 'connected' : 'missing';
     });
     setConnectionStatus(newStatus);
+    
+    // Pre-load models for all configured providers
+    (Object.keys(AGENT_LABELS) as AgentRole[]).forEach((role) => {
+      const agentConfig = (loaded as Record<AgentRole, AgentModelConfig>)[role];
+      const providerId = agentConfig?.providerId || 'mock';
+      if (providerId !== 'mock' && isProviderConfigured(providerId)) {
+        loadModelsForProvider(providerId);
+      }
+    });
   }, [isOpen]);
 
   const handleSave = useCallback(() => {
@@ -299,14 +308,14 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
           {activeTab === 'agents' ? (
             /* Agent provider selection with model catalogs */
             <div className="space-y-4">
-              <div className="mb-4 flex gap-2 flex-wrap">
+              <div className="mb-4 flex gap-2 flex-wrap items-center">
                 <label className="text-xs text-gray-400">Filter models:</label>
                 <label className="flex items-center gap-1 text-xs">
-                  <input type="checkbox" checked={modelFilters.freeOnly} onChange={(e) => setModelFilters(f => ({ ...f, freeOnly: e.target.checked }))} className="rounded" />
+                  <input type="checkbox" checked={modelFilters.freeOnly} onChange={(e) => setModelFilters(f => ({ ...f, freeOnly: e.target.checked, paidOnly: e.target.checked ? false : f.paidOnly }))} className="rounded" />
                   Free
                 </label>
                 <label className="flex items-center gap-1 text-xs">
-                  <input type="checkbox" checked={modelFilters.paidOnly} onChange={(e) => setModelFilters(f => ({ ...f, paidOnly: e.target.checked }))} className="rounded" />
+                  <input type="checkbox" checked={modelFilters.paidOnly} onChange={(e) => setModelFilters(f => ({ ...f, paidOnly: e.target.checked, freeOnly: e.target.checked ? false : f.freeOnly }))} className="rounded" />
                   Paid
                 </label>
                 <label className="flex items-center gap-1 text-xs">
@@ -315,11 +324,17 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                 </label>
                 <input 
                   type="text" 
-                  placeholder="Search models..."
+                  placeholder="Search..."
                   value={modelFilters.search}
                   onChange={(e) => setModelFilters(f => ({ ...f, search: e.target.value }))}
-                  className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs w-32"
+                  className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs w-28"
                 />
+                {/* Show count when any filter is active */}
+                {Object.values(modelCache).some(m => m.length > 0) && (
+                  <span className="text-xs text-blue-400 ml-2">
+                    {Object.values(modelCache).reduce((sum, arr) => sum + arr.length, 0)} models
+                  </span>
+                )}
               </div>
 
               {(Object.keys(AGENT_LABELS) as AgentRole[]).map((role) => {

@@ -120,13 +120,13 @@ export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo 
         <div className="flex items-center justify-between">
           <span>Provider:</span>
           <span className="text-gray-400 font-medium capitalize">
-            {modelInfo?.providerId || participant.modelConfig.provider.id}
+            {modelInfo?.providerId || participant?.modelConfig?.provider?.id || 'mock'}
           </span>
         </div>
         <div className="flex items-center justify-between">
           <span>Model:</span>
-          <span className="text-gray-400 truncate max-w-[150px] font-mono" title={modelInfo?.model || participant.modelConfig.model}>
-            {modelInfo?.model || participant.modelConfig.model}
+          <span className="text-gray-400 truncate max-w-[150px] font-mono" title={modelInfo?.model || participant?.modelConfig?.model || 'unknown'}>
+            {modelInfo?.model || participant?.modelConfig?.model || 'unknown'}
           </span>
         </div>
         <div className="flex items-center justify-between">

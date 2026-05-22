@@ -169,6 +169,7 @@ export function getProvidersByCategory(category: ProviderCategory): ProviderRegi
 // Is provider placeholder only
 export function isProviderPlaceholder(id: ProviderId): boolean {
   const entry = PROVIDER_REGISTRY[id];
+  if (!entry) return false;
   return entry.category !== 'mock';
 }
 
@@ -228,8 +229,56 @@ export function loadCourtroomConfig(): CourtroomModelConfig {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (parsed.version === 1) {
-        return parsed;
+      if (parsed && typeof parsed === 'object') {
+        // Upgrade/migration path for old localStorage schemas
+        const migrated = { ...parsed };
+        const roles = ['judge', 'prosecutor', 'defense'] as const;
+        let needsMigration = false;
+
+        roles.forEach((role) => {
+          if (migrated[role] && typeof migrated[role] === 'object') {
+            const agentConfig = { ...migrated[role] };
+            // Handle migration from old provider object to providerId
+            if (!agentConfig.providerId && agentConfig.provider && typeof agentConfig.provider === 'object') {
+              agentConfig.providerId = agentConfig.provider.id || 'mock';
+              needsMigration = true;
+            }
+            // Ensure providerId exists
+            if (!agentConfig.providerId) {
+              agentConfig.providerId = 'mock';
+              needsMigration = true;
+            }
+            // Ensure model exists
+            if (!agentConfig.model) {
+              agentConfig.model = DEFAULT_MODEL_CONFIG[role].model;
+              needsMigration = true;
+            }
+            // Ensure mode exists
+            if (!agentConfig.mode) {
+              agentConfig.mode = DEFAULT_MODEL_CONFIG[role].mode;
+              needsMigration = true;
+            }
+            migrated[role] = agentConfig;
+          } else {
+            // Missing agent config entirely
+            migrated[role] = { ...DEFAULT_MODEL_CONFIG[role] };
+            needsMigration = true;
+          }
+        });
+
+        if (!migrated.version) {
+          migrated.version = 1;
+          needsMigration = true;
+        }
+
+        if (needsMigration) {
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+          } catch (e) {
+            console.warn('Failed to save migrated config:', e);
+          }
+        }
+        return migrated as CourtroomModelConfig;
       }
     }
   } catch (e) {
@@ -332,9 +381,9 @@ export type AgentConnectionStatus =
 
 export function getAgentConnectionStatus(
   role: AgentRole, 
-  config: AgentModelConfig
+  config?: AgentModelConfig
 ): AgentConnectionStatus {
-  if (config.providerId === 'mock') {
+  if (!config || !config.providerId || config.providerId === 'mock') {
     return 'mock';
   }
   

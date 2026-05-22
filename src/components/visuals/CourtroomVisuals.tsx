@@ -70,19 +70,27 @@ export function CourtroomAvatar({
   }
   
   return (
-    <div className={`relative flex flex-col items-center transition-all duration-300 ${isSpeaking ? 'scale-105' : 'opacity-80 hover:opacity-100'}`}>
+    <div className={`relative flex flex-col items-center transition-all duration-300 ${isSpeaking ? 'scale-105' : 'opacity-85 hover:opacity-100'}`}>
       {/* Avatar circle */}
       <div className={`
-        relative w-20 h-20 rounded-full flex items-center justify-center
+        relative w-20 h-20 rounded-full flex items-center justify-center overflow-hidden
         ${bgClass} ${isSpeaking ? '' : colorClass.split(' ')[0]}
-        ${isSpeaking ? 'ring-4 ring-yellow-500 shadow-lg shadow-yellow-500/30' : 'border-2 border-gray-600'}
+        ${isSpeaking ? (
+          role === 'judge' ? 'ring-4 ring-yellow-500 shadow-lg shadow-yellow-500/50' :
+          role === 'prosecutor' ? 'ring-4 ring-blue-500 shadow-lg shadow-blue-500/50' :
+          'ring-4 ring-green-500 shadow-lg shadow-green-500/50'
+        ) : 'border border-gray-700'}
         transition-all duration-300
       `}>
-        <AvatarIcon role={role} className="w-10 h-10" />
+        <AvatarIcon role={role} isSpeaking={isSpeaking} className="w-full h-full" />
         
         {/* Speaking pulse */}
         {isSpeaking && (
-          <div className="absolute inset-0 rounded-full animate-ping opacity-50 bg-yellow-500/30" />
+          <div className={`absolute inset-0 rounded-full animate-ping opacity-25 ${
+            role === 'judge' ? 'bg-yellow-500' :
+            role === 'prosecutor' ? 'bg-blue-500' :
+            'bg-green-500'
+          }`} />
         )}
         
         {/* Role badge */}
@@ -95,7 +103,7 @@ export function CourtroomAvatar({
       <div className="mt-2 text-center">
         <div className="text-sm font-semibold text-white">{getRoleLabel(role)}</div>
         {providerInfo && (
-          <div className="text-xs text-gray-400 truncate max-w-[100px]">{providerInfo}</div>
+          <div className="text-xs text-gray-400 truncate max-w-[110px] font-mono">{providerInfo}</div>
         )}
       </div>
     </div>
@@ -116,42 +124,181 @@ function CompactAvatarIcon({ role, className }: { role: AgentRole; className?: s
 }
 
 /**
- * Full avatar icon
+ * Full avatar icon - Realistic human illustrations for judge, prosecutor, and defense
  */
-function AvatarIcon({ role, className }: { role: AgentRole; className?: string }) {
-  const color = role === 'judge' ? '#FFD700' : role === 'prosecutor' ? '#60A5FA' : '#4ADE80';
-  
+function AvatarIcon({ role, isSpeaking = false, className }: { role: AgentRole; isSpeaking?: boolean; className?: string }) {
   switch (role) {
     case 'judge':
       return (
-        <svg className={className} viewBox="0 0 24 24">
-          <path d="M12 2L8 6v2l-4 4v8h4v-4h8v4h4v-8l-4-4V6l-4-4z" fill="none" stroke={color} strokeWidth="1.5" />
-          <path d="M10 4h4l-2 2z" fill={color} />
-          <rect x="10" y="10" width="4" height="1" rx="0.5" fill={color} />
-          <rect x="11" y="9" width="1" height="3" rx="0.5" fill={color} />
+        <svg className={className} viewBox="0 0 80 80" fill="none">
+          <defs>
+            <radialGradient id="judgeGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#451a03" />
+              <stop offset="100%" stopColor="#111827" />
+            </radialGradient>
+          </defs>
+          <circle cx="40" cy="40" r="38" fill="url(#judgeGrad)" />
+          
+          {/* Hair Back */}
+          <path d="M22,35 C18,20 62,20 58,35 C56,22 24,22 22,35 Z" fill="#9CA3AF" />
+          
+          {/* Neck */}
+          <rect x="36" y="42" width="8" height="12" fill="#E0A96D" rx="2" />
+          
+          {/* Face */}
+          <ellipse cx="40" cy="36" rx="13" ry="15" fill="#F3C590" />
+          
+          {/* Hair Side/Front */}
+          <path d="M25,28 C25,23 30,21 34,22 C30,22 27,24 27,28 C27,33 26,38 27,42 C28,42 28,40 28,38 C28,33 26,32 25,28 Z" fill="#D1D5DB" />
+          <path d="M55,28 C55,23 50,21 46,22 C50,22 53,24 53,28 C53,33 54,38 53,42 C52,42 52,40 52,38 C52,33 54,32 55,28 Z" fill="#D1D5DB" />
+          <path d="M32,22 C36,18 44,18 48,22 C44,19 36,19 32,22 Z" fill="#D1D5DB" />
+          
+          {/* Eyes */}
+          <circle cx="34" cy="34" r="1.5" fill="#1F2937" />
+          <circle cx="46" cy="34" r="1.5" fill="#1F2937" />
+          
+          {/* Eyebrows */}
+          <path d="M30,31 Q34,29 37,32" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+          <path d="M50,31 Q46,29 43,32" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+          
+          {/* Glasses */}
+          <circle cx="34" cy="34" r="4.5" stroke="#F59E0B" strokeWidth="1" fill="none" />
+          <circle cx="46" cy="34" r="4.5" stroke="#F59E0B" strokeWidth="1" fill="none" />
+          <line x1="38.5" y1="34" x2="41.5" y2="34" stroke="#F59E0B" strokeWidth="1" />
+          
+          {/* Nose */}
+          <path d="M40,32 L40,37 L38.5,37" stroke="#C28659" strokeWidth="1" strokeLinecap="round" fill="none" />
+          
+          {/* Mouth (Speech Animation) */}
+          {isSpeaking ? (
+            <ellipse cx="40" cy="44" rx="3.5" ry="2.2" fill="#4B1A0E" />
+          ) : (
+            <path d="M36,44 Q40,46 44,44" stroke="#4B1A0E" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+          )}
+          
+          {/* Robe / Shoulders */}
+          <path d="M15,68 C15,54 28,51 40,51 C52,51 65,54 65,68 L67,80 L13,80 Z" fill="#1F2937" />
+          
+          {/* Judicial collar tabs */}
+          <path d="M33,51 L47,51 L45,57 L35,57 Z" fill="#F9FAFB" />
+          <path d="M37,51 L43,51 L43,63 L37,63 Z" fill="#E5E7EB" />
+          <line x1="40" y1="51" x2="40" y2="63" stroke="#9CA3AF" strokeWidth="0.8" />
         </svg>
       );
     case 'prosecutor':
       return (
-        <svg className={className} viewBox="0 0 24 24">
-          <path d="M12 3L9 6v2l-3 3v7h3v-3h6v3h3v-7l-3-3V6l-3-3z" fill="none" stroke={color} strokeWidth="1.5" />
-          <path d="M12 7v3l-1 2h2v-3z" fill={color} />
-          <rect x="9" y="15" width="6" height="4" rx="1" fill="none" stroke={color} strokeWidth="1" />
+        <svg className={className} viewBox="0 0 80 80" fill="none">
+          <defs>
+            <radialGradient id="prosGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#1e3a8a" />
+              <stop offset="100%" stopColor="#111827" />
+            </radialGradient>
+          </defs>
+          <circle cx="40" cy="40" r="38" fill="url(#prosGrad)" />
+          
+          {/* Neck */}
+          <rect x="36" y="42" width="8" height="12" fill="#E0A96D" rx="2" />
+          
+          {/* Face */}
+          <ellipse cx="40" cy="35" rx="12" ry="14" fill="#F3C590" />
+          
+          {/* Hair */}
+          <path d="M26,30 C25,21 32,17 40,17 C48,17 55,21 54,30 C51,19 29,19 26,30 Z" fill="#111827" />
+          <path d="M26,30 L28,33 L29,29 Z" fill="#111827" />
+          <path d="M54,30 L52,33 L51,29 Z" fill="#111827" />
+          
+          {/* Eyes */}
+          <circle cx="34" cy="33" r="1.5" fill="#111827" />
+          <circle cx="46" cy="33" r="1.5" fill="#111827" />
+          
+          {/* Eyebrows */}
+          <path d="M30,29 Q34,28 37,30" stroke="#111827" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+          <path d="M50,29 Q46,28 43,30" stroke="#111827" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+          
+          {/* Nose */}
+          <path d="M40,31 L40,36 L38.5,36" stroke="#C28659" strokeWidth="1" strokeLinecap="round" fill="none" />
+          
+          {/* Mouth (Speech Animation) */}
+          {isSpeaking ? (
+            <ellipse cx="40" cy="43" rx="4" ry="2.5" fill="#4B1A0E" />
+          ) : (
+            <path d="M36,43 Q40,44 44,43" stroke="#4B1A0E" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+          )}
+          
+          {/* Suit / Shoulders */}
+          <path d="M15,68 C15,54 28,50 40,50 C52,50 65,54 65,68 L67,80 L13,80 Z" fill="#2563EB" />
+          
+          {/* Shirt collar */}
+          <path d="M32,50 L48,50 L40,58 Z" fill="#F9FAFB" />
+          
+          {/* Tie */}
+          <path d="M38,52 L42,52 L44,75 L36,75 Z" fill="#DC2626" />
+          <path d="M37,51 L43,51 L40,55 Z" fill="#B91C1C" />
         </svg>
       );
     case 'defense':
       return (
-        <svg className={className} viewBox="0 0 24 24">
-          <path d="M12 3L9 6v2l-3 3v7h3v-3h6v3h3v-7l-3-3V6l-3-3z" fill="none" stroke={color} strokeWidth="1.5" />
-          <path d="M12 7v3l-1 2h2v-3z" fill={color} />
-          <path d="M12 14l-2 3-2-1-1-3h3v3l1 2 1-2v-3h3l-1 3-2 1z" fill={color} />
+        <svg className={className} viewBox="0 0 80 80" fill="none">
+          <defs>
+            <radialGradient id="defGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#064e3b" />
+              <stop offset="100%" stopColor="#111827" />
+            </radialGradient>
+          </defs>
+          <circle cx="40" cy="40" r="38" fill="url(#defGrad)" />
+          
+          {/* Hair Back */}
+          <path d="M23,30 C20,18 60,18 57,30 C57,38 58,45 56,48 C55,42 55,30 23,30 Z" fill="#582F0E" />
+          
+          {/* Neck */}
+          <rect x="36" y="42" width="8" height="12" fill="#E0A96D" rx="2" />
+          
+          {/* Face */}
+          <ellipse cx="40" cy="35" rx="11.5" ry="13.5" fill="#F3C590" />
+          
+          {/* Hair Front */}
+          <path d="M26,26 Q35,21 44,25 Q35,23 29,29 C27,32 26,36 26,40" stroke="#582F0E" strokeWidth="3" strokeLinecap="round" fill="none" />
+          <path d="M54,26 Q45,21 36,25 Q45,23 51,29 C53,32 54,36 54,40" stroke="#582F0E" strokeWidth="3" strokeLinecap="round" fill="none" />
+          
+          {/* Eyes */}
+          <circle cx="34" cy="33" r="1.5" fill="#111827" />
+          <circle cx="46" cy="33" r="1.5" fill="#111827" />
+          
+          {/* Eyebrows */}
+          <path d="M30,29.5 Q34,28.5 37,30.5" stroke="#331A00" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+          <path d="M50,29.5 Q46,28.5 43,30.5" stroke="#331A00" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+          
+          {/* Glasses */}
+          <rect x="29" y="30" width="8.5" height="6.5" rx="1.5" stroke="#B45309" strokeWidth="1" fill="none" />
+          <rect x="42.5" y="30" width="8.5" height="6.5" rx="1.5" stroke="#B45309" strokeWidth="1" fill="none" />
+          <line x1="37.5" y1="33" x2="42.5" y2="33" stroke="#B45309" strokeWidth="1" />
+          
+          {/* Nose */}
+          <path d="M40,32 L40,37 L38.5,37" stroke="#C28659" strokeWidth="1" strokeLinecap="round" fill="none" />
+          
+          {/* Mouth (Speech Animation) */}
+          {isSpeaking ? (
+            <ellipse cx="40" cy="43" rx="3.5" ry="2.2" fill="#4B1A0E" />
+          ) : (
+            <path d="M36,43 Q40,45 44,43" stroke="#4B1A0E" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+          )}
+          
+          {/* Suit / Shoulders */}
+          <path d="M15,68 C15,54 28,50 40,50 C52,50 65,54 65,68 L67,80 L13,80 Z" fill="#4B5563" />
+          
+          {/* Blouse V-Neck */}
+          <path d="M31,50 L49,50 L40,59 Z" fill="#F9FAFB" />
+          
+          {/* Necklace */}
+          <path d="M35,52 Q40,56 45,52" stroke="#D4AF37" strokeWidth="1" fill="none" />
+          <circle cx="40" cy="55.5" r="1.5" fill="#D4AF37" />
         </svg>
       );
     default:
       return (
         <svg className={className} viewBox="0 0 24 24">
-          <circle cx="12" cy="8" r="4" fill={color} />
-          <path d="M12 14v6m-4-3v3m8-3v3" stroke={color} strokeWidth="2" />
+          <circle cx="12" cy="8" r="4" fill="#9CA3AF" />
+          <path d="M12 14v6m-4-3v3m8-3v3" stroke="#9CA3AF" strokeWidth="2" />
         </svg>
       );
   }

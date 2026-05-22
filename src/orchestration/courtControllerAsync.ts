@@ -86,7 +86,7 @@ export function getNextSpeakerRole(state: CourtState): AgentRole | null {
   );
 
   const currentTurnIndex = substantiveEntries.length;
-  const speakerIndex = Math.floor(currentTurnIndex / 2);
+  const speakerIndex = currentTurnIndex;
 
   if (speakerIndex >= speakers.length) {
     return null;

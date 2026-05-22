@@ -10,12 +10,21 @@ import { CourtroomLayout } from './components/CourtroomLayout';
 import { createInitialState, startSimulation, processNextTurnAsync, resetSimulation, skipToNextPhase, ruleOnObjection, getNextSpeakerRole } from './orchestration/courtControllerAsync';
 import { saveSession, loadSession, clearSession, hasSavedSession } from './data/sessionPersistence';
 import type { CourtState, TranscriptEntry, CaseData } from './types/courtroom';
+import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 
 function App() {
   const [state, setState] = useState<CourtState>(() => createInitialState());
   const [isGenerating, setIsGenerating] = useState(false);
   const streamRef = useRef<{ abort: boolean }>({ abort: false });
+  const isProcessingRef = useRef<boolean>(false);
   const [hasSession, setHasSession] = useState(false);
+
+  const speech = useSpeechSynthesis();
+
+  // Autoplay states
+  const [isAutoplay, setIsAutoplay] = useState(false);
+  const [isAutoplayPaused, setIsAutoplayPaused] = useState(false);
+  const [autoplaySpeed, setAutoplaySpeed] = useState<'slow' | 'normal' | 'fast'>('normal');
 
   // Check for saved session on mount
   useEffect(() => {
@@ -28,7 +37,8 @@ function App() {
   }, [state]);
 
   const handleNextTurn = useCallback(async () => {
-    if (isGenerating) return;
+    if (isGenerating || isProcessingRef.current) return;
+    isProcessingRef.current = true;
     streamRef.current.abort = false;
     setIsGenerating(true);
 
@@ -69,16 +79,61 @@ function App() {
       }));
     } catch (err) {
       console.error('Generation error:', err);
+      setIsAutoplay(false); // Stop autoplay on error
       setState(prev => ({
         ...prev,
         transcript: prev.transcript.filter((_, i) => i < prev.transcript.length - 1),
       }));
     } finally {
+      isProcessingRef.current = false;
       if (!streamRef.current.abort) {
         setIsGenerating(false);
       }
     }
   }, [state, isGenerating]);
+
+  // Autoplay progression effect
+  useEffect(() => {
+    if (!isAutoplay || isAutoplayPaused || isGenerating || !state.isActive) {
+      return;
+    }
+
+    const nextSpeaker = getNextSpeakerRole(state);
+    // Stop autoplay when trial reaches the end
+    if (state.currentPhase === 'case_summary' && nextSpeaker === null) {
+      setIsAutoplay(false);
+      return;
+    }
+
+    // Delay checking if speech synthesis is currently active
+    if (speech.supported && speech.settings.enabled && speech.settings.autoRead && speech.speaking) {
+      return;
+    }
+
+    const delays = {
+      slow: 3000,
+      normal: 2000,
+      fast: 1000,
+    };
+    const delay = delays[autoplaySpeed];
+
+    const timer = setTimeout(() => {
+      handleNextTurn();
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [
+    isAutoplay,
+    isAutoplayPaused,
+    isGenerating,
+    state,
+    autoplaySpeed,
+    speech.supported,
+    speech.speaking,
+    speech.settings.enabled,
+    speech.settings.autoRead,
+    handleNextTurn
+  ]);
 
   const handleSkip = useCallback(() => {
     streamRef.current.abort = true;
@@ -87,10 +142,14 @@ function App() {
 
   const handleReset = useCallback(() => {
     streamRef.current.abort = true;
+    isProcessingRef.current = false;
     setIsGenerating(false);
+    setIsAutoplay(false);
+    setIsAutoplayPaused(false);
+    speech.stopSpeaking();
     setState(resetSimulation());
     setHasSession(false);
-  }, []);
+  }, [speech]);
 
   // Session controls
   const handleSave = useCallback(() => {
@@ -149,6 +208,13 @@ function App() {
       onObjectionRuling={handleRuling}
       hasSavedSession={hasSession}
       isGenerating={isGenerating}
+      isAutoplay={isAutoplay}
+      isAutoplayPaused={isAutoplayPaused}
+      autoplaySpeed={autoplaySpeed}
+      onToggleAutoplay={() => setIsAutoplay(prev => !prev)}
+      onToggleAutoplayPause={() => setIsAutoplayPaused(prev => !prev)}
+      onChangeAutoplaySpeed={setAutoplaySpeed}
+      speech={speech}
     />
   );
 }

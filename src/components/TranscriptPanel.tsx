@@ -59,6 +59,7 @@ function useTypewriter(fullText: string, entryId: string) {
 interface TranscriptPanelProps {
   transcript: TranscriptEntry[];
   currentPhase: string;
+  speech: ReturnType<typeof useSpeechSynthesis>;
 }
 
 const speakerStyles: Record<AgentRole, { bg: string; border: string; icon: string; label: string }> = {
@@ -163,9 +164,9 @@ function TranscriptEntryItem({ entry, isLatest }: TranscriptEntryItemProps) {
   );
 }
 
-export function TranscriptPanel({ transcript, currentPhase }: TranscriptPanelProps) {
+export function TranscriptPanel({ transcript, currentPhase, speech }: TranscriptPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { supported, voices, speaking, settings, updateSetting, speak, stopSpeaking } = useSpeechSynthesis();
+  const { supported, voices, speaking, settings, updateSetting, speak, stopSpeaking } = speech;
   
   // Auto-read logic
   const lastSpokenIdRef = useRef<string | null>(null);

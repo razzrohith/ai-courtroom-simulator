@@ -34,6 +34,7 @@ import { AppealPanel } from './AppealPanel';
 import { ExhibitPanel } from './ExhibitPanel';
 import { CourtroomStage } from './visuals/CourtroomStage';
 import { getParticipantName } from '../orchestration/courtControllerAsync';
+import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis';
 
 interface AgentModelInfo {
   providerId: string;
@@ -56,9 +57,36 @@ interface CourtroomLayoutProps {
   onObjectionRuling?: (objectionId: string, sustained: boolean, targetEvidence?: string) => void;
   isGenerating?: boolean;
   hasSavedSession?: boolean;
+  isAutoplay?: boolean;
+  isAutoplayPaused?: boolean;
+  autoplaySpeed?: 'slow' | 'normal' | 'fast';
+  onToggleAutoplay?: () => void;
+  onToggleAutoplayPause?: () => void;
+  onChangeAutoplaySpeed?: (speed: 'slow' | 'normal' | 'fast') => void;
+  speech: ReturnType<typeof useSpeechSynthesis>;
 }
 
-export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, onSave, onLoad, onClear, onCaseUpdate, onObjectionRuling, isGenerating = false, hasSavedSession = false }: CourtroomLayoutProps) {
+export function CourtroomLayout({
+  state,
+  onStart,
+  onNextTurn,
+  onReset,
+  onSkip,
+  onSave,
+  onLoad,
+  onClear,
+  onCaseUpdate,
+  onObjectionRuling,
+  isGenerating = false,
+  hasSavedSession = false,
+  isAutoplay = false,
+  isAutoplayPaused = false,
+  autoplaySpeed = 'normal',
+  onToggleAutoplay,
+  onToggleAutoplayPause,
+  onChangeAutoplaySpeed,
+  speech
+}: CourtroomLayoutProps) {
   const { currentPhase, currentSpeaker, participants, transcript, evidence, verdict, case: caseData, isActive, objectionHistory, witnesses, motionHistory } = state;
   const phaseLabel = PHASE_LABELS[currentPhase];
   const [showSettings, setShowSettings] = useState(false);
@@ -169,6 +197,7 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, o
                 showVerdict={currentPhase === 'verdict' && !!verdict}
                 verdict={verdict}
                 compact={false}
+                latestEntry={transcript[transcript.length - 1] || null}
               />
             </div>
           )}
@@ -200,7 +229,7 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, o
               {verdict && currentPhase === 'verdict' ? (
                 <VerdictPanel verdict={verdict} evidence={evidence} objections={objectionHistory} />
               ) : (
-                <TranscriptPanel transcript={currentPhaseTranscript} currentPhase={phaseLabel} />
+                <TranscriptPanel transcript={currentPhaseTranscript} currentPhase={phaseLabel} speech={speech} />
               )}
             </div>
           </div>
@@ -328,15 +357,56 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, o
               <>
                 <button
                   onClick={onNextTurn}
-                  disabled={!canAdvance || isGenerating}
+                  disabled={!canAdvance || isGenerating || (isAutoplay && !isAutoplayPaused)}
                   className={`w-full sm:w-auto px-6 py-2.5 font-bold rounded-lg shadow-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm md:text-base active:scale-95 ${
-                    canAdvance && !isGenerating
+                    canAdvance && !isGenerating && !(isAutoplay && !isAutoplayPaused)
                       ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/20'
                       : 'bg-gray-700 text-gray-500 cursor-not-allowed shadow-none'
                   }`}
                 >
-                  {isGenerating ? '⏳ Generating...' : 'Next Turn ➡️'}
+                  {isGenerating ? '⏳ Generating...' : (isAutoplay && !isAutoplayPaused) ? '🤖 Autoplay...' : 'Next Turn ➡️'}
                 </button>
+
+                {/* Autoplay Controls */}
+                <div className="flex items-center gap-1.5 bg-gray-800/80 border border-gray-700 rounded-lg p-1">
+                  <button
+                    onClick={onToggleAutoplay}
+                    className={`px-3 py-1 rounded font-semibold text-xs md:text-sm transition-all duration-200 ${
+                      isAutoplay
+                        ? 'bg-yellow-600 text-white hover:bg-yellow-500'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-650'
+                    }`}
+                    title={isAutoplay ? 'Turn off autoplay' : 'Turn on autoplay'}
+                  >
+                    {isAutoplay ? '🤖 Auto ON' : '🤖 Auto OFF'}
+                  </button>
+
+                  {isAutoplay && (
+                    <>
+                      <button
+                        onClick={onToggleAutoplayPause}
+                        className={`px-2 py-1 rounded font-semibold text-xs md:text-sm transition-all duration-200 ${
+                          isAutoplayPaused
+                            ? 'bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/40'
+                            : 'bg-amber-600/30 text-amber-400 border border-amber-500/30 hover:bg-amber-600/40'
+                        }`}
+                      >
+                        {isAutoplayPaused ? '▶️ Resume' : '⏸️ Pause'}
+                      </button>
+
+                      <select
+                        value={autoplaySpeed}
+                        onChange={(e) => onChangeAutoplaySpeed?.(e.target.value as 'slow' | 'normal' | 'fast')}
+                        className="bg-gray-900 border border-gray-700 text-gray-300 text-xs md:text-sm rounded px-1 py-1 focus:outline-none focus:border-yellow-500 font-medium"
+                        title="Select Autoplay Speed"
+                      >
+                        <option value="slow">Slow</option>
+                        <option value="normal">Normal</option>
+                        <option value="fast">Fast</option>
+                      </select>
+                    </>
+                  )}
+                </div>
 
                 {onSkip && (
                   <button

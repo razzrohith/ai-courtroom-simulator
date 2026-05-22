@@ -3,7 +3,7 @@
  * Phase 16: Full courtroom stage integration
  */
 
-import type { AgentRole, AgentParticipant, CourtPhase, Evidence, Verdict } from '../../types/courtroom';
+import type { AgentRole, AgentParticipant, CourtPhase, Evidence, Verdict, TranscriptEntry } from '../../types/courtroom';
 import { PHASE_LABELS } from '../../types/courtroom';
 import { 
   CourtroomBackdrop,
@@ -59,6 +59,32 @@ interface CourtroomStageProps {
   verdict?: Verdict | null;
   // Layout options
   compact?: boolean;
+  latestEntry?: TranscriptEntry | null;
+}
+
+export function AudioVisualizerWave({ role }: { role: AgentRole }) {
+  const barColor = role === 'judge' ? '#EAB308' : role === 'prosecutor' ? '#3B82F6' : '#22C55E';
+  
+  return (
+    <div className="flex items-end justify-center gap-[2px] h-3 px-1 py-0.5 bg-gray-950/80 rounded-full border border-gray-800">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes courtroomWave {
+          0% { transform: scaleY(0.25); }
+          100% { transform: scaleY(1); }
+        }
+      `}} />
+      {[0.1, 0.3, 0.2, 0.4, 0.15].map((delay, i) => (
+        <div
+          key={i}
+          className="w-[1.5px] h-2.5 rounded-full origin-bottom"
+          style={{
+            backgroundColor: barColor,
+            animation: `courtroomWave 0.6s ease-in-out ${delay}s infinite alternate`
+          }}
+        />
+      ))}
+    </div>
+  );
 }
 
 /**
@@ -98,6 +124,7 @@ export function CourtroomStage({
   showVerdict = false,
   verdict,
   compact = false,
+  latestEntry,
 }: CourtroomStageProps) {
   // Check if there's an active objection
   const hasObjection = !!activeObjection;
@@ -220,8 +247,57 @@ export function CourtroomStage({
             judge={judge} 
             isSpeaking={currentSpeaker === 'judge' && isSpeaking} 
             currentPhase={currentPhase}
+            latestEntry={latestEntry}
           />
         </div>
+        
+        {/* Live Discussion panel/bubble in the middle of the stage */}
+        {isActive && latestEntry && (
+          <div className="my-3 mx-auto max-w-xl w-full bg-gray-950/85 backdrop-blur-md border border-gray-700/80 rounded-xl p-3.5 shadow-2xl text-left transition-all duration-300">
+            <div className="flex items-center justify-between border-b border-gray-800 pb-1.5 mb-1.5">
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold text-white ${
+                  latestEntry.speakerRole === 'judge' ? 'bg-yellow-600' :
+                  latestEntry.speakerRole === 'prosecutor' ? 'bg-blue-600' :
+                  'bg-green-600'
+                }`}>
+                  {latestEntry.speakerRole === 'judge' ? 'Hon. Judge' : latestEntry.speakerRole === 'prosecutor' ? 'Prosecutor' : 'Defense'}
+                </span>
+                <span className="text-xs font-bold text-gray-250">
+                  {latestEntry.speakerName}
+                </span>
+                {latestEntry.isComplete === false && (
+                  <span className="text-[10px] text-yellow-500 animate-pulse font-medium flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-ping"></span>
+                    Speaking...
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5">
+                {latestEntry.providerUsed && (
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-gray-900 border border-gray-800 text-gray-400">
+                    {latestEntry.providerUsed}
+                  </span>
+                )}
+                <span className="text-[10px] text-gray-500 font-mono">
+                  {PHASE_LABELS[currentPhase as keyof typeof PHASE_LABELS] || currentPhase}
+                </span>
+              </div>
+            </div>
+            <p className="text-xs text-gray-205 leading-relaxed font-serif min-h-[36px] max-h-[100px] overflow-y-auto pr-1 select-text">
+              {latestEntry.message}
+              {latestEntry.isComplete === false && <span className="animate-pulse text-yellow-500"> ▋</span>}
+            </p>
+            {latestEntry.evidenceRef && (
+              <div className="mt-1.5 pt-1.5 border-t border-gray-900 flex items-center gap-2">
+                <span className="text-[9px] text-gray-500 font-medium">Evidence Cited:</span>
+                <span className="text-[9px] text-yellow-450 bg-yellow-950/20 border border-yellow-900/30 px-1 py-0.5 rounded font-mono">
+                  {latestEntry.evidenceRef}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
         
         {/* Row 2: Attorney stations - sides */}
         <div className="flex justify-between items-start flex-1 -mt-2">
@@ -231,6 +307,7 @@ export function CourtroomStage({
             role="prosecutor"
             isSpeaking={currentSpeaker === 'prosecutor' && isSpeaking}
             position="left"
+            latestEntry={latestEntry}
           />
           
           {/* Right side: Defense */}
@@ -239,6 +316,7 @@ export function CourtroomStage({
             role="defense"
             isSpeaking={currentSpeaker === 'defense' && isSpeaking}
             position="right"
+            latestEntry={latestEntry}
           />
         </div>
         
@@ -272,23 +350,28 @@ export function CourtroomStage({
 function JudgeStation({ 
   judge, 
   isSpeaking, 
-  currentPhase 
+  currentPhase,
+  latestEntry
 }: { 
   judge: StageParticipant | null; 
   isSpeaking: boolean;
   currentPhase: CourtPhase;
+  latestEntry?: TranscriptEntry | null;
 }) {
   return (
     <div className={`
-      flex flex-col items-center p-3 rounded-lg
-      ${isSpeaking ? 'bg-yellow-500/20 ring-2 ring-yellow-500' : 'bg-gray-800/60'}
+      flex flex-col items-center p-3 rounded-lg w-[170px]
+      ${isSpeaking ? 'bg-yellow-500/20 ring-2 ring-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : 'bg-gray-800/60'}
       transition-all duration-300
     `}>
       {/* Judge Bench SVG */}
       <JudgeBenchSVG className="w-32 h-16 mb-1" />
       
-      {/* Speaking Pulse Ring when active */}
-      {isSpeaking && <SpeakingPulseRing active={true} role="judge" />}
+      {/* Speaking Indicator and Visualizer */}
+      <div className="flex items-center gap-1.5 mb-1.5 h-4">
+        {isSpeaking && <SpeakingPulseRing active={true} role="judge" />}
+        {isSpeaking && <AudioVisualizerWave role="judge" />}
+      </div>
       
       {/* Judge Avatar */}
       <CourtroomAvatar 
@@ -296,9 +379,24 @@ function JudgeStation({
         isSpeaking={isSpeaking}
         providerInfo={formatProviderInfo(judge?.modelInfo)}
       />
+
+      {/* Live context near speaker */}
+      {isSpeaking && latestEntry && (
+        <div className="mt-2 bg-gray-950/95 border border-yellow-500/40 rounded-lg p-1.5 w-full text-center shadow-lg animate-pulse">
+          <span className="text-[9px] text-yellow-450 font-bold uppercase tracking-wide block">🎙️ Speaking</span>
+          <p className="text-[9px] text-gray-300 line-clamp-2 mt-0.5 leading-tight italic">
+            "{latestEntry.message || '...'}"
+          </p>
+          {latestEntry.evidenceRef && (
+            <span className="inline-block mt-1 text-[8px] bg-yellow-950/40 text-yellow-450 border border-yellow-900/40 px-1 rounded font-mono">
+              📁 {latestEntry.evidenceRef}
+            </span>
+          )}
+        </div>
+      )}
       
       {/* Current phase indicator */}
-      <div className="text-xs text-gray-400 mt-1">
+      <div className="text-[10px] text-gray-400 mt-1 uppercase font-semibold">
         {PHASE_LABELS[currentPhase]}
       </div>
     </div>
@@ -312,27 +410,33 @@ function AttorneyStation({
   participant, 
   role,
   isSpeaking,
-  position: _position 
+  position: _position,
+  latestEntry
 }: { 
   participant: StageParticipant | null; 
   role: AgentRole;
   isSpeaking: boolean;
   position: 'left' | 'right';
+  latestEntry?: TranscriptEntry | null;
 }) {
   const roleColor = role === 'prosecutor' ? 'blue' : 'green';
   const roleLabel = role === 'prosecutor' ? 'Prosecution' : 'Defense';
+  const accentColor = role === 'prosecutor' ? '#3B82F6' : '#22C55E';
   
   return (
     <div className={`
-      flex flex-col items-center p-2 rounded-lg w-[140px]
-      ${isSpeaking ? `bg-${roleColor}-500/20 ring-2 ring-${roleColor}-500` : 'bg-gray-800/60'}
+      flex flex-col items-center p-3 rounded-lg w-[150px]
+      ${isSpeaking ? `bg-${roleColor}-500/20 ring-2 ring-${roleColor}-500 shadow-[0_0_15px_rgba(${role === 'prosecutor' ? '59,130,246' : '34,197,94'},0.3)]` : 'bg-gray-800/60'}
       transition-all duration-300
     `}>
       {/* Table SVG */}
       <AttorneyTableSVG className="w-20 h-12 mb-1" />
       
-      {/* Speaking Pulse Ring when active */}
-      {isSpeaking && <SpeakingPulseRing active={true} role={role} />}
+      {/* Speaking Indicator and Visualizer */}
+      <div className="flex items-center gap-1.5 mb-1.5 h-4">
+        {isSpeaking && <SpeakingPulseRing active={true} role={role} />}
+        {isSpeaking && <AudioVisualizerWave role={role} />}
+      </div>
       
       {/* Attorney Avatar */}
       <CourtroomAvatar 
@@ -340,6 +444,21 @@ function AttorneyStation({
         isSpeaking={isSpeaking}
         providerInfo={formatProviderInfo(participant?.modelInfo)}
       />
+
+      {/* Live context near speaker */}
+      {isSpeaking && latestEntry && (
+        <div className="mt-2 bg-gray-950/95 border border-gray-700/80 rounded-lg p-1.5 w-full text-center shadow-lg">
+          <span className="text-[9px] font-bold uppercase tracking-wide block" style={{ color: accentColor }}>🎙️ Speaking</span>
+          <p className="text-[9px] text-gray-300 line-clamp-2 mt-0.5 leading-tight italic">
+            "{latestEntry.message || '...'}"
+          </p>
+          {latestEntry.evidenceRef && (
+            <span className="inline-block mt-1 text-[8px] bg-yellow-950/40 text-yellow-450 border border-yellow-900/40 px-1 rounded font-mono">
+              📁 {latestEntry.evidenceRef}
+            </span>
+          )}
+        </div>
+      )}
       
       {/* Table label */}
       <div className={`text-xs text-${roleColor}-400 mt-1 font-medium`}>

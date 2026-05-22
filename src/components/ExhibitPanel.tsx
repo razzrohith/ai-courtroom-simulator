@@ -67,7 +67,7 @@ export function ExhibitPanel({ exhibits, showRestricted = false }: ExhibitPanelP
           <EmptyStatePlaceholder 
             icon="📁" 
             title="No Exhibits Yet" 
-            message="Evidence will appear here once introduced during the trial." 
+            message="Evidence will be introduced during proceedings." 
           />
         )}
         {sortedExhibits.map((exhibit) => {

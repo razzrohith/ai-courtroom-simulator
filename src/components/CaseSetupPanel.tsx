@@ -274,19 +274,25 @@ export function CaseSetupPanel({ caseData, onUpdateCase }: CaseSetupPanelProps) 
           {/* Key facts */}
           <div>
             <h5 className="text-xs text-gray-500 uppercase mb-2">Key Facts</h5>
-            <ul className="text-sm space-y-1">
-              {displayData.keyFacts.slice(0, 4).map((fact, i) => (
-                <li key={i} className="flex items-start gap-2 text-gray-300">
-                  <span className="text-gray-500">{i + 1}.</span>
-                  <span>{fact}</span>
-                </li>
-              ))}
-              {displayData.keyFacts.length > 4 && (
-                <li className="text-gray-500 text-xs">
-                  ...and {displayData.keyFacts.length - 4} more facts
-                </li>
-              )}
-            </ul>
+            {displayData.keyFacts.length === 0 ? (
+              <p className="text-sm text-gray-400 italic">
+                Facts will be collected as agents present arguments.
+              </p>
+            ) : (
+              <ul className="text-sm space-y-1">
+                {displayData.keyFacts.slice(0, 4).map((fact, i) => (
+                  <li key={i} className="flex items-start gap-2 text-gray-300">
+                    <span className="text-gray-500">{i + 1}.</span>
+                    <span>{fact}</span>
+                  </li>
+                ))}
+                {displayData.keyFacts.length > 4 && (
+                  <li className="text-gray-500 text-xs">
+                    ...and {displayData.keyFacts.length - 4} more facts
+                  </li>
+                )}
+              </ul>
+            )}
           </div>
 
           {/* Legal questions */}

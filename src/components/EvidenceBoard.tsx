@@ -42,7 +42,7 @@ export function EvidenceBoard({ evidence }: EvidenceBoardProps) {
           <EmptyStatePlaceholder 
             icon="📋" 
             title="No Evidence Yet" 
-            message="Evidence will be introduced during the trial." 
+            message="Evidence will be introduced during proceedings." 
           />
         ) : evidence.map((item) => {
           const status = statusStyles[item.status];

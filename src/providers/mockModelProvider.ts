@@ -46,76 +46,76 @@ export function generateMockResponse(params: {
   
   const mockResponses: Record<CourtPhase, Record<AgentRole, string>> = {
     case_setup: {
-      judge: 'This court is now in session. We will proceed with the case.',
-      prosecutor: 'Your Honor, we are prepared to present our case.',
+      judge: 'This court is now in session. We will proceed with the origin priority dispute.',
+      prosecutor: 'Your Honor, we are prepared to present the plaintiff\'s case.',
       defense: 'Your Honor, the defense is ready.',
     },
     court_opening: {
       judge: 'This court is now in session. Please approach.',
-      prosecutor: 'The prosecution is ready to present its opening statement.',
+      prosecutor: 'The plaintiff is ready to present its opening statement.',
       defense: 'The defense is ready, Your Honor.',
     },
     plaintiff_opening: {
       judge: '',
-      prosecutor: 'Good morning. This case concerns a breach of contract regarding the supply agreement between Apex Logistics and Northstar Retail.',
+      prosecutor: 'Good morning, Your Honor. The Plaintiff, The Hen, claims that the hen came first in this priority dispute. A hen is required to lay the egg, which means the bird itself must have existed prior to the egg. We will demonstrate the living bird requirement as the biological basis of life.',
       defense: '',
     },
     defense_opening: {
       judge: '',
       prosecutor: '',
-      defense: 'The defense will show that Northstar Retail had valid reasons for refusing payment given the delivery delays.',
+      defense: 'Your Honor, the defense representing The Egg will show that the egg came first. Evolutionary genetic mutations occur at the zygote stage, before the new species develops into an adult hen. Therefore, the first true hen egg came before the first hen.',
     },
     evidence_presentation: {
       judge: '',
-      prosecutor: 'We enter into evidence the signed supply agreement, dated January 15, 2024.',
-      defense: '',
+      prosecutor: 'We introduce the living bird requirement to prove that hen eggs require OC-17, a protein synthesized only inside a living hen\'s ovaries. This is supported by Exhibit P-1.',
+      defense: 'The defense points to the egg fossil record and the evolutionary record, which show that egg-laying organisms existed hundreds of millions of years before the first hen. We also cite genetic mutation evidence showing mutations occur in the zygote, as documented in Exhibit D-1.',
     },
     objection_ruling: {
-      judge: 'The objection is overruled. The evidence is relevant.',
+      judge: 'The objection is overruled. The scientific argument is relevant to the priority dispute.',
       prosecutor: '',
       defense: '',
     },
     cross_examination: {
       judge: '',
-      prosecutor: 'Did you receive notice of the delays?',
-      defense: 'Yes, but the delays were excessive.',
+      prosecutor: 'Dr. Vance, does your egg fossil record show a modern chicken egg specifically?',
+      defense: 'The evolutionary record shows that the transition was gradual, meaning the egg containing the first hen was laid by a pre-hen ancestor.',
     },
     rebuttal: {
       judge: '',
-      prosecutor: 'The defense has not provided documentation.',
-      defense: '',
+      prosecutor: 'Without a living bird to produce the OC-17 protein, no such egg shell could form. Therefore, the hen is the initiator.',
+      defense: 'The genetic mutation evidence shows that the zygote is where the new species is defined. Thus, the egg came first.',
     },
     closing_arguments: {
       judge: '',
-      prosecutor: 'We ask the court to rule in favor of the plaintiff.',
-      defense: 'We ask the court to dismiss the case.',
+      prosecutor: 'Biology dictates that the shell requires the hen. We request a verdict for the Plaintiff, The Hen.',
+      defense: 'Evolution dictates that the genetic change happened in the egg. We request a verdict for the Defendant, The Egg.',
     },
     judge_deliberation: {
-      judge: `The Court will now consider all evidence, testimony, objections, and motions before reaching a verdict. This matter is taken under advisement.
+      judge: `The Court will now consider all scientific evidence, testimony, objections, and motions before reaching a verdict. This matter is taken under advisement.
 
-Reviewing: Force majeure claim for April delay. Evidence established delivery logs and email correspondence. Both witnesses examined regarding operational constraints and delay notification.
+Reviewing: Living bird requirement for egg shell protein synthesis. Evidence established evolutionary record, egg fossil record, and genetic mutation evidence. Both witnesses examined regarding ovarian biology and palaeontological transition records.
 
-Preliminary findings: Plaintiff's force majeure claim appears valid for April. Defense acceptance and sale of goods constitutes waiver. Witness Morrison credible with corroboration. Witness Patterson partially credible but lacking documentation. Motion to exclude testimony granted.
+Preliminary findings: The living bird requirement (OC-17) is proven biochemically, but the evolutionary record shows egg-laying preceded the hen. The genetic mutation evidence shows speciation starts in the zygote. Dr. Rostova credible with ovarian biology data. Dr. Vance credible with dinosaur egg fossil records. Motion to admit Exhibit D-1 granted.
 
 Parties will be notified of final ruling.`,
       prosecutor: '',
       defense: '',
     },
     verdict: {
-      judge: 'After careful consideration, the court finds in favor of the defendant.',
+      judge: 'After careful consideration, the court finds in favor of the defendant, The Egg.',
       prosecutor: '',
       defense: '',
     },
     // Phase 9: New phases
     witness_testimony: {
-      judge: 'The court will now take testimony. Please proceed with direct examination.',
-      prosecutor: 'I call my witness to the stand.',
-      defense: 'I will cross-examine this witness.',
+      judge: 'The court will now take expert testimony. Please proceed with direct examination.',
+      prosecutor: 'I call my witness, Dr. Evelyn Rostova, to the stand.',
+      defense: 'I will cross-examine the witness.',
     },
     motion_hearing: {
       judge: 'The court will hear any motions at this time.',
-      prosecutor: 'Your Honor, we make a motion to admit Exhibit E03.',
-      defense: 'Your Honor, we make a motion to dismiss.',
+      prosecutor: 'Your Honor, we make a motion to admit Exhibit P-1.',
+      defense: 'Your Honor, we make a motion to admit Exhibit D-1.',
     },
     // Phase 11: Jury instructions
     jury_instructions: {
@@ -159,33 +159,38 @@ export function generateWitnessQAndA(params: {
   
   // Mock Q&A based on witness and question type
   const mockQA: Record<string, Record<string, { q: string; a: string; evidence?: string[] }>> = {
-    'wit-001': { // James Morrison (prosecution)
+    'wit-001': { // Dr. Evelyn Rostova (plaintiff)
       direct: {
-        q: 'Mr. Morrison, please describe your role at Apex Logistics during the relevant period.',
-        a: 'I was Operations Manager responsible for overseeing all delivery operations and coordinating with Northstar on supply chain matters.',
-        evidence: ['E01'],
+        q: 'Dr. Rostova, please describe your findings regarding the chemical structure of the chicken egg shell.',
+        a: 'Through chemical analysis, we found that the formation of the egg shell requires OC-17, a protein synthesized exclusively in the ovaries of a living hen. Without a living bird, the egg shell cannot form, proving the living bird requirement as shown in Exhibit P-1.',
+        evidence: ['EXHIBITP1', 'LIVING_BIRD_REQUIREMENT'],
       },
       cross: {
-        q: 'Mr. Morrison,weren\'t the delivery delays caused by factors beyond Northstar\'s control?',
-        a: 'Objection, Your Honor. Calls for speculation.\n\nSustained. Counsel, rephrase.',
+        q: 'Dr. Rostova, is it not true that other egg-laying species existed before the hen?',
+        a: 'While egg-laying as a general mechanism predates hens, a true hen egg specifically requires the specific OC-17 avian protein which only a hen possesses.',
+        evidence: ['EVOLUTIONARY_RECORD'],
       },
       clarification: {
-        q: 'Mr. Morrison, can you clarify the timeline of the first delay notice?',
-        a: 'Yes, Your Honor. The first notice was sent on March 15th, referencing the February delay.',
+        q: 'Dr. Rostova, can the OC-17 protein be produced by any other ancestor species?',
+        a: 'No, Your Honor. Our genomic studies indicate OC-17 is a novel avian protein unique to the modern Gallus gallus domesticus.',
+        evidence: ['EXHIBITP1'],
       },
     },
-    'wit-002': { // Linda Patterson (defense)
+    'wit-002': { // Dr. Marcus Vance (defense)
       direct: {
-        q: 'Ms. Patterson, what was your understanding of the delivery schedule?',
-        a: 'The contract required delivery within 14 days of order placement. We consistently received late deliveries.',
+        q: 'Dr. Vance, what does the evolutionary and fossil record tell us about the appearance of the egg?',
+        a: 'The fossil record shows that amniotic, egg-laying organisms existed hundreds of millions of years before hens. Furthermore, the evolutionary record demonstrates that genetic mutation happens at the zygote stage. Therefore, the first true hen egg containing the first mutated hen zygote came before the adult hen itself, as documented in Exhibit D-1.',
+        evidence: ['EXHIBITD1', 'EGG_FOSSIL_RECORD', 'GENETIC_MUTATION_EVIDENCE'],
       },
       cross: {
-        q: 'Ms. Patterson, didn\'t Northstar accept late deliveries without complaint for months?',
-        a: 'We documented each late delivery and reserved our rights under Section 4.2 of the contract.',
+        q: 'Dr. Vance, how could that first egg be laid without a parent bird to incubate and shelter it?',
+        a: 'The parent was a transitional proto-hen ancestor. It possessed almost identical biology, but was genetically distinct from the modern hen. It laid the egg containing the genetic mutation.',
+        evidence: ['EVOLUTIONARY_RECORD'],
       },
       clarification: {
-        q: 'Ms. Patterson, regarding the payment refusal - what was the basis?',
-        a: 'Section 4.2 Material Breach - we were entitled to withhold payment for continued failures.',
+        q: 'Dr. Vance, does the genetic mutation evidence show a sharp demarcation?',
+        a: 'Yes, Your Honor. At the zygote stage, the genetic mutation sequence defines the species boundaries, establishing priority for the egg.',
+        evidence: ['GENETIC_MUTATION_EVIDENCE'],
       },
     },
   };

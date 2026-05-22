@@ -260,16 +260,60 @@ export async function generateAgentResponse(params: {
  * Parse evidence references from message text
  */
 export function parseEvidenceReferences(message: string): string[] {
-  // Match patterns like E01, E1, E02, Evidence-1, etc.
-  const matches = message.matchAll(/(?:E(?:0)?\d+|Evidence[-\s]?\d+|Ex(?:hibit)?\s?[-]?\d+)/gi);
   const refs: string[] = [];
   
-  for (const match of matches) {
-    const ref = match[0].replace(/[-\s]/i, '').toUpperCase();
+  // 1. Check for specific natural-language phrases
+  const phraseMapping: Record<string, string> = {
+    'evolutionary record': 'EVOLUTIONARY_RECORD',
+    'egg fossil record': 'EGG_FOSSIL_RECORD',
+    'living bird requirement': 'LIVING_BIRD_REQUIREMENT',
+    'genetic mutation evidence': 'GENETIC_MUTATION_EVIDENCE',
+    'exhibit p-1': 'EXHIBITP1',
+    'exhibit p1': 'EXHIBITP1',
+    'exhibit d-1': 'EXHIBITD1',
+    'exhibit d1': 'EXHIBITD1',
+  };
+
+  const lowerMessage = message.toLowerCase();
+  Object.entries(phraseMapping).forEach(([phrase, ref]) => {
+    if (lowerMessage.includes(phrase)) {
+      if (!refs.includes(ref)) {
+        refs.push(ref);
+      }
+    }
+  });
+
+  // 2. Fall back to matching standard pattern-based matches
+  // Matches e.g. E01, E1, Evidence-1, Exhibit-1, Exhibit P-1, Exhibit D-1, etc.
+  const regexMatches = message.matchAll(/(?:E(?:0)?\d+|Evidence[-\s]?\d+|Ex(?:hibit)?\s?[-]?\s?(?:P|D)?\s?[-]?\d+)/gi);
+  for (const match of regexMatches) {
+    let raw = match[0].toUpperCase();
+    let ref = raw.replace(/[-\s]/g, '');
+    
+    // Normalize prefix patterns
+    if (ref.startsWith('EVID')) {
+      const numMatch = ref.match(/\d+/);
+      if (numMatch) {
+        ref = `E${numMatch[0]}`;
+      }
+    } else if (ref.startsWith('EX')) {
+      // Normalize Exhibit P-1 -> EXHIBITP1
+      if (ref.includes('EXHIBITP') || ref.includes('EXP')) {
+        ref = 'EXHIBITP1';
+      } else if (ref.includes('EXHIBITD') || ref.includes('EXD')) {
+        ref = 'EXHIBITD1';
+      } else {
+        const numMatch = ref.match(/\d+/);
+        if (numMatch) {
+          ref = `E${numMatch[0]}`;
+        }
+      }
+    }
+
     if (!refs.includes(ref)) {
       refs.push(ref);
     }
   }
-  
+
   return refs;
 }

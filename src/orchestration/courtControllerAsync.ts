@@ -7,7 +7,7 @@ import type { CourtState, AgentRole, TranscriptEntry, Evidence, AgentParticipant
 import { COURT_PHASES } from '../types/courtroom';
 import { SAMPLE_CASE } from '../data/sampleCase';
 import { createMockConfig } from '../providers/modelProviderTypes';
-import { getSpeakersForPhase, getNextSpeaker } from './phaseEngine';
+import { getSpeakersForPhase } from './phaseEngine';
 import { generateAgentResponse, parseEvidenceReferences } from '../providers/agentService';
 import { generateWitnessQAndA, calculateCredibilityScore } from '../providers/mockModelProvider';
 import { JUDGE_TRANSITIONS, shouldTriggerObjection, MOCK_VERDICT } from '../data/mockCourtFlow';
@@ -71,36 +71,42 @@ function getParticipantConfig(state: CourtState, role: AgentRole) {
   return participant?.modelConfig || createMockConfig(role);
 }
 
+export function getNextSpeakerRole(state: CourtState): AgentRole | null {
+  if (!state.isActive) return null;
+  const phase = state.currentPhase;
+  const speakers = getSpeakersForPhase(phase);
+  if (speakers.length === 0) return null;
+
+  const substantiveEntries = state.transcript.filter(
+    t => t.phase === phase &&
+         !t.id.startsWith('trans-j-transition-') &&
+         !t.id.startsWith('trans-summary-') &&
+         !t.id.startsWith('trans-ruling-')
+  );
+
+  const currentTurnIndex = substantiveEntries.length;
+  const speakerIndex = Math.floor(currentTurnIndex / 2);
+
+  if (speakerIndex >= speakers.length) {
+    return null;
+  }
+
+  return speakers[speakerIndex];
+}
+
 export async function processNextTurnAsync(state: CourtState): Promise<CourtState> {
   if (!state.isActive) return state;
   const phase = state.currentPhase;
-  const currentSpeaker = state.currentSpeaker;
-  if (!currentSpeaker) {
-    const speakers = getSpeakersForPhase(phase);
-    if (speakers.length === 0) return advanceToNextPhase(state);
-    const nextSpeaker = speakers[0];
-    // Phase 10: Handle witness testimony specially
-    if (phase === 'witness_testimony') {
-      return processWitnessTestimony(await addTranscriptEntryAsync(state, nextSpeaker), nextSpeaker);
-    }
-    return addTranscriptEntryAsync(state, nextSpeaker);
-  }
-  const speakerHasMore = checkSpeakerHasMore(state, currentSpeaker);
-  if (!speakerHasMore) {
-    const nextSpeaker = getNextSpeaker(phase, currentSpeaker);
-    if (nextSpeaker) {
-      if (phase === 'witness_testimony') {
-        return processWitnessTestimony(await addTranscriptEntryAsync(state, nextSpeaker), nextSpeaker);
-      }
-      return addTranscriptEntryAsync(state, nextSpeaker);
-    }
+  const nextSpeaker = getNextSpeakerRole(state);
+
+  if (!nextSpeaker) {
     return advanceToNextPhase(state);
   }
-  // Phase 10: Handle witness testimony specially
+
   if (phase === 'witness_testimony') {
-    return processWitnessTestimony(await addTranscriptEntryAsync(state, currentSpeaker), currentSpeaker);
+    return processWitnessTestimony(await addTranscriptEntryAsync(state, nextSpeaker), nextSpeaker);
   }
-  return addTranscriptEntryAsync(state, currentSpeaker);
+  return addTranscriptEntryAsync(state, nextSpeaker);
 }
 
 /**
@@ -184,11 +190,6 @@ function processWitnessTestimony(state: CourtState, speakerRole: AgentRole): Cou
   }
   
   return { ...state, witnesses: updatedWitnesses };
-}
-
-function checkSpeakerHasMore(state: CourtState, speakerRole: AgentRole): boolean {
-  const phaseEntries = state.transcript.filter(t => t.phase === state.currentPhase && t.speakerRole === speakerRole);
-  return phaseEntries.length < 2;
 }
 
 async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole): Promise<CourtState> {

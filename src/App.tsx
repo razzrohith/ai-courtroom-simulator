@@ -7,7 +7,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { CourtroomLayout } from './components/CourtroomLayout';
-import { createInitialState, startSimulation, processNextTurnAsync, resetSimulation, skipToNextPhase, ruleOnObjection } from './orchestration/courtControllerAsync';
+import { createInitialState, startSimulation, processNextTurnAsync, resetSimulation, skipToNextPhase, ruleOnObjection, getNextSpeakerRole } from './orchestration/courtControllerAsync';
 import { saveSession, loadSession, clearSession, hasSavedSession } from './data/sessionPersistence';
 import type { CourtState, TranscriptEntry, CaseData } from './types/courtroom';
 
@@ -33,12 +33,12 @@ function App() {
     setIsGenerating(true);
 
     try {
-      const speakerRole = state.currentSpeaker;
+      const speakerRole = getNextSpeakerRole(state) || 'judge';
       const speakerName = state.participants.find(p => p.role === speakerRole)?.name || 'Unknown';
       
       const tempEntry: TranscriptEntry = {
         id: `trans-${Date.now()}-${speakerRole}`,
-        speakerRole: speakerRole!,
+        speakerRole,
         speakerName,
         message: '',
         phase: state.currentPhase,

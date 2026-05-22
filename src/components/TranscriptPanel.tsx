@@ -60,6 +60,7 @@ interface TranscriptPanelProps {
   transcript: TranscriptEntry[];
   currentPhase: string;
   speech: ReturnType<typeof useSpeechSynthesis>;
+  activeStageEntryId?: string;
 }
 
 const speakerStyles: Record<AgentRole, { bg: string; border: string; icon: string; label: string }> = {
@@ -164,7 +165,7 @@ function TranscriptEntryItem({ entry, isLatest }: TranscriptEntryItemProps) {
   );
 }
 
-export function TranscriptPanel({ transcript, currentPhase, speech }: TranscriptPanelProps) {
+export function TranscriptPanel({ transcript, currentPhase, speech, activeStageEntryId }: TranscriptPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { supported, voices, speaking, settings, updateSetting, speak, stopSpeaking } = speech;
   
@@ -330,7 +331,9 @@ export function TranscriptPanel({ transcript, currentPhase, speech }: Transcript
             message="The court reporter will record proceedings as they unfold." 
           />
         ) : (
-          transcript.map((entry, index) => (
+          transcript
+          .filter(entry => entry.id !== activeStageEntryId)
+          .map((entry, index) => (
             <TranscriptEntryItem 
               key={entry.id} 
               entry={entry} 

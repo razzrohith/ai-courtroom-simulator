@@ -26,10 +26,61 @@ function App() {
   const [isAutoplayPaused, setIsAutoplayPaused] = useState(false);
   const [autoplaySpeed, setAutoplaySpeed] = useState<'slow' | 'normal' | 'fast'>('normal');
 
+  // Decoupled live-stage typewriter states
+  const [stageEntry, setStageEntry] = useState<TranscriptEntry | null>(null);
+  const [isStageTyping, setIsStageTyping] = useState<boolean>(false);
+
   // Check for saved session on mount
   useEffect(() => {
     setHasSession(hasSavedSession());
   }, []);
+
+  const lastProcessedEntryIdRef = useRef<string | null>(null);
+
+  // Typewriter effect for live stage
+  useEffect(() => {
+    if (state.transcript.length === 0) {
+      setStageEntry(null);
+      setIsStageTyping(false);
+      lastProcessedEntryIdRef.current = null;
+      return;
+    }
+
+    const latestCompletedEntry = [...state.transcript].reverse().find(e => e.isComplete);
+    if (!latestCompletedEntry) return;
+
+    if (latestCompletedEntry.id !== lastProcessedEntryIdRef.current) {
+      lastProcessedEntryIdRef.current = latestCompletedEntry.id;
+      setIsStageTyping(true);
+      
+      let charIndex = 0;
+      const fullText = latestCompletedEntry.message || '';
+      
+      // Clear previous live stage text by setting new speaker but empty message
+      setStageEntry({
+        ...latestCompletedEntry,
+        message: ''
+      });
+
+      const interval = setInterval(() => {
+        charIndex += 1;
+        if (charIndex <= fullText.length) {
+          setStageEntry(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              message: fullText.slice(0, charIndex)
+            };
+          });
+        } else {
+          setIsStageTyping(false);
+          clearInterval(interval);
+        }
+      }, 20); // Cinematic letter-by-letter speed
+
+      return () => clearInterval(interval);
+    }
+  }, [state.transcript]);
 
   const handleStart = useCallback(() => {
     streamRef.current.abort = false;
@@ -94,7 +145,7 @@ function App() {
 
   // Autoplay progression effect
   useEffect(() => {
-    if (!isAutoplay || isAutoplayPaused || isGenerating || !state.isActive) {
+    if (!isAutoplay || isAutoplayPaused || isGenerating || !state.isActive || isStageTyping) {
       return;
     }
 
@@ -132,7 +183,8 @@ function App() {
     speech.speaking,
     speech.settings.enabled,
     speech.settings.autoRead,
-    handleNextTurn
+    handleNextTurn,
+    isStageTyping
   ]);
 
   const handleSkip = useCallback(() => {
@@ -147,6 +199,8 @@ function App() {
     setIsAutoplay(false);
     setIsAutoplayPaused(false);
     speech.stopSpeaking();
+    setStageEntry(null);
+    setIsStageTyping(false);
     setState(resetSimulation());
     setHasSession(false);
   }, [speech]);
@@ -215,6 +269,8 @@ function App() {
       onToggleAutoplayPause={() => setIsAutoplayPaused(prev => !prev)}
       onChangeAutoplaySpeed={setAutoplaySpeed}
       speech={speech}
+      stageEntry={stageEntry}
+      isStageTyping={isStageTyping}
     />
   );
 }

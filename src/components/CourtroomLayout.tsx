@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import type { CourtState, CaseData, AgentRole } from '../types/courtroom';
+import type { CourtState, CaseData, AgentRole, TranscriptEntry } from '../types/courtroom';
 import { PHASE_LABELS } from '../types/courtroom';
 import { 
   loadCourtroomConfig, 
@@ -64,6 +64,8 @@ interface CourtroomLayoutProps {
   onToggleAutoplayPause?: () => void;
   onChangeAutoplaySpeed?: (speed: 'slow' | 'normal' | 'fast') => void;
   speech: ReturnType<typeof useSpeechSynthesis>;
+  stageEntry: TranscriptEntry | null;
+  isStageTyping: boolean;
 }
 
 export function CourtroomLayout({
@@ -85,7 +87,9 @@ export function CourtroomLayout({
   onToggleAutoplay,
   onToggleAutoplayPause,
   onChangeAutoplaySpeed,
-  speech
+  speech,
+  stageEntry,
+  isStageTyping
 }: CourtroomLayoutProps) {
   const { currentPhase, currentSpeaker, participants, transcript, evidence, verdict, case: caseData, isActive, objectionHistory, witnesses, motionHistory } = state;
   const phaseLabel = PHASE_LABELS[currentPhase];
@@ -111,7 +115,6 @@ export function CourtroomLayout({
     };
   }, []);
 
-  const currentPhaseTranscript = transcript.filter(t => t.phase === currentPhase);
   const canAdvance = isActive && currentSpeaker !== null;
 
   const getAgentModelInfo = (role: AgentRole): AgentModelInfo | null => {
@@ -128,7 +131,7 @@ export function CourtroomLayout({
   };
 
   return (
-    <div className="min-h-screen bg-courtroom-bg p-4 md:p-6 pb-28 md:pb-32">
+    <div className="min-h-screen bg-courtroom-bg p-4 md:p-6 pb-52 sm:pb-36 md:pb-40">
       <div className="max-w-7xl mx-auto space-y-4">
         <header className="text-center py-4 border-b border-gray-700">
           <h1 className="text-2xl md:text-3xl font-bold text-yellow-500 mb-2">
@@ -188,8 +191,8 @@ export function CourtroomLayout({
                   ...participants.find(p => p.role === 'defense')!,
                   modelInfo: getAgentModelInfo('defense')
                 }}
-                currentSpeaker={currentSpeaker}
-                isSpeaking={isActive && currentSpeaker !== null}
+                currentSpeaker={stageEntry?.speakerRole || null}
+                isSpeaking={isStageTyping}
                 currentPhase={currentPhase}
                 isActive={isActive}
                 evidence={evidence}
@@ -197,7 +200,10 @@ export function CourtroomLayout({
                 showVerdict={currentPhase === 'verdict' && !!verdict}
                 verdict={verdict}
                 compact={false}
-                latestEntry={transcript[transcript.length - 1] || null}
+                latestEntry={stageEntry}
+                isStageTyping={isStageTyping}
+                simulationSpeaker={currentSpeaker}
+                isGenerating={isGenerating}
               />
             </div>
           )}
@@ -225,11 +231,11 @@ export function CourtroomLayout({
 
           <div className="lg:col-span-6 space-y-4">
             <PhaseTimeline currentPhase={currentPhase} />
-            <div className="h-[500px]">
+            <div className="h-[600px] md:h-[650px] flex flex-col">
               {verdict && currentPhase === 'verdict' ? (
                 <VerdictPanel verdict={verdict} evidence={evidence} objections={objectionHistory} />
               ) : (
-                <TranscriptPanel transcript={currentPhaseTranscript} currentPhase={phaseLabel} speech={speech} />
+                <TranscriptPanel transcript={transcript} currentPhase={phaseLabel} speech={speech} />
               )}
             </div>
           </div>

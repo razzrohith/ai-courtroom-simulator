@@ -7,20 +7,18 @@ import type { AgentRole, AgentParticipant, CourtPhase, Evidence, Verdict, Transc
 import { PHASE_LABELS } from '../../types/courtroom';
 import { 
   CourtroomBackdrop,
-  CourtroomAvatar, 
   PhaseBanner, 
   SpeakingIndicator, 
   ObjectionAlert,
   VerdictReveal,
-  JudgeBenchSVG,
-  AttorneyTableSVG,
   WitnessStandSVG,
   CourtroomEmblem,
   EvidenceCard,
   SpeakingPulseRing,
   CourtReporterDeskIllustration,
   EvidenceFolderIllustration,
-  EvidenceChipImproved
+  EvidenceChipImproved,
+  CourtroomLiveAvatar
 } from './CourtroomVisuals';
 
 /**
@@ -60,6 +58,9 @@ interface CourtroomStageProps {
   // Layout options
   compact?: boolean;
   latestEntry?: TranscriptEntry | null;
+  isStageTyping?: boolean;
+  simulationSpeaker?: AgentRole | null;
+  isGenerating?: boolean;
 }
 
 export function AudioVisualizerWave({ role }: { role: AgentRole }) {
@@ -125,6 +126,9 @@ export function CourtroomStage({
   verdict,
   compact = false,
   latestEntry,
+  isStageTyping,
+  simulationSpeaker,
+  isGenerating,
 }: CourtroomStageProps) {
   // Check if there's an active objection
   const hasObjection = !!activeObjection;
@@ -246,8 +250,10 @@ export function CourtroomStage({
           <JudgeStation 
             judge={judge} 
             isSpeaking={currentSpeaker === 'judge' && isSpeaking} 
-            currentPhase={currentPhase}
             latestEntry={latestEntry}
+            isStageTyping={isStageTyping}
+            simulationSpeaker={simulationSpeaker}
+            isGenerating={isGenerating}
           />
         </div>
         
@@ -266,7 +272,7 @@ export function CourtroomStage({
                 <span className="text-xs font-bold text-gray-250">
                   {latestEntry.speakerName}
                 </span>
-                {latestEntry.isComplete === false && (
+                {isStageTyping && (
                   <span className="text-[10px] text-yellow-500 animate-pulse font-medium flex items-center gap-1">
                     <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-ping"></span>
                     Speaking...
@@ -286,7 +292,7 @@ export function CourtroomStage({
             </div>
             <p className="text-xs text-gray-205 leading-relaxed font-serif min-h-[36px] max-h-[100px] overflow-y-auto pr-1 select-text">
               {latestEntry.message}
-              {latestEntry.isComplete === false && <span className="animate-pulse text-yellow-500"> ▋</span>}
+              {isStageTyping && <span className="animate-pulse text-yellow-500"> ▋</span>}
             </p>
             {latestEntry.evidenceRef && (
               <div className="mt-1.5 pt-1.5 border-t border-gray-900 flex items-center gap-2">
@@ -308,6 +314,9 @@ export function CourtroomStage({
             isSpeaking={currentSpeaker === 'prosecutor' && isSpeaking}
             position="left"
             latestEntry={latestEntry}
+            isStageTyping={isStageTyping}
+            simulationSpeaker={simulationSpeaker}
+            isGenerating={isGenerating}
           />
           
           {/* Right side: Defense */}
@@ -317,6 +326,9 @@ export function CourtroomStage({
             isSpeaking={currentSpeaker === 'defense' && isSpeaking}
             position="right"
             latestEntry={latestEntry}
+            isStageTyping={isStageTyping}
+            simulationSpeaker={simulationSpeaker}
+            isGenerating={isGenerating}
           />
         </div>
         
@@ -350,54 +362,107 @@ export function CourtroomStage({
 function JudgeStation({ 
   judge, 
   isSpeaking, 
-  currentPhase,
-  latestEntry
+  latestEntry,
+  isStageTyping,
+  simulationSpeaker,
+  isGenerating
 }: { 
   judge: StageParticipant | null; 
   isSpeaking: boolean;
-  currentPhase: CourtPhase;
   latestEntry?: TranscriptEntry | null;
+  isStageTyping?: boolean;
+  simulationSpeaker?: AgentRole | null;
+  isGenerating?: boolean;
 }) {
   return (
-    <div className={`
-      flex flex-col items-center p-3 rounded-lg w-[170px]
-      ${isSpeaking ? 'bg-yellow-500/20 ring-2 ring-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.3)]' : 'bg-gray-800/60'}
-      transition-all duration-300
-    `}>
-      {/* Judge Bench SVG */}
-      <JudgeBenchSVG className="w-32 h-16 mb-1" />
-      
-      {/* Speaking Indicator and Visualizer */}
-      <div className="flex items-center gap-1.5 mb-1.5 h-4">
-        {isSpeaking && <SpeakingPulseRing active={true} role="judge" />}
-        {isSpeaking && <AudioVisualizerWave role="judge" />}
-      </div>
-      
-      {/* Judge Avatar */}
-      <CourtroomAvatar 
-        role="judge"
-        isSpeaking={isSpeaking}
-        providerInfo={formatProviderInfo(judge?.modelInfo)}
-      />
+    <div className="relative flex flex-col items-center">
+      {/* Elevated Dais/Bench card container */}
+      <div className={`
+        relative w-48 h-56 bg-gradient-to-b from-[#2d1b10] to-[#1c120c] border border-amber-950/80 rounded-xl overflow-hidden flex flex-col justify-end items-center shadow-lg
+        ${isSpeaking ? 'ring-2 ring-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.4)]' : ''}
+        transition-all duration-300
+      `}>
+        {/* Background / Arch / Wall behind the judge chair */}
+        <div className="absolute top-2 w-40 h-28 bg-[#5c4033]/25 rounded-t-full border-t border-x border-[#8b5a2b]/35 -z-10" />
 
-      {/* Live context near speaker */}
-      {isSpeaking && latestEntry && (
-        <div className="mt-2 bg-gray-950/95 border border-yellow-500/40 rounded-lg p-1.5 w-full text-center shadow-lg animate-pulse">
-          <span className="text-[9px] text-yellow-450 font-bold uppercase tracking-wide block">🎙️ Speaking</span>
-          <p className="text-[9px] text-gray-300 line-clamp-2 mt-0.5 leading-tight italic">
-            "{latestEntry.message || '...'}"
+        {/* Judge Chair Back */}
+        <div className="absolute bottom-14 w-24 h-28 bg-gradient-to-b from-[#18181b] to-[#09090b] border-2 border-yellow-600/40 rounded-t-2xl shadow-md z-0 flex flex-col justify-start pt-2 items-center">
+          <div className="w-16 h-1 bg-yellow-600/30 rounded" />
+        </div>
+
+        {/* Judge Live Avatar (middle layer) */}
+        <div className="z-10 mb-8 transition-transform duration-300">
+          <CourtroomLiveAvatar role="judge" isSpeaking={isSpeaking} />
+        </div>
+
+        {/* Judge elevated bench overlay (front layer, absolute bottom) */}
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#3a2512] to-[#5a3b1f] border-t-4 border-[#d97706]/70 z-20 flex flex-col justify-center items-center shadow-[0_-5px_10px_rgba(0,0,0,0.6)]">
+          <div className="absolute top-1 bottom-1 left-2 right-2 border border-[#8b5a2b]/30 rounded flex items-center justify-center">
+            <span className="text-[10px] text-yellow-500/30 font-bold tracking-widest font-serif">COURT OF INDIA</span>
+          </div>
+          {/* Gavels/Papers on bench */}
+          <div className="absolute -top-1.5 left-4 w-6 h-3 bg-[#e2e8f0] border border-gray-400 rounded-sm shadow-sm" style={{ transform: 'rotate(-5deg)' }} />
+          <div className="absolute -top-1 left-12 w-4 h-2 bg-[#d97706] rounded-sm" />
+        </div>
+      </div>
+
+      {/* Floating live context near speaker (statement persists until next turns ready) */}
+      {latestEntry && latestEntry.speakerRole === 'judge' && (
+        <div className="absolute bottom-[240px] left-1/2 -translate-x-1/2 w-64 bg-gray-950/95 border border-yellow-500 rounded-xl p-3 shadow-2xl z-30 transition-all duration-300 animate-scale-in text-left">
+          <div className="flex items-center justify-between border-b border-gray-800 pb-1 mb-1">
+            <span className="text-[10px] text-yellow-500 font-bold uppercase tracking-wider">🎙️ Hon. Judge</span>
+            {latestEntry.providerUsed && (
+              <span className="text-[8px] font-mono px-1 py-0.2 rounded bg-gray-900 border border-gray-800 text-gray-400">
+                {latestEntry.providerUsed}
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] text-gray-250 leading-relaxed italic select-text">
+            "{latestEntry.message}"
+            {isStageTyping && <span className="animate-pulse text-yellow-500"> ▋</span>}
           </p>
           {latestEntry.evidenceRef && (
-            <span className="inline-block mt-1 text-[8px] bg-yellow-950/40 text-yellow-450 border border-yellow-900/40 px-1 rounded font-mono">
-              📁 {latestEntry.evidenceRef}
-            </span>
+            <div className="mt-1 pt-1 border-t border-gray-900 flex items-center gap-1.5">
+              <span className="text-[8px] text-gray-500">Cited:</span>
+              <span className="text-[8px] text-yellow-500 bg-yellow-950/40 px-1 rounded font-mono">
+                {latestEntry.evidenceRef}
+              </span>
+            </div>
           )}
         </div>
       )}
-      
-      {/* Current phase indicator */}
-      <div className="text-[10px] text-gray-400 mt-1 uppercase font-semibold">
-        {PHASE_LABELS[currentPhase]}
+
+      {/* Generating/Thinking indicator near speaker */}
+      {simulationSpeaker === 'judge' && isGenerating && (
+        <div className="absolute bottom-[240px] left-1/2 -translate-x-1/2 w-64 bg-gray-950/95 border border-dashed border-yellow-500/50 rounded-xl p-3 shadow-2xl z-30 transition-all duration-300 animate-pulse text-left">
+          <div className="flex items-center justify-between border-b border-gray-800 pb-1 mb-1">
+            <span className="text-[10px] text-yellow-500 font-bold uppercase tracking-wider">⏳ Hon. Judge</span>
+            <span className="text-[8px] font-mono px-1 py-0.2 rounded bg-yellow-950/40 text-yellow-550 border border-yellow-900/35">
+              Generating
+            </span>
+          </div>
+          <p className="text-[11px] text-gray-400 leading-relaxed italic flex items-center gap-1.5 mt-1">
+            <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-ping"></span>
+            Reviewing arguments and formulating response...
+          </p>
+        </div>
+      )}
+
+      {/* Speaking Indicator and Visualizer */}
+      <div className="absolute -top-6 h-5 flex items-center gap-1.5">
+        {isSpeaking && <SpeakingPulseRing active={true} role="judge" />}
+        {isSpeaking && <AudioVisualizerWave role="judge" />}
+      </div>
+
+      {/* Name and Model label below the station card */}
+      <div className="mt-2 text-center">
+        <div className="text-xs font-bold text-white">{judge?.name || 'Hon. Judge'}</div>
+        <div className="text-[9px] text-yellow-500/80 font-mono tracking-wider">JUDGE</div>
+        {judge?.modelInfo && (
+          <div className="text-[9px] text-gray-400 font-mono truncate max-w-[140px] mt-0.5">
+            {formatProviderInfo(judge.modelInfo)}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -410,59 +475,125 @@ function AttorneyStation({
   participant, 
   role,
   isSpeaking,
-  position: _position,
-  latestEntry
+  position,
+  latestEntry,
+  isStageTyping,
+  simulationSpeaker,
+  isGenerating
 }: { 
   participant: StageParticipant | null; 
   role: AgentRole;
   isSpeaking: boolean;
   position: 'left' | 'right';
   latestEntry?: TranscriptEntry | null;
+  isStageTyping?: boolean;
+  simulationSpeaker?: AgentRole | null;
+  isGenerating?: boolean;
 }) {
   const roleColor = role === 'prosecutor' ? 'blue' : 'green';
   const roleLabel = role === 'prosecutor' ? 'Prosecution' : 'Defense';
   const accentColor = role === 'prosecutor' ? '#3B82F6' : '#22C55E';
   
   return (
-    <div className={`
-      flex flex-col items-center p-3 rounded-lg w-[150px]
-      ${isSpeaking ? `bg-${roleColor}-500/20 ring-2 ring-${roleColor}-500 shadow-[0_0_15px_rgba(${role === 'prosecutor' ? '59,130,246' : '34,197,94'},0.3)]` : 'bg-gray-800/60'}
-      transition-all duration-300
-    `}>
-      {/* Table SVG */}
-      <AttorneyTableSVG className="w-20 h-12 mb-1" />
-      
-      {/* Speaking Indicator and Visualizer */}
-      <div className="flex items-center gap-1.5 mb-1.5 h-4">
-        {isSpeaking && <SpeakingPulseRing active={true} role={role} />}
-        {isSpeaking && <AudioVisualizerWave role={role} />}
-      </div>
-      
-      {/* Attorney Avatar */}
-      <CourtroomAvatar 
-        role={role}
-        isSpeaking={isSpeaking}
-        providerInfo={formatProviderInfo(participant?.modelInfo)}
-      />
+    <div className="relative flex flex-col items-center">
+      {/* Station card container */}
+      <div className={`
+        relative w-40 h-52 bg-gradient-to-b from-[#2d1b10] to-[#1c120c] border border-amber-950/80 rounded-xl overflow-hidden flex flex-col justify-end items-center shadow-lg
+        ${isSpeaking ? `ring-2 ring-${roleColor}-500 shadow-[0_0_20px_rgba(${role === 'prosecutor' ? '59,130,246' : '34,197,94'},0.4)]` : ''}
+        transition-all duration-300
+      `}>
+        {/* Office Chair Back (behind lawyer) */}
+        <div className="absolute bottom-10 w-16 h-20 bg-zinc-900 border border-zinc-800 rounded-t-lg shadow-sm -z-10" />
 
-      {/* Live context near speaker */}
-      {isSpeaking && latestEntry && (
-        <div className="mt-2 bg-gray-950/95 border border-gray-700/80 rounded-lg p-1.5 w-full text-center shadow-lg">
-          <span className="text-[9px] font-bold uppercase tracking-wide block" style={{ color: accentColor }}>🎙️ Speaking</span>
-          <p className="text-[9px] text-gray-300 line-clamp-2 mt-0.5 leading-tight italic">
-            "{latestEntry.message || '...'}"
+        {/* Lawyer Live Avatar (middle layer) */}
+        <div className={`
+          z-10 transition-all duration-500 ease-out transform
+          ${isSpeaking ? 'translate-y-[-12px] scale-[1.04]' : 'translate-y-[10px] scale-[0.95]'}
+          mb-4
+        `}>
+          <CourtroomLiveAvatar role={role} isSpeaking={isSpeaking} />
+        </div>
+
+        {/* Lawyer table overlay (front layer, absolute bottom) */}
+        <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#2c1a0e] to-[#462d19] border-t-2 border-[#8b5a2b]/70 z-20 flex justify-center items-center shadow-[0_-3px_8px_rgba(0,0,0,0.5)]">
+          <div className="absolute top-0.5 bottom-0.5 left-1.5 right-1.5 border border-[#8b5a2b]/25 rounded flex items-center justify-center">
+            <span className="text-[8px] text-gray-450/40 uppercase tracking-wider font-semibold">
+              {roleLabel} Table
+            </span>
+          </div>
+          {/* Papers and nameplate on table */}
+          <div className="absolute -top-1 left-2 w-5 h-3 bg-white/90 border border-gray-400 rounded-sm shadow-sm" style={{ transform: 'rotate(15deg)' }} />
+          <div className="absolute -top-1.5 right-4 w-6 h-3 bg-white/90 border border-gray-400 rounded-sm shadow-sm" style={{ transform: 'rotate(-5deg)' }} />
+        </div>
+      </div>
+
+      {/* Floating live context near speaker (statement persists until next turns ready) */}
+      {latestEntry && latestEntry.speakerRole === role && (
+        <div className={`
+          absolute bottom-[230px] w-64 bg-gray-950/95 border rounded-xl p-3 shadow-2xl z-30 transition-all duration-300 animate-scale-in text-left
+          ${position === 'left' ? 'left-0' : 'right-0'}
+        `}
+        style={{ borderColor: accentColor }}
+        >
+          <div className="flex items-center justify-between border-b border-gray-800 pb-1 mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: accentColor }}>🎙️ {roleLabel}</span>
+            {latestEntry.providerUsed && (
+              <span className="text-[8px] font-mono px-1 py-0.2 rounded bg-gray-900 border border-gray-800 text-gray-400">
+                {latestEntry.providerUsed}
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] text-gray-250 leading-relaxed italic select-text">
+            "{latestEntry.message}"
+            {isStageTyping && <span className="animate-pulse text-yellow-500"> ▋</span>}
           </p>
           {latestEntry.evidenceRef && (
-            <span className="inline-block mt-1 text-[8px] bg-yellow-950/40 text-yellow-450 border border-yellow-900/40 px-1 rounded font-mono">
-              📁 {latestEntry.evidenceRef}
-            </span>
+            <div className="mt-1 pt-1 border-t border-gray-900 flex items-center gap-1.5">
+              <span className="text-[8px] text-gray-500">Cited:</span>
+              <span className="text-[8px] text-yellow-500 bg-yellow-950/40 px-1 rounded font-mono">
+                {latestEntry.evidenceRef}
+              </span>
+            </div>
           )}
         </div>
       )}
-      
-      {/* Table label */}
-      <div className={`text-xs text-${roleColor}-400 mt-1 font-medium`}>
-        {roleLabel} Table
+
+      {/* Generating/Thinking indicator near speaker */}
+      {simulationSpeaker === role && isGenerating && (
+        <div className={`
+          absolute bottom-[230px] w-64 bg-gray-950/95 border border-dashed rounded-xl p-3 shadow-2xl z-30 transition-all duration-300 animate-pulse text-left
+          ${position === 'left' ? 'left-0' : 'right-0'}
+        `}
+        style={{ borderColor: `${accentColor}80` }}
+        >
+          <div className="flex items-center justify-between border-b border-gray-800 pb-1 mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: accentColor }}>⏳ {roleLabel}</span>
+            <span className="text-[8px] font-mono px-1 py-0.2 rounded bg-gray-900 border border-gray-800 text-gray-400">
+              Generating
+            </span>
+          </div>
+          <p className="text-[11px] text-gray-400 leading-relaxed italic flex items-center gap-1.5 mt-1">
+            <span className="w-1.5 h-1.5 rounded-full animate-ping" style={{ backgroundColor: accentColor }}></span>
+            Preparing court statement...
+          </p>
+        </div>
+      )}
+
+      {/* Speaking Indicator and Visualizer */}
+      <div className="absolute -top-6 h-5 flex items-center gap-1.5">
+        {isSpeaking && <SpeakingPulseRing active={true} role={role} />}
+        {isSpeaking && <AudioVisualizerWave role={role} />}
+      </div>
+
+      {/* Name and Model label below the station card */}
+      <div className="mt-2 text-center">
+        <div className="text-xs font-bold text-white">{participant?.name || roleLabel}</div>
+        <div className="text-[9px] uppercase tracking-wider font-mono" style={{ color: accentColor }}>{roleLabel}</div>
+        {participant?.modelInfo && (
+          <div className="text-[9px] text-gray-400 font-mono truncate max-w-[140px] mt-0.5">
+            {formatProviderInfo(participant.modelInfo)}
+          </div>
+        )}
       </div>
     </div>
   );

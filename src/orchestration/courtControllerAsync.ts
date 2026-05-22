@@ -486,9 +486,12 @@ export function ruleOnObjection(
   targetEvidence?: string
 ): CourtState {
   const objStatus = sustained ? 'sustained' : 'overruled';
-  const rulingMessage = sustained 
-    ? `The objection is SUSTAINED. The evidence in question is hereby excluded/motion granted.` 
-    : `The objection is OVERRULED. The evidence stands/motion denied.`;
+  // Determine reason and impact for the ruling
+  const rulingReason = sustained ? 'Objection deemed relevant and impacts evidence admissibility.' : 'Objection not pertinent; evidence remains admissible.';
+  const rulingImpact = sustained ? 'Evidence excluded or limited.' : 'Evidence admitted.';
+  const rulingMessage = sustained
+    ? `The objection is SUSTAINED. ${rulingReason} ${rulingImpact}`
+    : `The objection is OVERRULED. ${rulingReason} ${rulingImpact}`;
   
   // Create judge ruling transcript entry
   const rulingEntry: TranscriptEntry = {
@@ -521,7 +524,7 @@ export function ruleOnObjection(
     currentSpeaker: 'judge',
     transcript: [...state.transcript, rulingEntry],
     objectionHistory: state.objectionHistory.map(obj =>
-      obj.id === objectionId ? { ...obj, status: objStatus } : obj
+      obj.id === objectionId ? { ...obj, status: objStatus, reason: rulingReason, impact: rulingImpact } : obj
     ),
     evidence: updatedEvidence,
   };

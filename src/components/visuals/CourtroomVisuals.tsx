@@ -572,59 +572,79 @@ export function CourtroomEmblem({ className }: { className?: string }) {
  */
 export function CourtroomBackdrop({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative overflow-hidden bg-[#1e1510] border border-amber-950/60 rounded-xl shadow-inner min-h-[380px]">
+    <div className="relative overflow-hidden bg-[#1a0e08] border border-amber-950 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_1px_2px_rgba(255,255,255,0.1)] min-h-[420px] transition-all duration-300">
       {/* Indian Courtroom Wall Background */}
       <div className="absolute inset-0 pointer-events-none flex flex-col">
-        {/* Top wall: Warm Beige/Sand color */}
-        <div className="h-2/5 bg-gradient-to-b from-[#e5d3be] to-[#d6bd9f] relative border-b-8 border-[#5c4033] shadow-md">
-          {/* Court Wall Framing / Molding lines */}
-          <div className="absolute inset-x-8 inset-y-4 border-2 border-[#8b5a2b]/30 rounded opacity-60" />
+        {/* Top wall: Elegant Sandstone / Beige finish */}
+        <div className="h-[38%] bg-gradient-to-b from-[#e3cfb6] via-[#d7bf9d] to-[#cba983] relative border-b-[10px] border-[#422415] shadow-lg">
+          {/* Premium wall framing molding */}
+          <div className="absolute inset-x-6 inset-y-3 border border-[#8b5a2b]/25 rounded opacity-80" />
+          <div className="absolute inset-x-8 inset-y-4 border-2 border-[#8b5a2b]/15 rounded opacity-40" />
           
-          {/* Columns / Pilasters */}
-          <div className="absolute left-10 top-0 bottom-0 w-8 bg-gradient-to-r from-[#d6bd9f] via-[#f2e3d3] to-[#c7ad8f] shadow-inner opacity-70" />
-          <div className="absolute right-10 top-0 bottom-0 w-8 bg-gradient-to-r from-[#c7ad8f] via-[#f2e3d3] to-[#d6bd9f] shadow-inner opacity-70" />
+          {/* Premium Pilasters / Columns with Gold Capitals and Bases */}
+          {/* Column Left */}
+          <div className="absolute left-[8%] top-0 bottom-0 w-10 bg-gradient-to-r from-[#b59570] via-[#eed9be] to-[#b08f6a] shadow-[inset_-2px_0_5px_rgba(0,0,0,0.15),inset_2px_0_5px_rgba(255,255,255,0.2)]">
+            <div className="absolute top-0 inset-x-0 h-2 bg-[#ecd4b7] border-b border-[#a1784e]" />
+            <div className="absolute bottom-0 inset-x-0 h-3 bg-[#83592f] border-t border-[#dfba94] shadow" />
+            <div className="absolute top-2 inset-x-1 h-1.5 bg-[#ffd700]/70 rounded-full" />
+          </div>
+          {/* Column Right */}
+          <div className="absolute right-[8%] top-0 bottom-0 w-10 bg-gradient-to-r from-[#b59570] via-[#eed9be] to-[#b08f6a] shadow-[inset_-2px_0_5px_rgba(0,0,0,0.15),inset_2px_0_5px_rgba(255,255,255,0.2)]">
+            <div className="absolute top-0 inset-x-0 h-2 bg-[#ecd4b7] border-b border-[#a1784e]" />
+            <div className="absolute bottom-0 inset-x-0 h-3 bg-[#83592f] border-t border-[#dfba94] shadow" />
+            <div className="absolute top-2 inset-x-1 h-1.5 bg-[#ffd700]/70 rounded-full" />
+          </div>
 
-          {/* Central Ashoka/Dharma Chakra Inspired Golden Law Wheel */}
+          {/* Central Ashoka / Dharma Chakra Golden Law Wheel Emblem */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
-            <svg className="w-24 h-24 text-amber-700/40 animate-pulse" viewBox="0 0 100 100" fill="currentColor">
-              <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="3" />
-              <circle cx="50" cy="50" r="10" fill="none" stroke="currentColor" strokeWidth="2" />
-              <circle cx="50" cy="50" r="4" />
-              {/* 24 spokes of the law wheel */}
-              {Array.from({ length: 24 }).map((_, i) => (
-                <line
-                  key={i}
-                  x1="50"
-                  y1="50"
-                  x2={50 + 35 * Math.cos((i * 15 * Math.PI) / 180)}
-                  y2={50 + 35 * Math.sin((i * 15 * Math.PI) / 180)}
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                />
-              ))}
-            </svg>
+            <div className="relative flex items-center justify-center p-2 rounded-full bg-[#dfc5a6]/40 backdrop-blur-[1px] border border-[#a67c52]/30 shadow-inner">
+              <svg className="w-24 h-24 text-amber-900/60 drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)] animate-pulse" viewBox="0 0 100 100" fill="currentColor">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="3" />
+                <circle cx="50" cy="50" r="10" fill="none" stroke="currentColor" strokeWidth="2.5" />
+                <circle cx="50" cy="50" r="4" />
+                {/* 24 spokes of the law wheel */}
+                {Array.from({ length: 24 }).map((_, i) => (
+                  <line
+                    key={i}
+                    x1="50"
+                    y1="50"
+                    x2={50 + 35 * Math.cos((i * 15 * Math.PI) / 180)}
+                    y2={50 + 35 * Math.sin((i * 15 * Math.PI) / 180)}
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                  />
+                ))}
+              </svg>
+            </div>
           </div>
         </div>
         
-        {/* Bottom wall: Teak/Mahogany Wood paneling */}
-        <div className="flex-1 bg-gradient-to-b from-[#3d2b1f] to-[#1c120c] relative">
+        {/* Bottom wall: Deep Polished Teak/Mahogany Wood paneling */}
+        <div className="flex-1 bg-gradient-to-b from-[#2e190e] via-[#3a2012] to-[#1c0f08] relative">
           {/* Wood panel lines */}
-          <div className="absolute inset-0 opacity-15" style={{
+          <div className="absolute inset-0 opacity-20" style={{
             backgroundImage: `repeating-linear-gradient(
               90deg,
               transparent,
               transparent 78px,
-              rgba(0,0,0,0.8) 78px,
-              rgba(0,0,0,0.8) 80px
+              rgba(0,0,0,0.95) 78px,
+              rgba(255,255,255,0.05) 80px
             )`
           }} />
+          
           {/* Horizon shadow/depth */}
-          <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-black/40 to-transparent" />
+          <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-black/60 to-transparent" />
+          
+          {/* Polished light reflection sheen on the mahogany wall */}
+          <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-white/5 to-transparent opacity-40 blur-sm pointer-events-none" />
         </div>
       </div>
       
-      {/* Light highlights */}
-      <div className="absolute inset-0 bg-gradient-to-b from-yellow-500/5 via-transparent to-black/30 pointer-events-none" />
+      {/* Premium Ambient Lighting Accents */}
+      <div className="absolute inset-0 bg-gradient-to-b from-amber-500/10 via-transparent to-black/40 pointer-events-none" />
+      
+      {/* Subtle dust particles or ambient dynamic light haze */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(251,191,36,0.08),transparent_60%)] pointer-events-none" />
       
       <div className="relative z-10 flex flex-col h-full">{children}</div>
     </div>

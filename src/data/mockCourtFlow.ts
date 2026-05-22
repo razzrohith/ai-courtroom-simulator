@@ -28,8 +28,8 @@ export const SPEAKER_ORDER: Record<CourtPhase, AgentRole[]> = {
 export const JUDGE_TRANSITIONS: Record<CourtPhase, string> = {
   case_setup: '',
   court_opening: "The Court will now come to order. This is Case Number 2026-PHIL-001: The Hen v. The Egg: Origin Priority Dispute. This is a scientific and philosophical debate regarding which came first. Counsel, please state your appearances for the record.",
-  plaintiff_opening: "Thank you, counsel. Now, Ms. Chen, you may deliver your opening statement on behalf of the plaintiff, The Hen. Jury, pay close attention.",
-  defense_opening: "Thank you, Ms. Chen. Mr. Williams, you may deliver your opening statement on behalf of the defendant, The Egg.",
+  plaintiff_opening: "Thank you, counsel. Now, Advocate Verma, you may deliver your opening statement on behalf of the plaintiff, The Hen. Jury, pay close attention.",
+  defense_opening: "Thank you, Advocate Verma. Advocate Kapoor, you may deliver your opening statement on behalf of the defendant, The Egg.",
   evidence_presentation: "We will now move to the evidence presentation phase. The parties may present scientific arguments, theories, and studies. Counsel, approach the evidence board.",
   objection_ruling: "Before we proceed to cross-examination, the court will hear any objections to evidence already presented. Counsel, state your objections now.",
   cross_examination: "We will now move to cross-examination. Each counsel may question the other party's expert witnesses. Objections to questions must be raised immediately.",
@@ -52,9 +52,9 @@ export const PHASE_INSTRUCTIONS: any = {
     defense: 'Prepare your defense.',
   },
   court_opening: {
-    judge: "You are Presiding Judge Sarah Mitchell. Open court, welcome parties, state case info, have counsel state appearances. Be formal and procedural.",
-    prosecutor: "You are Attorney Rebecca Chen for The Hen. Introduce yourself. Wait for your opening statement phase.",
-    defense: "You are Attorney Marcus Williams for The Egg. Introduce yourself. Wait for your opening statement phase.",
+    judge: "You are Presiding Judge Honorable Justice Arvind Menon. Open court, welcome parties, state case info, have counsel state appearances. Be formal and procedural.",
+    prosecutor: "You are Advocate Rahul Verma for The Hen. Introduce yourself. Wait for your opening statement phase.",
+    defense: "You are Advocate Sneha Kapoor for The Egg. Introduce yourself. Wait for your opening statement phase.",
   },
   plaintiff_opening: {
     judge: "You are the judge. Listen to plaintiff's opening. Acknowledge when complete. Then invite defendant.",
@@ -73,13 +73,13 @@ export const PHASE_INSTRUCTIONS: any = {
   },
   cross_examination: {
     judge: "You are the judge. Control questioning. Allow both sides to test witness credibility. Rule on objections.",
-    prosecutor: "Question defendant's witness (Dr. Vance). Challenge the fossil record of hen eggs specifically.",
-    defense: "Question plaintiff's witness (Dr. Rostova). Challenge the assumption that the first hen egg required a modern hen parent.",
+    prosecutor: "Question defendant's witness (Dr. Amit Patel). Challenge the fossil record of hen eggs specifically.",
+    defense: "Question plaintiff's witness (Dr. Isha Sen). Challenge the assumption that the first hen egg required a modern hen parent.",
   },
   witness_testimony: {
     judge: "You are the judge. Conduct witness examination. Allow direct and cross examination. Assess credibility.",
-    prosecutor: "Call Dr. Rostova for direct examination. Ask her about the living bird requirement and OC-17 shell protein synthesis.",
-    defense: "Cross-examine Dr. Rostova. Call Dr. Vance for direct examination to discuss dinosaur egg fossils and genetic mutation evidence.",
+    prosecutor: "Call Dr. Isha Sen for direct examination. Ask her about the living bird requirement and OC-17 shell protein synthesis.",
+    defense: "Cross-examine Dr. Isha Sen. Call Dr. Amit Patel for direct examination to discuss dinosaur egg fossils and genetic mutation evidence.",
   },
   motion_hearing: {
     judge: "You are the judge. Hear motions. Consider legal basis. Rule on each motion.",
@@ -169,7 +169,7 @@ export function getJuryInstruction(phase: CourtPhase): string | null {
 export const MOCK_MESSAGES: any = {
   court_opening: {
     judge: [
-      "All rise. This court is now in session. The Honorable Judge Sarah Mitchell presiding.",
+      "All rise. This court is now in session. The Honorable Justice Arvind Menon presiding.",
       "Good morning. This is Case Number 2026-PHIL-001: The Hen v. The Egg: Origin Priority Dispute.",
       "This is a scientific and philosophical debate regarding which came first.",
       "The plaintiff, The Hen, alleges that the hen must precede the egg. The defendant, The Egg, argues that evolutionary changes occur in the zygote first.",
@@ -178,19 +178,19 @@ export const MOCK_MESSAGES: any = {
   },
   plaintiff_opening: {
     prosecutor: [
-      "Your Honor, good morning. I am Attorney Rebecca Chen representing The Hen.",
+      "Your Honor, good morning. I am Advocate Rahul Verma representing The Hen.",
       "Our case rests on biological fact. A modern chicken egg shell cannot form without the OC-17 protein, which is synthesized only inside a living hen's ovaries.",
       "Therefore, a physical egg cannot exist without a pre-existing living bird to lay it. This is the living bird requirement.",
       "We will present clear biological proof that the hen must be the initiator of the cycle.",
       "The evidence will show that The Hen came first. We ask for a ruling in our favor.",
     ],
     judge: [
-      "Thank you, Ms. Chen. Mr. Williams, your opening statement?",
+      "Thank you, Advocate Verma. Advocate Kapoor, your opening statement?",
     ],
   },
   defense_opening: {
     defense: [
-      "Your Honor, good morning. I am Attorney Marcus Williams representing The Egg.",
+      "Your Honor, good morning. I am Advocate Sneha Kapoor representing The Egg.",
       "This case is about the fundamental laws of evolution and genetics.",
       "Speciation occurs when a genetic mutation happens in the zygote, which exists inside the egg.",
       "The bird that laid the first true hen egg was a close ancestor, not a modern hen itself. Thus, the egg came first.",
@@ -206,7 +206,7 @@ export const MOCK_MESSAGES: any = {
     ],
     judge: [
       "So noted. The exhibit is admitted into evidence.",
-      "Mr. Williams, your response?",
+      "Advocate Kapoor, your response?",
     ],
     defense: [
       "Your Honor, we introduce the evolutionary record and the egg fossil record.",
@@ -226,12 +226,12 @@ export const MOCK_MESSAGES: any = {
   },
   cross_examination: {
     prosecutor: [
-      "Dr. Vance, does your egg fossil record show a modern chicken egg specifically?",
+      "Dr. Amit Patel, does your egg fossil record show a modern chicken egg specifically?",
       "So, you admit that dinosaur eggs are not modern hen eggs?",
       "No further questions.",
     ],
     defense: [
-      "Dr. Rostova, does the living bird requirement negate the fact that genetic changes occur in the zygote?",
+      "Dr. Isha Sen, does the living bird requirement negate the fact that genetic changes occur in the zygote?",
       "So, the first chicken had to hatch from an egg laid by a pre-chicken, correct?",
       "Thank you. No further questions.",
     ],
@@ -308,7 +308,7 @@ export const MOCK_VERDICT: Verdict = {
     defense: ['Cannot explain how the first egg shell was formed without the OC-17 protein machinery'],
   },
   ruling: 'Judgment for the defendant. The Egg is declared to have origin priority over The Hen.',
-  witnessImpact: 'Both expert witnesses provided highly credible scientific testimony. Dr. Rostova\'s biochemical analysis of OC-17 protein synthesis was undisputed. However, Dr. Vance\'s evolutionary record and genetic mutation data established that the speciation boundary is defined at the zygote stage. The court credits the defense expert\'s evolutionary logic as more legally and biologically compelling for defining the priority event.',
+  witnessImpact: 'Both expert witnesses provided highly credible scientific testimony. Dr. Isha Sen\'s biochemical analysis of OC-17 protein synthesis was undisputed. However, Dr. Amit Patel\'s evolutionary record and genetic mutation data established that the speciation boundary is defined at the zygote stage. The court credits the defense expert\'s evolutionary logic as more legally and biologically compelling for defining the priority event.',
   juryInstructionSummary: 'Burden of proof: preponderance. Evidence consideration: biochemical vs evolutionary. Witness credibility: scientific consensus and logical consistency.',
   motionImpact: 'Plaintiff motion to strike evolutionary speculation was denied. Defense motion to admit Exhibit D-1 was granted. The evolutionary timeline was considered in full.',
   deliberationSummary: 'Deliberations focused on comparing the biochemical shell requirement with the genomic speciation model. The Court concludes that genome definition holds precedence over physical packaging machinery.',

@@ -170,6 +170,68 @@ function getPersonaInstructions(role: AgentRole): string {
 }
 
 /**
+ * Sanitize agent response to prevent prompt leakage, markdown formatting wrappers, 
+ * AI meta-text, and prefixing.
+ */
+export function sanitizeAgentResponse(text: string, role: AgentRole): string {
+  void role;
+  if (!text) return '';
+  
+  let cleaned = text.trim();
+
+  // 1. Remove markdown code blocks (e.g. ```html ... ``` or ```json ... ``` or ```plaintext ... ```)
+  cleaned = cleaned.replace(/```[a-zA-Z]*\n?([\s\S]*?)```/g, '$1').trim();
+
+  // 2. Remove role-playing headers or prefix indicators (e.g. "Advocate Sneha Kapoor:", "Counsel Sneha Kapoor:", "Advocate Sneha Kapoor (Defense):", "Defense Counsel:", "Judge Menon:", "Honorable Justice Arvind Menon:")
+  const prefixesToRemove = [
+    /^(?:Advocate|Attorney|Counsel|Judge|Justice|Honorable)\s+[A-Za-z\s]+(?:\s*\([^)]*\))?:/gi,
+    /^(?:Prosecutor|Prosecution|Defense|Judge|Jury)(?:\s+Counsel)?(?:\s*\([^)]*\))?:/gi,
+    /^(?:Advocate|Attorney|Counsel|Judge|Justice|Honorable)\s+[A-Za-z\s]+-\s+/gi,
+  ];
+  
+  for (const regex of prefixesToRemove) {
+    cleaned = cleaned.replace(regex, '').trim();
+  }
+
+  // 3. Strip instruction templates or markdown list markers that sometimes leak
+  cleaned = cleaned.replace(/^(?:Instructions|System\s+Instructions|Task|Constraints|Rules):\s*/gi, '');
+  
+  // 4. Strip specific prompt leak texts
+  cleaned = cleaned.replace(/You are (?:Advocate|Attorney|Judge|Justice|Honorable)\s+[A-Za-z\s]+,\s+counsel for the [A-Za-z\s]+\./gi, '');
+  cleaned = cleaned.replace(/Represent your client's case based on the Case Overview, Key Facts, and evidence\./gi, '');
+  cleaned = cleaned.replace(/Challenge the (?:prosecution|defense)'s evidence\./gi, '');
+
+  // 5. Strip "As an AI..." or meta commentary
+  cleaned = cleaned.replace(/As an AI(?:\s+assistant|\s+language\s+model)?,\s*/gi, '');
+  cleaned = cleaned.replace(/I am an AI(?:\s+assistant|\s+language\s+model)?\s*(?:and|but)?\s*/gi, '');
+  
+  // 6. Strip standard instructions lines from lists
+  const lines = cleaned.split('\n');
+  const filteredLines = lines.filter(line => {
+    const l = line.toLowerCase().trim();
+    if (l.startsWith('- write in') || l.startsWith('- avoid long') || l.startsWith('- never give') || l.startsWith('- cite evidence') || l.startsWith('- stay in character') || l.startsWith('- use proper') || l.startsWith('- this is an educational')) {
+      return false;
+    }
+    if (l.startsWith('important constraints:') || l.startsWith('length rule:')) {
+      return false;
+    }
+    return true;
+  });
+  
+  cleaned = filteredLines.join('\n').trim();
+
+  // 7. Cleanup extra quotes that some models wrap their output in
+  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+    cleaned = cleaned.slice(1, -1).trim();
+  }
+  if (cleaned.startsWith("'") && cleaned.endsWith("'")) {
+    cleaned = cleaned.slice(1, -1).trim();
+  }
+
+  return cleaned.trim();
+}
+
+/**
  * Generate agent response - improved for Phase 7
  */
 export async function generateAgentResponse(params: {
@@ -220,7 +282,7 @@ export async function generateAgentResponse(params: {
       });
 
       return {
-        message,
+        message: sanitizeAgentResponse(message, role),
         providerUsed: providerId,
         modelUsed: config.model,
         responseSource: 'real',
@@ -236,7 +298,7 @@ export async function generateAgentResponse(params: {
       });
 
       return {
-        message: msg,
+        message: sanitizeAgentResponse(msg, role),
         providerUsed: 'mock',
         modelUsed: config.model,
         responseSource: 'fallback',
@@ -254,7 +316,7 @@ export async function generateAgentResponse(params: {
     });
 
     return {
-      message: fallback,
+      message: sanitizeAgentResponse(fallback, role),
       providerUsed: 'mock',
       modelUsed: config.model,
       responseSource: 'fallback',

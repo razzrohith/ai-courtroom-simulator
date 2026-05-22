@@ -17,7 +17,7 @@ import { loadCourtroomConfig, setAgentConnectionStatus } from '../types/provider
 const DEFAULT_WITNESSES: Witness[] = [
   {
     id: 'wit-001',
-    name: 'Dr. Evelyn Rostova',
+    name: 'Dr. Isha Sen',
     role: 'prosecution',
     title: 'Evolutionary Biologist',
     summary: 'Specializes in avian egg shell protein synthesis and ovarian biology.',
@@ -25,7 +25,7 @@ const DEFAULT_WITNESSES: Witness[] = [
   },
   {
     id: 'wit-002',
-    name: 'Dr. Marcus Vance',
+    name: 'Dr. Amit Patel',
     role: 'defense',
     title: 'Paleontologist',
     summary: 'Expert in pre-avian theropod dinosaur eggs and fossil transition records.',
@@ -35,9 +35,9 @@ const DEFAULT_WITNESSES: Witness[] = [
 
 export function createInitialState(): CourtState {
   const participants: AgentParticipant[] = [
-    { id: 'judge-001', role: 'judge', name: 'Honorable Sarah Mitchell', title: 'Presiding Judge', modelConfig: createMockConfig('judge') },
-    { id: 'prosecutor-001', role: 'prosecutor', name: 'Attorney Rebecca Chen', title: 'Counsel for Plaintiff', modelConfig: createMockConfig('prosecutor') },
-    { id: 'defense-001', role: 'defense', name: 'Attorney Marcus Williams', title: 'Counsel for Defendant', modelConfig: createMockConfig('defense') },
+    { id: 'judge-001', role: 'judge', name: 'Honorable Justice Arvind Menon', title: 'Presiding Judge', modelConfig: createMockConfig('judge') },
+    { id: 'prosecutor-001', role: 'prosecutor', name: 'Advocate Rahul Verma', title: 'Counsel for Plaintiff', modelConfig: createMockConfig('prosecutor') },
+    { id: 'defense-001', role: 'defense', name: 'Advocate Sneha Kapoor', title: 'Counsel for Defendant', modelConfig: createMockConfig('defense') },
   ];
   return {
     currentPhase: 'case_setup',

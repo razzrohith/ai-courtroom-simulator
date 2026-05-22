@@ -249,7 +249,8 @@ export function CourtroomStage({
         <div className="flex justify-center mb-4">
           <JudgeStation 
             judge={judge} 
-            isSpeaking={currentSpeaker === 'judge' && isSpeaking} 
+            currentSpeaker={currentSpeaker}
+            isSpeaking={isSpeaking} 
             latestEntry={latestEntry}
             isStageTyping={isStageTyping}
             simulationSpeaker={simulationSpeaker}
@@ -311,7 +312,8 @@ export function CourtroomStage({
           <AttorneyStation 
             participant={prosecutor}
             role="prosecutor"
-            isSpeaking={currentSpeaker === 'prosecutor' && isSpeaking}
+            currentSpeaker={currentSpeaker}
+            isSpeaking={isSpeaking}
             position="left"
             latestEntry={latestEntry}
             isStageTyping={isStageTyping}
@@ -323,7 +325,8 @@ export function CourtroomStage({
           <AttorneyStation 
             participant={defense}
             role="defense"
-            isSpeaking={currentSpeaker === 'defense' && isSpeaking}
+            currentSpeaker={currentSpeaker}
+            isSpeaking={isSpeaking}
             position="right"
             latestEntry={latestEntry}
             isStageTyping={isStageTyping}
@@ -357,10 +360,40 @@ export function CourtroomStage({
 }
 
 /**
+ * SpeakerSpotlight — Radial light cone spotlight for active speaker
+ */
+function SpeakerSpotlight({ role, active }: { role: AgentRole; active: boolean }) {
+  if (!active) return null;
+  const colors = {
+    judge: 'bg-yellow-500/20',
+    prosecutor: 'bg-blue-500/20',
+    defense: 'bg-green-500/20'
+  };
+  return (
+    <div className="absolute inset-0 pointer-events-none z-0 overflow-visible">
+      {/* Spotlight beam */}
+      <svg className="absolute -top-[160px] -left-20 -right-20 h-[380px] w-[calc(100%+160px)] opacity-70" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id={`spotlight-cone-${role}`} x1="0.5" y1="0" x2="0.5" y2="1">
+            <stop offset="0%" stopColor="rgba(255, 255, 255, 0.45)" />
+            <stop offset="25%" stopColor={role === 'judge' ? 'rgba(234,179,8,0.22)' : role === 'prosecutor' ? 'rgba(59,130,246,0.22)' : 'rgba(34,197,94,0.22)'} />
+            <stop offset="100%" stopColor="rgba(0, 0, 0, 0)" />
+          </linearGradient>
+        </defs>
+        <polygon points="42,0 58,0 100,100 0,100" fill={`url(#spotlight-cone-${role})`} />
+      </svg>
+      {/* Floor glow */}
+      <div className={`absolute bottom-[-16px] left-1/2 -translate-x-1/2 w-48 h-10 rounded-full blur-xl opacity-75 animate-pulse ${colors[role]}`} />
+    </div>
+  );
+}
+
+/**
  * Judge Station - elevated bench area
  */
 function JudgeStation({ 
   judge, 
+  currentSpeaker,
   isSpeaking, 
   latestEntry,
   isStageTyping,
@@ -368,19 +401,29 @@ function JudgeStation({
   isGenerating
 }: { 
   judge: StageParticipant | null; 
+  currentSpeaker: AgentRole | null;
   isSpeaking: boolean;
   latestEntry?: TranscriptEntry | null;
   isStageTyping?: boolean;
   simulationSpeaker?: AgentRole | null;
   isGenerating?: boolean;
 }) {
+  const role = 'judge';
+  const isActive = (currentSpeaker === role && isSpeaking) || (simulationSpeaker === role && !!isGenerating);
+  const hasActive = (currentSpeaker !== null && isSpeaking) || (simulationSpeaker !== null && isGenerating);
+  const isDimmed = hasActive && !isActive;
+
   return (
-    <div className="relative flex flex-col items-center">
+    <div className="relative flex flex-col items-center transition-all duration-500">
+      {/* Spotlight */}
+      <SpeakerSpotlight role="judge" active={isActive} />
+
       {/* Elevated Dais/Bench card container */}
       <div className={`
         relative w-48 h-56 bg-gradient-to-b from-[#2d1b10] to-[#1c120c] border border-amber-950/80 rounded-xl overflow-hidden flex flex-col justify-end items-center shadow-lg
-        ${isSpeaking ? 'ring-2 ring-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.4)]' : ''}
-        transition-all duration-300
+        ${isActive ? 'ring-2 ring-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.4)] z-20 scale-[1.03]' : ''}
+        ${isDimmed ? 'opacity-40 blur-[0.5px] scale-95 saturate-[0.7]' : 'opacity-100 scale-100'}
+        transition-all duration-500 ease-in-out
       `}>
         {/* Background / Arch / Wall behind the judge chair */}
         <div className="absolute top-2 w-40 h-28 bg-[#5c4033]/25 rounded-t-full border-t border-x border-[#8b5a2b]/35 -z-10" />
@@ -392,7 +435,7 @@ function JudgeStation({
 
         {/* Judge Live Avatar (middle layer) */}
         <div className="z-10 mb-8 transition-transform duration-300">
-          <CourtroomLiveAvatar role="judge" isSpeaking={isSpeaking} />
+          <CourtroomLiveAvatar role="judge" isSpeaking={currentSpeaker === 'judge' && isSpeaking} />
         </div>
 
         {/* Judge elevated bench overlay (front layer, absolute bottom) */}
@@ -450,8 +493,8 @@ function JudgeStation({
 
       {/* Speaking Indicator and Visualizer */}
       <div className="absolute -top-6 h-5 flex items-center gap-1.5">
-        {isSpeaking && <SpeakingPulseRing active={true} role="judge" />}
-        {isSpeaking && <AudioVisualizerWave role="judge" />}
+        {isActive && <SpeakingPulseRing active={true} role="judge" />}
+        {isActive && <AudioVisualizerWave role="judge" />}
       </div>
 
       {/* Name and Model label below the station card */}
@@ -474,6 +517,7 @@ function JudgeStation({
 function AttorneyStation({ 
   participant, 
   role,
+  currentSpeaker,
   isSpeaking,
   position,
   latestEntry,
@@ -483,6 +527,7 @@ function AttorneyStation({
 }: { 
   participant: StageParticipant | null; 
   role: AgentRole;
+  currentSpeaker: AgentRole | null;
   isSpeaking: boolean;
   position: 'left' | 'right';
   latestEntry?: TranscriptEntry | null;
@@ -494,13 +539,21 @@ function AttorneyStation({
   const roleLabel = role === 'prosecutor' ? 'Prosecution' : 'Defense';
   const accentColor = role === 'prosecutor' ? '#3B82F6' : '#22C55E';
   
+  const isActive = (currentSpeaker === role && isSpeaking) || (simulationSpeaker === role && !!isGenerating);
+  const hasActive = (currentSpeaker !== null && isSpeaking) || (simulationSpeaker !== null && isGenerating);
+  const isDimmed = hasActive && !isActive;
+  
   return (
-    <div className="relative flex flex-col items-center">
+    <div className="relative flex flex-col items-center transition-all duration-500">
+      {/* Spotlight */}
+      <SpeakerSpotlight role={role} active={isActive} />
+
       {/* Station card container */}
       <div className={`
         relative w-40 h-52 bg-gradient-to-b from-[#2d1b10] to-[#1c120c] border border-amber-950/80 rounded-xl overflow-hidden flex flex-col justify-end items-center shadow-lg
-        ${isSpeaking ? `ring-2 ring-${roleColor}-500 shadow-[0_0_20px_rgba(${role === 'prosecutor' ? '59,130,246' : '34,197,94'},0.4)]` : ''}
-        transition-all duration-300
+        ${isActive ? `ring-2 ring-${roleColor}-500 shadow-[0_0_20px_rgba(${role === 'prosecutor' ? '59,130,246' : '34,197,94'},0.4)] z-20 scale-[1.03]` : ''}
+        ${isDimmed ? 'opacity-40 blur-[0.5px] scale-95 saturate-[0.7]' : 'opacity-100 scale-100'}
+        transition-all duration-500 ease-in-out
       `}>
         {/* Office Chair Back (behind lawyer) */}
         <div className="absolute bottom-10 w-16 h-20 bg-zinc-900 border border-zinc-800 rounded-t-lg shadow-sm -z-10" />
@@ -508,10 +561,10 @@ function AttorneyStation({
         {/* Lawyer Live Avatar (middle layer) */}
         <div className={`
           z-10 transition-all duration-500 ease-out transform
-          ${isSpeaking ? 'translate-y-[-12px] scale-[1.04]' : 'translate-y-[10px] scale-[0.95]'}
+          ${isActive ? 'translate-y-[-24px] scale-[1.08]' : 'translate-y-[8px] scale-[0.95]'}
           mb-4
         `}>
-          <CourtroomLiveAvatar role={role} isSpeaking={isSpeaking} />
+          <CourtroomLiveAvatar role={role} isSpeaking={currentSpeaker === role && isSpeaking} />
         </div>
 
         {/* Lawyer table overlay (front layer, absolute bottom) */}
@@ -581,8 +634,8 @@ function AttorneyStation({
 
       {/* Speaking Indicator and Visualizer */}
       <div className="absolute -top-6 h-5 flex items-center gap-1.5">
-        {isSpeaking && <SpeakingPulseRing active={true} role={role} />}
-        {isSpeaking && <AudioVisualizerWave role={role} />}
+        {isActive && <SpeakingPulseRing active={true} role={role} />}
+        {isActive && <AudioVisualizerWave role={role} />}
       </div>
 
       {/* Name and Model label below the station card */}
@@ -590,7 +643,7 @@ function AttorneyStation({
         <div className="text-xs font-bold text-white">{participant?.name || roleLabel}</div>
         <div className="text-[9px] uppercase tracking-wider font-mono" style={{ color: accentColor }}>{roleLabel}</div>
         {participant?.modelInfo && (
-          <div className="text-[9px] text-gray-400 font-mono truncate max-w-[140px] mt-0.5">
+          <div className="text-[9px] text-gray-450 font-mono truncate max-w-[140px] mt-0.5">
             {formatProviderInfo(participant.modelInfo)}
           </div>
         )}

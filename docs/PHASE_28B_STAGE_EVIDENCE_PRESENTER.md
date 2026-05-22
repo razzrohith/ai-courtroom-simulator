@@ -1,35 +1,26 @@
-# Phase 28B – Evidence‑on‑Stage Presenter
+# Phase 28B – Evidence‑on‑Stage Presenter
 
 ## Overview
-Adds a visual component that displays the latest evidence on the courtroom stage. The component shows:
-- **Evidence ID**
-- **Title**
-- **Status badge** (Offered, Admitted, Disputed, Excluded, Sealed)
-- **Sealed** overlay when the evidence is sealed or marked confidential.
-- A slide‑in animation with a stamp‑like effect for admitted/disputed/excluded evidence.
+The **StageEvidencePresenter** component displays the most recent evidence item on the courtroom stage. It shows:
+- Evidence ID
+- Title
+- Status badge (Offered, Admitted, Disputed, Excluded, Sealed)
+- Visual indication for sealed/confidential evidence
+- Animated entrance (slide‑in) and sealed overlay animation
 
 ## Integration
-- Imported as `StageEvidencePresenter` in `src/components/visuals/CourtroomStage.tsx`.
-- Rendered directly after the `WitnessAndEvidenceArea` and before the active speaker indicator.
-- Receives the latest evidence via `evidence[evidence.length - 1]`.
+- Imported and rendered in `src/components/visuals/CourtroomStage.tsx` near the bottom of the stage layout.
+- Receives the latest evidence via `evidence[evidence.length - 1]` (the newest array entry).
 
-## Component Props
+## Styling & Animations
+- Uses `StageEvidencePresenter.module.css` for container positioning, slide‑in animation, and sealed overlay shimmer.
+- Designed with a dark‑mode friendly palette, subtle gradients, and micro‑animations.
+
+## Usage
 ```tsx
-interface StageEvidencePresenterProps {
-  evidence?: Evidence; // from src/types/courtroom.ts
-}
+<StageEvidencePresenter evidence={evidence[evidence.length - 1]} />
 ```
 
-## Styling
-Implemented in `StageEvidencePresenter.module.css` with:
-- `slideIn` keyframe animation.
-- `sealedOverlay` semi‑transparent frosted layer.
-
-## Build & Verification
-Running the standard npm commands (`install`, `typecheck`, `npx tsc --noEmit`, `build`) passes with no errors. The UI shows the evidence card on the stage, respects sealed status, and does not interfere with existing features (language selector, autoplay, voice, provider config, etc.).
-
-## Security Scan
-Performed a repository‑wide grep for secrets, tokens, and debug statements. No matches found.
-
----
-*No further user action required.*
+## Future Enhancements
+- Select evidence based on status (e.g., last admitted) rather than simple array order.
+- Add side/source indicator and short description if needed.

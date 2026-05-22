@@ -159,9 +159,11 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
     if (keyInput.trim()) {
       saveApiKey(providerId, keyInput.trim(), rememberKey);
       setConnectionStatus(prev => ({ ...prev, [providerId]: 'connected' }));
+      // Load models for this provider after API key is saved
+      loadModelsForProvider(providerId);
       setKeyInput('');
     }
-  }, [keyInput, rememberKey]);
+  }, [keyInput, rememberKey, loadModelsForProvider]);
 
   const handleClearApiKey = useCallback((providerId: ProviderId) => {
     clearApiKey(providerId);
@@ -186,7 +188,7 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
   }, []);
 
   // Load models for a provider
-  const loadModelsForProvider = useCallback(async (providerId: ProviderId) => {
+  async function loadModelsForProvider(providerId: ProviderId) {
     if (modelsLoading[providerId]) return;
     
     // Check cache first
@@ -254,7 +256,7 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
     } finally {
       setModelsLoading(prev => ({ ...prev, [providerId]: false }));
     }
-  }, [modelsLoading]);
+  }
 
   // Get available models for an agent's provider
   const getAvailableModels = useCallback((providerId: ProviderId): ModelInfo[] => {
@@ -365,6 +367,8 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                               model: defaultModel,
                               mode: newEntry.category === 'mock' ? 'mock' : newEntry.category === 'local' ? 'local' : 'api',
                             });
+                            // Load models for the newly selected provider
+                            loadModelsForProvider(newProviderId);
                           }}
                           className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm"
                         >

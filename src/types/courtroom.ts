@@ -234,7 +234,11 @@ export interface ObjectionEvent {
   targetEvidence?: string;
   status: 'pending' | 'sustained' | 'overruled';
   timestamp: string;
+  // New fields for Phase 28D
+  reason?: string; // short reason for ruling
+  impact?: string; // why this matters / evidence impact description
 }
+
 
 // Agent model configuration (placeholder for future providers)
 export interface ModelProviderType {

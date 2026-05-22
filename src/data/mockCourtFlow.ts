@@ -3,7 +3,7 @@
  * Phase 7: Judge transitions, objection logic, improved verdict
  */
 
-import type { CourtPhase, AgentRole, TranscriptEntry, Verdict, ObjectionEvent } from '../types/courtroom';
+import type { CourtPhase, AgentRole, TranscriptEntry, Verdict, ObjectionEvent, ObjectionType } from '../types/courtroom';
 
 // Agent speaking order per phase
 export const SPEAKER_ORDER: Record<CourtPhase, AgentRole[]> = {
@@ -114,7 +114,7 @@ export const OBJECTION_TYPES = {
 
 // Decide if an objection should occur based on phase and random chance
 // Phase 7.5: More deterministic - reduce duplicates and use smarter triggers
-export function shouldTriggerObjection(phase: CourtPhase, speakerTurn: number, existingObjections: ObjectionEvent[], evidenceRefs: string[]): string | null {
+export function shouldTriggerObjection(phase: CourtPhase, speakerTurn: number, existingObjections: ObjectionEvent[], evidenceRefs: string[]): ObjectionType | null {
   // Objections most likely in evidence and cross-examination
   const likelyPhases = ['evidence_presentation', 'cross_examination', 'witness_testimony', 'rebuttal', 'closing_arguments'];
   if (!likelyPhases.includes(phase)) return null;
@@ -138,12 +138,12 @@ export function shouldTriggerObjection(phase: CourtPhase, speakerTurn: number, e
     // Choose objection based on whether evidence was referenced
     if (evidenceRefs.length > 0) {
       // Evidence was mentioned - might trigger relevance or foundation
-      const evidenceObjTypes = ['relevance', 'lack_of_foundation', 'hearsay'];
-      return evidenceObjTypes[Math.floor(Math.random() * evidenceObjTypes.length)];
+      const evidenceObjTypes: ObjectionType[] = ['relevance', 'lack_of_foundation', 'hearsay'];
+      return evidenceObjTypes[Math.floor(Math.random() * evidenceObjTypes.length)] as ObjectionType;
     } else {
       // No evidence - might trigger procedural
-      const noEvTypes = ['argumentative', 'speculation', 'leading_question', 'misleading_evidence', 'improper_conclusion'];
-      return noEvTypes[Math.floor(Math.random() * noEvTypes.length)];
+      const noEvTypes: ObjectionType[] = ['argumentative', 'speculation', 'leading_question', 'misleading_evidence', 'improper_conclusion'];
+      return noEvTypes[Math.floor(Math.random() * noEvTypes.length)] as ObjectionType;
     }
   }
   return null;

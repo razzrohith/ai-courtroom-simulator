@@ -3,7 +3,7 @@
  * Phase 9: Witness testimony and motion flow
  */
 
-import type { CourtState, AgentRole, TranscriptEntry, Evidence, AgentParticipant, ObjectionEvent, Witness, WitnessQAndA, CourtPhase } from '../types/courtroom';
+import type { CourtState, AgentRole, TranscriptEntry, Evidence, AgentParticipant, ObjectionEvent, ObjectionType, Witness, WitnessQAndA, CourtPhase } from '../types/courtroom';
 import { COURT_PHASES } from '../types/courtroom';
 import { SAMPLE_CASE } from '../data/sampleCase';
 import { createMockConfig } from '../providers/modelProviderTypes';
@@ -462,7 +462,7 @@ export function introduceEvidence(state: CourtState, evidenceId: string): CourtS
 export function recordObjection(
   state: CourtState,
   raisedBy: AgentRole,
-  objectionType: string,
+  objectionType: ObjectionType,
   targetEvidence?: string
 ): CourtState {
   const objection: ObjectionEvent = {

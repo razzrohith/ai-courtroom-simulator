@@ -104,17 +104,19 @@ export const OBJECTION_TYPES = {
   hearsay: { weight: 0.12, desc: "hearsay" },
   speculation: { weight: 0.10, desc: "speculation" },
   lack_of_foundation: { weight: 0.15, desc: "lack of foundation" },
-  leading: { weight: 0.10, desc: "leading" },
+  leading_question: { weight: 0.10, desc: "leading question" },
   argumentative: { weight: 0.08, desc: "argumentative" },
-  compound: { weight: 0.05, desc: "compound question" },
-  assume_facts: { weight: 0.08, desc: "assumes facts not in evidence" },
+  compound_question: { weight: 0.05, desc: "compound question" },
+  assumes_facts_not_shown: { weight: 0.08, desc: "assumes facts not shown" },
+  misleading_evidence: { weight: 0.07, desc: "misleading evidence" },
+  improper_conclusion: { weight: 0.06, desc: "improper conclusion" },
 };
 
 // Decide if an objection should occur based on phase and random chance
 // Phase 7.5: More deterministic - reduce duplicates and use smarter triggers
 export function shouldTriggerObjection(phase: CourtPhase, speakerTurn: number, existingObjections: ObjectionEvent[], evidenceRefs: string[]): string | null {
   // Objections most likely in evidence and cross-examination
-  const likelyPhases = ['evidence_presentation', 'cross_examination'];
+  const likelyPhases = ['evidence_presentation', 'cross_examination', 'witness_testimony', 'rebuttal', 'closing_arguments'];
   if (!likelyPhases.includes(phase)) return null;
   
   // Only after speaker has said at least one substantive thing
@@ -140,7 +142,7 @@ export function shouldTriggerObjection(phase: CourtPhase, speakerTurn: number, e
       return evidenceObjTypes[Math.floor(Math.random() * evidenceObjTypes.length)];
     } else {
       // No evidence - might trigger procedural
-      const noEvTypes = ['argumentative', 'speculation', 'leading'];
+      const noEvTypes = ['argumentative', 'speculation', 'leading_question', 'misleading_evidence', 'improper_conclusion'];
       return noEvTypes[Math.floor(Math.random() * noEvTypes.length)];
     }
   }

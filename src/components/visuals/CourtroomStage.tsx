@@ -20,6 +20,7 @@ import {
   EvidenceChipImproved,
   CourtroomLiveAvatar
 } from './CourtroomVisuals';
+import StageEvidencePresenter from './StageEvidencePresenter';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { getRoleLabel } from '../../utils/languageMode';
 
@@ -347,6 +348,8 @@ export function CourtroomStage({
           />
         </div>
         
+        {/* Stage Evidence Presenter */}
+        <StageEvidencePresenter evidence={evidence[evidence.length - 1]} />
         {/* Active speaker indicator - bottom center */}
         <div className="flex justify-center mt-3">
           {isActive && currentSpeaker && (

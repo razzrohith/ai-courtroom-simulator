@@ -1,0 +1,42 @@
+.container {
+  position: absolute;
+  bottom: 120px; /* adjust as needed to appear on stage */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+}
+
+.card {
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(4px);
+  border: 1px solid #444;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  color: #fff;
+  min-width: 200px;
+}
+
+.slideIn {
+  animation: slideIn 0.6s ease-out forwards;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sealedOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 255, 0.2);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #add8e6;
+  border-radius: 0.5rem;
+}

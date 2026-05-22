@@ -21,6 +21,7 @@ import {
   CourtroomLiveAvatar
 } from './CourtroomVisuals';
 import StageEvidencePresenter from './StageEvidencePresenter';
+import CourtroomGallery from './CourtroomGallery';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { getRoleLabel } from '../../utils/languageMode';
 
@@ -250,6 +251,7 @@ export function CourtroomStage({
       
       {/* Main stage area */}
       <div className="relative p-4 md:p-6 min-h-[280px] flex flex-col">
+  <CourtroomGallery />
         {/* Row 1: Judge Bench at top center */}
         <div className="flex justify-center mb-4">
           <JudgeStation 

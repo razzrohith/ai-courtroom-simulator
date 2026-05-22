@@ -227,12 +227,24 @@ export interface CourtState {
   isActive: boolean;
 }
 
+export type ObjectionType =
+  | 'relevance'
+  | 'speculation'
+  | 'argumentative'
+  | 'hearsay'
+  | 'assumes_facts_not_shown'
+  | 'misleading_evidence'
+  | 'improper_conclusion'
+  | 'leading_question'
+  | 'lack_of_foundation'
+  | 'compound_question';
+
 export interface ObjectionEvent {
   id: string;
   raisedBy: AgentRole;
-  type: string;
+  type: ObjectionType;
   targetEvidence?: string;
-  status: 'pending' | 'sustained' | 'overruled';
+  status: 'pending' | 'sustained' | 'overruled' | 'allowed_with_limitation';
   timestamp: string;
   // New fields for Phase 28D
   reason?: string; // short reason for ruling

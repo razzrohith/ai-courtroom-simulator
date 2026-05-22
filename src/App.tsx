@@ -11,6 +11,27 @@ import { createInitialState, startSimulation, processNextTurnAsync, resetSimulat
 import { saveSession, loadSession, clearSession, hasSavedSession } from './data/sessionPersistence';
 import type { CourtState, TranscriptEntry, CaseData } from './types/courtroom';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
+import { LanguageMode } from './utils/languageMode';
+
+function LanguageSelector() {
+  const { mode, setMode } = useLanguage();
+  return (
+    <div className="p-2 bg-gray-800 text-white flex items-center space-x-2">
+      <label htmlFor="language" className="text-sm">Language:</label>
+      <select
+        id="language"
+        value={mode}
+        onChange={e => setMode(e.target.value as LanguageMode)}
+        className="bg-gray-700 text-white rounded p-1"
+      >
+        <option value={LanguageMode.EN_IN}>Indian English</option>
+        <option value={LanguageMode.TELUGU}>తెలుగు (Telugu)</option>
+        <option value={LanguageMode.HINDI}>हिन्दी (Hindi)</option>
+      </select>
+    </div>
+  );
+}
 
 function App() {
   const [state, setState] = useState<CourtState>(() => createInitialState());
@@ -249,30 +270,39 @@ function App() {
   }, []);
 
   return (
-    <CourtroomLayout
-      state={state}
-      onStart={handleStart}
-      onNextTurn={handleNextTurn}
-      onReset={handleReset}
-      onSkip={handleSkip}
-      onSave={handleSave}
-      onLoad={handleLoad}
-      onClear={handleClear}
-      onCaseUpdate={handleCaseUpdate}
-      onObjectionRuling={handleRuling}
-      hasSavedSession={hasSession}
-      isGenerating={isGenerating}
-      isAutoplay={isAutoplay}
-      isAutoplayPaused={isAutoplayPaused}
-      autoplaySpeed={autoplaySpeed}
-      onToggleAutoplay={() => setIsAutoplay(prev => !prev)}
-      onToggleAutoplayPause={() => setIsAutoplayPaused(prev => !prev)}
-      onChangeAutoplaySpeed={setAutoplaySpeed}
-      speech={speech}
-      stageEntry={stageEntry}
-      isStageTyping={isStageTyping}
-    />
+    <>
+      <LanguageSelector />
+      <CourtroomLayout
+        state={state}
+        onStart={handleStart}
+        onNextTurn={handleNextTurn}
+        onReset={handleReset}
+        onSkip={handleSkip}
+        onSave={handleSave}
+        onLoad={handleLoad}
+        onClear={handleClear}
+        onCaseUpdate={handleCaseUpdate}
+        onObjectionRuling={handleRuling}
+        hasSavedSession={hasSession}
+        isGenerating={isGenerating}
+        isAutoplay={isAutoplay}
+        isAutoplayPaused={isAutoplayPaused}
+        autoplaySpeed={autoplaySpeed}
+        onToggleAutoplay={() => setIsAutoplay(prev => !prev)}
+        onToggleAutoplayPause={() => setIsAutoplayPaused(prev => !prev)}
+        onChangeAutoplaySpeed={setAutoplaySpeed}
+        speech={speech}
+        stageEntry={stageEntry}
+        isStageTyping={isStageTyping}
+      />
+    </>
   );
 }
 
-export default App;
+export default function WrappedApp() {
+  return (
+    <LanguageProvider>
+      <App />
+    </LanguageProvider>
+  );
+}

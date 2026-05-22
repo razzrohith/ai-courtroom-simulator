@@ -147,12 +147,14 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
     saveCourtroomConfig(updated);
     setConfig(updated);
     setIsDirty(false);
+    window.dispatchEvent(new Event('judgebench-provider-status-changed'));
   }, [config]);
 
   const handleReset = useCallback(() => {
     const reset = resetCourtroomConfig();
     setConfig(reset);
     setIsDirty(false);
+    window.dispatchEvent(new Event('judgebench-provider-status-changed'));
   }, []);
 
   const handleSaveApiKey = useCallback((providerId: ProviderId) => {
@@ -162,12 +164,14 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
       // Load models for this provider after API key is saved
       loadModelsForProvider(providerId);
       setKeyInput('');
+      window.dispatchEvent(new Event('judgebench-provider-status-changed'));
     }
   }, [keyInput, rememberKey, loadModelsForProvider]);
 
   const handleClearApiKey = useCallback((providerId: ProviderId) => {
     clearApiKey(providerId);
     setConnectionStatus(prev => ({ ...prev, [providerId]: 'missing' }));
+    window.dispatchEvent(new Event('judgebench-provider-status-changed'));
   }, []);
 
   const getDisplayKey = useCallback((providerId: ProviderId): string => {

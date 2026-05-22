@@ -6,7 +6,15 @@
 import { useState, useEffect } from 'react';
 import type { CourtState, CaseData, AgentRole } from '../types/courtroom';
 import { PHASE_LABELS } from '../types/courtroom';
-import { loadCourtroomConfig, CourtroomModelConfig, isProviderPlaceholder, AgentModelConfig, DEFAULT_MODEL_CONFIG } from '../types/providers';
+import { 
+  loadCourtroomConfig, 
+  CourtroomModelConfig, 
+  isProviderPlaceholder, 
+  AgentModelConfig, 
+  DEFAULT_MODEL_CONFIG,
+  getAgentConnectionStatus,
+  AgentConnectionStatus
+} from '../types/providers';
 import { AgentPanel } from './AgentPanel';
 import { TranscriptPanel } from './TranscriptPanel';
 import { EvidenceBoard } from './EvidenceBoard';
@@ -31,6 +39,7 @@ interface AgentModelInfo {
   model: string;
   mode: string;
   isPlaceholder: boolean;
+  status: AgentConnectionStatus;
 }
 
 interface CourtroomLayoutProps {
@@ -55,10 +64,22 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, o
   const [showTimeline, setShowTimeline] = useState(false);
   const [showExhibitView, setShowExhibitView] = useState(false);
   const [modelConfig, setModelConfig] = useState<CourtroomModelConfig | null>(null);
+  const [statusTick, setStatusTick] = useState(0);
 
   useEffect(() => {
     const config = loadCourtroomConfig();
     setModelConfig(config);
+  }, []);
+
+  useEffect(() => {
+    const handleStatusChange = () => {
+      setModelConfig(loadCourtroomConfig());
+      setStatusTick(t => t + 1);
+    };
+    window.addEventListener('judgebench-provider-status-changed', handleStatusChange);
+    return () => {
+      window.removeEventListener('judgebench-provider-status-changed', handleStatusChange);
+    };
   }, []);
 
   const currentPhaseTranscript = transcript.filter(t => t.phase === currentPhase);
@@ -73,6 +94,7 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, o
       model: config.model,
       mode: config.mode,
       isPlaceholder: isProviderPlaceholder(config.providerId),
+      status: getAgentConnectionStatus(role, config),
     };
   };
 
@@ -330,7 +352,11 @@ export function CourtroomLayout({ state, onStart, onNextTurn, onReset, onSkip, o
       />
       
       {/* Provider Runtime Status */}
-      <ProviderRuntimeStatusPanel configs={modelConfig !== null ? modelConfig : DEFAULT_MODEL_CONFIG} />
+      <ProviderRuntimeStatusPanel 
+        configs={modelConfig !== null ? modelConfig : DEFAULT_MODEL_CONFIG} 
+        onStatusChange={() => setStatusTick(t => t + 1)}
+        key={`runtime-status-${statusTick}`}
+      />
     </div>
   );
 }

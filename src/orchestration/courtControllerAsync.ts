@@ -11,6 +11,7 @@ import { getSpeakersForPhase } from './phaseEngine';
 import { generateAgentResponse, parseEvidenceReferences } from '../providers/agentService';
 import { generateWitnessQAndA, calculateCredibilityScore } from '../providers/mockModelProvider';
 import { JUDGE_TRANSITIONS, shouldTriggerObjection, MOCK_VERDICT } from '../data/mockCourtFlow';
+import { loadCourtroomConfig, setAgentConnectionStatus } from '../types/providers';
 
 // Sample witnesses for the case
 const DEFAULT_WITNESSES: Witness[] = [
@@ -66,9 +67,9 @@ export function getParticipantName(state: CourtState, role: AgentRole): string {
   return participant?.name || role.toUpperCase();
 }
 
-function getParticipantConfig(state: CourtState, role: AgentRole) {
-  const participant = state.participants.find(p => p.role === role);
-  return participant?.modelConfig || createMockConfig(role);
+function getParticipantConfig(role: AgentRole) {
+  const config = loadCourtroomConfig();
+  return config[role];
 }
 
 export function getNextSpeakerRole(state: CourtState): AgentRole | null {
@@ -194,7 +195,7 @@ function processWitnessTestimony(state: CourtState, speakerRole: AgentRole): Cou
 
 async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole): Promise<CourtState> {
   const speakerName = getParticipantName(state, speakerRole);
-  const config = getParticipantConfig(state, speakerRole);
+  const config = getParticipantConfig(speakerRole);
 
   const result = await generateAgentResponse({ 
     role: speakerRole, 
@@ -207,6 +208,14 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
     objectionHistory: state.objectionHistory,
     caseKeyFacts: state.case.keyFacts
   });
+
+  // Update provider connection status based on whether it succeeded or fell back
+  setAgentConnectionStatus(
+    speakerRole,
+    config.providerId,
+    config.model,
+    result.responseSource === 'real' ? 'connected' : 'fallback'
+  );
 
   // Parse evidence references
   const evidenceRefs = parseEvidenceReferences(result.message);

@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getProviderRuntimeStatus, ProviderRuntimeStatus, generateResponse } from '../providers/runtime';
 import { LoadingSpinner } from './visuals/CourtroomVisuals';
+import { setAgentConnectionStatus } from '../types/providers';
 import type { AgentModelConfig } from '../types/providers';
 import type { AgentRole, CourtPhase, TranscriptEntry, Evidence } from '../types/courtroom';
 
@@ -15,6 +16,7 @@ interface ProviderRuntimeStatusProps {
     prosecutor: AgentModelConfig;
     defense: AgentModelConfig;
   };
+  onStatusChange?: () => void;
 }
 
 const STATUS_CONFIG: Record<ProviderRuntimeStatus, { label: string; color: string; bg: string }> = {
@@ -29,7 +31,15 @@ const STATUS_CONFIG: Record<ProviderRuntimeStatus, { label: string; color: strin
 /**
  * Test result display for a single agent
  */
-function TestResultDisplay({ role, config }: { role: AgentRole; config: AgentModelConfig }) {
+function TestResultDisplay({ 
+  role, 
+  config, 
+  onStatusChange 
+}: { 
+  role: AgentRole; 
+  config: AgentModelConfig; 
+  onStatusChange?: () => void; 
+}) {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{success: boolean; message: string; fallback: boolean} | null>(null);
 
@@ -72,23 +82,32 @@ function TestResultDisplay({ role, config }: { role: AgentRole; config: AgentMod
       const latency = Date.now() - startTime;
       const preview = response.substring(0, 50).replace(/\n/g, ' ');
       
+      const success = !usedFallback;
+      setAgentConnectionStatus(role, config.providerId, config.model, success ? 'connected' : 'fallback');
+
       setTestResult({
-        success: !usedFallback,
+        success,
         message: `${config.providerId}/${config.model} - ${latency}ms - "${preview}..."`,
         fallback: usedFallback,
       });
+
+      if (onStatusChange) onStatusChange();
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Test failed';
       
+      setAgentConnectionStatus(role, config.providerId, config.model, 'fallback');
+
       setTestResult({
         success: false,
         message: `Error: ${errorMsg.substring(0, 40)}`,
         fallback: true, // If error, we'll fall back to mock
       });
+
+      if (onStatusChange) onStatusChange();
     } finally {
       setTesting(false);
     }
-  }, [role, config]);
+  }, [role, config, onStatusChange]);
 
   return (
     <button
@@ -107,7 +126,7 @@ function TestResultDisplay({ role, config }: { role: AgentRole; config: AgentMod
   );
 }
 
-export function ProviderRuntimeStatusPanel({ configs }: ProviderRuntimeStatusProps) {
+export function ProviderRuntimeStatusPanel({ configs, onStatusChange }: ProviderRuntimeStatusProps) {
   const [statuses, setStatuses] = useState<Record<string, ProviderRuntimeStatus>>({
     judge: 'mock',
     prosecutor: 'mock',
@@ -172,7 +191,7 @@ export function ProviderRuntimeStatusPanel({ configs }: ProviderRuntimeStatusPro
                 <span className="capitalize mr-2">{label}:</span>
                 <span className={statusColor}>{statusLabel}</span>
               </div>
-              <TestResultDisplay role={roleKey} config={config} />
+              <TestResultDisplay role={roleKey} config={config} onStatusChange={onStatusChange} />
             </div>
           );
         })}

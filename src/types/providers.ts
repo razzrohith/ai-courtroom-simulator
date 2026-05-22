@@ -4,6 +4,8 @@
  * Phase 13.5: Provider connection system and API key management
  */
 
+import type { AgentRole } from './courtroom';
+
 // All supported provider IDs
 export type ProviderId = 
   | 'mock'
@@ -319,4 +321,54 @@ export function isProviderConfigured(providerId: ProviderId): boolean {
     return !!(url && url.length > 0);
   }
   return true;
+}
+
+export type AgentConnectionStatus = 
+  | 'mock'
+  | 'missing-key'
+  | 'not-tested'
+  | 'connected'
+  | 'fallback';
+
+export function getAgentConnectionStatus(
+  role: AgentRole, 
+  config: AgentModelConfig
+): AgentConnectionStatus {
+  if (config.providerId === 'mock') {
+    return 'mock';
+  }
+  
+  if (!isProviderConfigured(config.providerId)) {
+    return 'missing-key';
+  }
+
+  // Load from localStorage status cache
+  try {
+    const key = `judgebench.status.${role}.${config.providerId}.${config.model}`;
+    const stored = localStorage.getItem(key);
+    if (stored === 'connected' || stored === 'fallback') {
+      return stored as AgentConnectionStatus;
+    }
+  } catch (e) {
+    console.warn('Failed to load status:', e);
+  }
+
+  return 'not-tested';
+}
+
+export function setAgentConnectionStatus(
+  role: AgentRole,
+  providerId: ProviderId,
+  model: string,
+  status: 'connected' | 'fallback'
+): void {
+  try {
+    const key = `judgebench.status.${role}.${providerId}.${model}`;
+    localStorage.setItem(key, status);
+    
+    // Dispatch a storage event or a custom event to notify other components/windows
+    window.dispatchEvent(new Event('judgebench-provider-status-changed'));
+  } catch (e) {
+    console.warn('Failed to save status:', e);
+  }
 }

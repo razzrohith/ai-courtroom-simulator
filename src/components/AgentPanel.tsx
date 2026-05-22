@@ -5,12 +5,14 @@
 
 import type { AgentRole, AgentParticipant } from '../types/courtroom';
 import { CourtroomAvatar } from './visuals/CourtroomVisuals';
+import type { AgentConnectionStatus } from '../types/providers';
 
 interface AgentModelInfo {
   providerId: string;
   model: string;
   mode: string;
   isPlaceholder: boolean;
+  status: AgentConnectionStatus;
 }
 
 interface AgentPanelProps {
@@ -32,6 +34,14 @@ const roleIcons: Record<AgentRole, string> = {
   defense: '🛡️',
 };
 
+const statusStyles: Record<AgentConnectionStatus, { label: string; class: string }> = {
+  mock: { label: 'Mock Mode', class: 'bg-green-950/60 text-green-400 border border-green-900/50' },
+  'missing-key': { label: 'Missing API Key', class: 'bg-red-950/60 text-red-400 border border-red-900/50' },
+  'not-tested': { label: 'API key configured — not tested', class: 'bg-blue-950/60 text-blue-400 border border-blue-900/50' },
+  connected: { label: 'Connected', class: 'bg-emerald-950/60 text-emerald-400 border border-emerald-900/50' },
+  fallback: { label: 'Fallback: Mock', class: 'bg-amber-950/60 text-amber-400 border border-amber-900/50' },
+};
+
 export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo }: AgentPanelProps) {
   const colors = roleColors[participant.role];
   const isSpeaking = isActive && isCurrentSpeaker;
@@ -46,26 +56,29 @@ export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo 
   // Get mode badge style
   const getModeBadge = () => {
     if (!modelInfo) {
-      return { label: 'Mock', class: 'bg-green-700 text-green-200' };
+      return { label: 'Mock', class: 'bg-green-950 text-green-400 border border-green-800' };
     }
     
-    if (modelInfo.isPlaceholder) {
-      return { label: 'Fallback', class: 'bg-yellow-700 text-yellow-200' };
+    if (modelInfo.status === 'fallback') {
+      return { label: 'Fallback', class: 'bg-amber-950 text-amber-400 border border-amber-800' };
     }
     
     switch (modelInfo.mode) {
       case 'mock':
-        return { label: 'Mock', class: 'bg-green-700 text-green-200' };
+        return { label: 'Mock', class: 'bg-green-950 text-green-400 border border-green-800' };
+      case 'local':
       case 'local-placeholder':
-        return { label: 'Local', class: 'bg-orange-700 text-orange-200' };
+        return { label: 'Local', class: 'bg-orange-950 text-orange-400 border border-orange-800' };
+      case 'api':
       case 'api-placeholder':
-        return { label: 'API', class: 'bg-purple-700 text-purple-200' };
+        return { label: 'API', class: 'bg-purple-950 text-purple-400 border border-purple-800' };
       default:
-        return { label: 'Unknown', class: 'bg-gray-700 text-gray-300' };
+        return { label: 'Unknown', class: 'bg-gray-800 text-gray-300' };
     }
   };
 
   const modeBadge = getModeBadge();
+  const statusInfo = statusStyles[modelInfo?.status || 'mock'];
 
   return (
     <div
@@ -103,32 +116,31 @@ export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo 
       </div>
 
       {/* Model configuration display */}
-      <div className="text-xs text-gray-500 space-y-1 pt-2 border-t border-gray-700/50">
+      <div className="text-xs text-gray-500 space-y-1.5 pt-2 border-t border-gray-700/50">
         <div className="flex items-center justify-between">
           <span>Provider:</span>
-          <span className="text-gray-400">
-            {modelInfo?.providerId || participant.modelConfig.model}
+          <span className="text-gray-400 font-medium capitalize">
+            {modelInfo?.providerId || participant.modelConfig.provider.id}
           </span>
         </div>
         <div className="flex items-center justify-between">
           <span>Model:</span>
-          <span className="text-gray-400">
+          <span className="text-gray-400 truncate max-w-[150px] font-mono" title={modelInfo?.model || participant.modelConfig.model}>
             {modelInfo?.model || participant.modelConfig.model}
           </span>
         </div>
         <div className="flex items-center justify-between">
           <span>Mode:</span>
-          <span className={`px-1.5 py-0.5 rounded ${modeBadge.class}`}>
+          <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-semibold ${modeBadge.class}`}>
             {modeBadge.label}
           </span>
         </div>
-        
-        {/* Warning badge if configured but not connected */}
-        {modelInfo && modelInfo.isPlaceholder && (
-          <div className="mt-1 text-orange-400 text-xs">
-            ⚠️ Not connected
-          </div>
-        )}
+        <div className="flex flex-col pt-1.5 gap-1">
+          <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Status</span>
+          <span className={`px-2 py-1 rounded text-xs text-center font-medium ${statusInfo.class}`}>
+            {statusInfo.label}
+          </span>
+        </div>
       </div>
     </div>
   );

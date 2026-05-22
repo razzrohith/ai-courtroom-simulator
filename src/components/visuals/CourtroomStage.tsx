@@ -20,6 +20,8 @@ import {
   EvidenceChipImproved,
   CourtroomLiveAvatar
 } from './CourtroomVisuals';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { getRoleLabel } from '../../utils/languageMode';
 
 /**
  * Model info interface - duplicated from CourtroomLayout to avoid circular deps
@@ -130,7 +132,9 @@ export function CourtroomStage({
   simulationSpeaker,
   isGenerating,
 }: CourtroomStageProps) {
+
   // Check if there's an active objection
+  const { mode: languageMode } = useLanguage();
   const hasObjection = !!activeObjection;
   
   // Count admitted evidence
@@ -160,7 +164,7 @@ export function CourtroomStage({
               <span className="text-lg">⚖️</span>
             </div>
             <div className="text-xs">
-              <div className="text-yellow-400 font-medium">Judge</div>
+              <div className="text-yellow-400 font-medium">{getRoleLabel('judge', languageMode)}</div>
               <div className="text-gray-500 truncate max-w-[80px]">{judge?.name}</div>
             </div>
           </div>
@@ -176,7 +180,7 @@ export function CourtroomStage({
               <span className="text-lg">⚔️</span>
             </div>
             <div className="text-xs">
-              <div className="text-blue-400 font-medium">Prosecutor</div>
+              <div className="text-blue-400 font-medium">{getRoleLabel('prosecutor', languageMode)}</div>
               <div className="text-gray-500 truncate max-w-[80px]">{prosecutor?.name}</div>
             </div>
           </div>
@@ -187,7 +191,7 @@ export function CourtroomStage({
               <span className="text-lg">🛡️</span>
             </div>
             <div className="text-xs">
-              <div className="text-green-400 font-medium">Defense</div>
+              <div className="text-green-400 font-medium">{getRoleLabel('defense', languageMode)}</div>
               <div className="text-gray-500 truncate max-w-[80px]">{defense?.name}</div>
             </div>
           </div>
@@ -268,7 +272,7 @@ export function CourtroomStage({
                   latestEntry.speakerRole === 'prosecutor' ? 'bg-blue-600' :
                   'bg-green-600'
                 }`}>
-                  {latestEntry.speakerRole === 'judge' ? 'Hon. Judge' : latestEntry.speakerRole === 'prosecutor' ? 'Prosecutor' : 'Defense'}
+                  {getRoleLabel(latestEntry.speakerRole as AgentRole, languageMode)}
                 </span>
                 <span className="text-xs font-bold text-gray-250">
                   {latestEntry.speakerName}
@@ -408,6 +412,7 @@ function JudgeStation({
   simulationSpeaker?: AgentRole | null;
   isGenerating?: boolean;
 }) {
+
   const role = 'judge';
   const isActive = (currentSpeaker === role && isSpeaking) || (simulationSpeaker === role && !!isGenerating);
   const hasActive = (currentSpeaker !== null && isSpeaking) || (simulationSpeaker !== null && isGenerating);
@@ -536,7 +541,8 @@ function AttorneyStation({
   isGenerating?: boolean;
 }) {
   const roleColor = role === 'prosecutor' ? 'blue' : 'green';
-  const roleLabel = role === 'prosecutor' ? 'Prosecution' : 'Defense';
+  const { mode: languageMode } = useLanguage();
+    const roleLabel = getRoleLabel(role, languageMode);
   const accentColor = role === 'prosecutor' ? '#3B82F6' : '#22C55E';
   
   const isActive = (currentSpeaker === role && isSpeaking) || (simulationSpeaker === role && !!isGenerating);

@@ -4,6 +4,8 @@
  */
 
 import type { AgentRole, AgentParticipant } from '../types/courtroom';
+import { useLanguage } from '../contexts/LanguageContext';
+import { getRoleLabel } from '../utils/languageMode';
 import { CourtroomAvatar } from './visuals/CourtroomVisuals';
 import type { AgentConnectionStatus } from '../types/providers';
 
@@ -43,6 +45,7 @@ const statusStyles: Record<AgentConnectionStatus, { label: string; class: string
 };
 
 export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo }: AgentPanelProps) {
+  const { mode } = useLanguage();
   const colors = roleColors[participant.role];
   const isSpeaking = isActive && isCurrentSpeaker;
 
@@ -90,7 +93,7 @@ export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo 
       <div className="flex items-center gap-3 mb-2">
         <span className="text-xl">{roleIcons[participant.role]}</span>
         <span className={`text-xs uppercase tracking-wider ${colors.text}`}>
-          {participant.role}
+          {getRoleLabel(participant.role as any, mode)}
         </span>
         {isSpeaking && (
           <span className="px-2 py-0.5 bg-yellow-600 rounded text-xs text-white animate-pulse">

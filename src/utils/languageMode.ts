@@ -25,14 +25,16 @@ export const getRoleLabel = (role: 'judge' | 'prosecutor' | 'defense', mode: Lan
       defense: 'Defense'
     },
     [LanguageMode.TELUGU]: {
+      // Telugu script with English fallback
       judge: 'న్యాయమూర్తి / Judge',
-      prosecutor: 'వాది న్యాయవాది / Prosecutor',
-      defense: 'ప్రత్యర్థి న్యాయవాది / Defense'
+      prosecutor: 'ప్రాసిక్యూటర్ / Prosecutor',
+      defense: 'డిఫెన్స్ / Defense'
     },
     [LanguageMode.HINDI]: {
+      // Hindi script with English fallback
       judge: 'न्यायाधीश / Judge',
-      prosecutor: 'वादी पक्ष के वकील / Prosecutor',
-      defense: 'बचाव पक्ष के वकील / Defense'
+      prosecutor: 'प्रोसीक्यूटर / Prosecutor',
+      defense: 'डिफेंस / Defense'
     }
   };
   return map[mode][role] ?? role;

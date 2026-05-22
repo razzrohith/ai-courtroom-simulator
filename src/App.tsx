@@ -11,27 +11,9 @@ import { createInitialState, startSimulation, processNextTurnAsync, resetSimulat
 import { saveSession, loadSession, clearSession, hasSavedSession } from './data/sessionPersistence';
 import type { CourtState, TranscriptEntry, CaseData } from './types/courtroom';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
-import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
-import { LanguageMode } from './utils/languageMode';
+import { LanguageProvider } from './contexts/LanguageContext';
 
-function LanguageSelector() {
-  const { mode, setMode } = useLanguage();
-  return (
-    <div className="p-2 bg-gray-800 text-white flex items-center space-x-2">
-      <label htmlFor="language" className="text-sm">Language:</label>
-      <select
-        id="language"
-        value={mode}
-        onChange={e => setMode(e.target.value as LanguageMode)}
-        className="bg-gray-700 text-white rounded p-1"
-      >
-        <option value={LanguageMode.EN_IN}>Indian English</option>
-        <option value={LanguageMode.TELUGU}>తెలుగు (Telugu)</option>
-        <option value={LanguageMode.HINDI}>हिन्दी (Hindi)</option>
-      </select>
-    </div>
-  );
-}
+import LanguageSelector from './components/LanguageSelector';
 
 function App() {
   const [state, setState] = useState<CourtState>(() => createInitialState());

@@ -6,6 +6,7 @@ interface LanguageContextProps {
   setMode: (mode: LanguageMode) => void;
 }
 
+// Fixed generic type name
 const LanguageContext = createContext<LanguageContextProps | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

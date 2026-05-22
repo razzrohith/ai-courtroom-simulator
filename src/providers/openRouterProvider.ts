@@ -100,8 +100,8 @@ export async function generateWithOpenRouter(params: {
           { role: 'system', content: context },
           { role: 'user', content: params.prompt },
         ],
-        temperature: 0.7,
-        max_tokens: 1024,
+        temperature: 0.5,
+        max_tokens: 220,
       }),
     });
 

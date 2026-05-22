@@ -105,8 +105,8 @@ export async function generateWithGemini(params: {
       body: JSON.stringify({
         contents,
         generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 2048,
+          temperature: 0.5,
+          maxOutputTokens: 220,
           topP: 0.95,
         },
       }),

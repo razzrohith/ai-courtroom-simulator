@@ -348,7 +348,13 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
 
   let updatedCase = state.case;
   if (factPhases.includes(state.currentPhase)) {
-    const sentences = result.message
+    const cleanMessage = result.message
+      .replace(/^#+\s+/gm, '')
+      .replace(/^[-*+]\s+/gm, '')
+      .replace(/^\d+\.\s+/gm, '')
+      .replace(/\s+/g, ' ');
+
+    const sentences = cleanMessage
       .split(/[.!?]+/)
       .map(s => s.trim())
       .filter(s => s.length > 20 && s.length < 150 && !s.toLowerCase().includes('your honor') && !s.toLowerCase().includes('objection') && !s.toLowerCase().includes('prosecution') && !s.toLowerCase().includes('defense'));

@@ -104,7 +104,8 @@ export async function generateWithAnthropic(params: {
       body: JSON.stringify({
         model,
         messages,
-        max_tokens: 1024,
+        max_tokens: 220,
+        temperature: 0.5,
         system: getSystemPrompt(role),
       }),
     });

@@ -39,9 +39,10 @@ function useTypewriter(fullText: string, entryId: string) {
     let index = 0;
     const interval = setInterval(() => {
       if (index < fullText.length) {
-        setDisplayedText(fullText.slice(0, index + 1));
-        index++;
+        index += 4; // Snappier typewriter speedup (4 characters per tick)
+        setDisplayedText(fullText.slice(0, index));
       } else {
+        setDisplayedText(fullText);
         setIsComplete(true);
         typewriterState.set(entryId, { complete: true });
         clearInterval(interval);
@@ -73,9 +74,10 @@ const speakerBadges: Record<AgentRole, string> = {
 
 interface TranscriptEntryItemProps {
   entry: TranscriptEntry;
+  isLatest: boolean;
 }
 
-function TranscriptEntryItem({ entry }: TranscriptEntryItemProps) {
+function TranscriptEntryItem({ entry, isLatest }: TranscriptEntryItemProps) {
   const style = speakerStyles[entry.speakerRole] || {
     bg: 'bg-gray-900/20',
     border: 'border-l-gray-500',
@@ -88,7 +90,9 @@ function TranscriptEntryItem({ entry }: TranscriptEntryItemProps) {
   const { displayedText, isComplete } = useTypewriter(entry.message || '', entry.id);
 
   return (
-    <div className={`transcript-entry ${style.bg} border-l-4 ${style.border} rounded-r-md p-3 mb-2`}>
+    <div className={`transcript-entry ${style.bg} border-l-4 ${style.border} rounded-r-md p-3 mb-2 transition-all duration-300 ${
+      isLatest ? 'ring-2 ring-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.15)] scale-[1.01]' : ''
+    }`}>
       <div className="flex items-center gap-2 mb-1">
         {/* Speaker badge */}
         <span className={`px-2 py-0.5 rounded text-xs font-semibold text-white ${badge}`}>
@@ -97,6 +101,11 @@ function TranscriptEntryItem({ entry }: TranscriptEntryItemProps) {
         <span className="text-sm font-medium text-gray-200">
           {entry.speakerName || 'Unknown'}
         </span>
+        {isLatest && (
+          <span className="animate-pulse bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ml-2">
+            Latest Turn
+          </span>
+        )}
         <span className="text-xs text-gray-500 ml-auto font-mono">
           #{entry.sequenceNumber || 0}
         </span>
@@ -116,7 +125,8 @@ function TranscriptEntryItem({ entry }: TranscriptEntryItemProps) {
               title={ref.trim()}
               type="evidence"
               status="pending"
-              side="plaintiff"
+              side={entry.speakerRole === 'defense' ? 'defense' : 'plaintiff'}
+              compact={true}
             />
           ))}
         </div>
@@ -153,6 +163,14 @@ function TranscriptEntryItem({ entry }: TranscriptEntryItemProps) {
 }
 
 export function TranscriptPanel({ transcript, currentPhase }: TranscriptPanelProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  }, [transcript.length]);
+
   return (
     <div className="bg-courtroom-card rounded-lg border border-gray-700 flex flex-col h-full">
       <div className="p-3 border-b border-gray-700 bg-gradient-to-r from-gray-900 to-gray-800">
@@ -169,7 +187,7 @@ export function TranscriptPanel({ transcript, currentPhase }: TranscriptPanelPro
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div ref={containerRef} className="flex-1 overflow-y-auto p-4 space-y-2">
         {transcript.length === 0 ? (
           <EmptyStatePlaceholder 
             icon="📜" 
@@ -177,8 +195,12 @@ export function TranscriptPanel({ transcript, currentPhase }: TranscriptPanelPro
             message="The court reporter will record proceedings as they unfold." 
           />
         ) : (
-          transcript.map((entry) => (
-            <TranscriptEntryItem key={entry.id} entry={entry} />
+          transcript.map((entry, index) => (
+            <TranscriptEntryItem 
+              key={entry.id} 
+              entry={entry} 
+              isLatest={index === transcript.length - 1} 
+            />
           ))
         )}
       </div>

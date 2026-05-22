@@ -677,21 +677,20 @@ export function LoadingSpinner({ message = 'Loading...' }: { message?: string })
   );
 }
 
-/**
- * EvidenceChipImproved — Better evidence chip with status
- */
 export function EvidenceChipImproved({ 
   exhibitNumber, 
   title, 
   type, 
   status = 'pending',
-  side
+  side,
+  compact = false
 }: { 
   exhibitNumber: string; 
   title: string; 
   type: string;
   status?: 'pending' | 'offered' | 'admitted' | 'disputed' | 'excluded' | 'sealed';
   side: 'plaintiff' | 'defense';
+  compact?: boolean;
 }) {
   const statusConfig: Record<string, { bg: string; text: string; icon: string }> = {
     pending: { bg: 'bg-gray-700', text: 'text-gray-400', icon: '⏳' },
@@ -704,6 +703,16 @@ export function EvidenceChipImproved({
   const config = statusConfig[status] || statusConfig.pending;
   const sideColor = side === 'plaintiff' ? 'border-l-blue-400' : 'border-l-green-400';
   
+  if (compact) {
+    return (
+      <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded border-l-2 ${config.bg} ${config.text} ${sideColor} text-[11px] max-w-[160px]`}>
+        <span className="font-bold">{exhibitNumber}</span>
+        <span className="opacity-75 truncate max-w-[90px]">{title}</span>
+        <span>{config.icon}</span>
+      </div>
+    );
+  }
+
   return (
     <div className={`flex items-center gap-2 px-3 py-2 rounded border-l-3 ${config.bg} ${config.text} ${sideColor} border-l-2`}>
       <span className="font-bold text-sm">{exhibitNumber}</span>

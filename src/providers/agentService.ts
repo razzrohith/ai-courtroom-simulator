@@ -148,19 +148,25 @@ function getPhaseInstruction(phase: CourtPhase, role: AgentRole): string {
   return role === 'judge' ? judgeInstr[phase] : lawyerInstr[phase];
 }
 
-/**
- * Agent persona instructions - Phase 7: Stronger role adherence
- */
 function getPersonaInstructions(role: AgentRole): string {
   const base = role === 'judge' 
-    ? `You are the Presiding Judge. Remain neutral, fair, and Procedural. Control the courtroom firmly but courteously.`
+    ? `You are the Presiding Judge. Remain neutral, fair, and procedural. Control the courtroom firmly but courteously. Keep arguments simple and clear.`
     : role === 'prosecutor'
-    ? `You are Plaintiff Counsel. Present facts persuasively. Argue vigorously for your client. Build clear narrative.`
-    : `You are Defense Counsel. Challenge opposing evidence. Present alternative interpretation. Protect client interests.`;
+    ? `You are Plaintiff Counsel representing the Hen. Argue simply and persuasively in plain English.`
+    : `You are Defense Counsel representing the Egg. Challenge arguments and explain concepts in clear layman terms.`;
 
-  const restrictions = `\n\nIMPORTANT CONSTRAINTS:\n- NEVER give legal advice outside simulation.\n-Cite evidence IDs when discussing evidence (e.g., E01, E02).\n- Stay in character throughout.\n- Use proper courtroom decorum.\n- This is an educational simulation - not real legal counsel.`;
+  const lengthRule = `\n\nRESPONSE LENGTH & STYLE RULES (CRITICAL):
+- Target 2 to 5 short sentences (maximum 80-140 words).
+- Write in plain English, short, layman-friendly, and human style.
+- Avoid long legalistic essays, excessive markdown, and heavy jargon.
+- If discussing the Chicken and Egg case:
+  * Plaintiff (Hen side) must keep it simple: an egg needs a living bird (hen) to lay it first (the living bird requirement).
+  * Defense (Egg side) must keep it simple: evolution/mutation occurred in a proto-bird, so the egg existed before the modern hen.
+  * Judge must remain neutral, simple, and direct.`;
 
-  return base + restrictions;
+  const restrictions = `\n\nIMPORTANT CONSTRAINTS:\n- NEVER give legal advice outside simulation.\n- Cite evidence IDs when discussing evidence (e.g., E01, E02).\n- Stay in character throughout.\n- Use proper courtroom decorum.\n- This is an educational simulation - not real legal counsel.`;
+
+  return base + lengthRule + restrictions;
 }
 
 /**
@@ -294,7 +300,9 @@ export function parseEvidenceReferences(message: string): string[] {
     if (ref.startsWith('EVID')) {
       const numMatch = ref.match(/\d+/);
       if (numMatch) {
-        ref = `E${numMatch[0]}`;
+        let numStr = numMatch[0];
+        if (numStr.length === 1) numStr = '0' + numStr;
+        ref = `E${numStr}`;
       }
     } else if (ref.startsWith('EX')) {
       // Normalize Exhibit P-1 -> EXHIBITP1
@@ -305,8 +313,18 @@ export function parseEvidenceReferences(message: string): string[] {
       } else {
         const numMatch = ref.match(/\d+/);
         if (numMatch) {
-          ref = `E${numMatch[0]}`;
+          let numStr = numMatch[0];
+          if (numStr.length === 1) numStr = '0' + numStr;
+          ref = `E${numStr}`;
         }
+      }
+    } else {
+      // Direct E1/E01 matches
+      const numMatch = ref.match(/\d+/);
+      if (numMatch) {
+        let numStr = numMatch[0];
+        if (numStr.length === 1) numStr = '0' + numStr;
+        ref = `E${numStr}`;
       }
     }
 
@@ -315,5 +333,6 @@ export function parseEvidenceReferences(message: string): string[] {
     }
   }
 
-  return refs;
+  // Prevent excessive weak evidence-card spam by limiting to 2 items per turn
+  return refs.slice(0, 2);
 }

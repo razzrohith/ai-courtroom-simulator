@@ -103,6 +103,10 @@ export async function generateWithOllama(params: {
           { role: 'system', content: context },
           { role: 'user', content: params.prompt },
         ],
+        options: {
+          temperature: 0.5,
+          num_predict: 220,
+        },
         stream: false,
       }),
     });

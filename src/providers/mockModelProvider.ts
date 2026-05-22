@@ -91,13 +91,7 @@ export function generateMockResponse(params: {
       defense: 'Evolution dictates that the genetic change happened in the egg. We request a verdict for the Defendant, The Egg.',
     },
     judge_deliberation: {
-      judge: `The Court will now consider all scientific evidence, testimony, objections, and motions before reaching a verdict. This matter is taken under advisement.
-
-Reviewing: Living bird requirement for egg shell protein synthesis. Evidence established evolutionary record, egg fossil record, and genetic mutation evidence. Both witnesses examined regarding ovarian biology and palaeontological transition records.
-
-Preliminary findings: The living bird requirement (OC-17) is proven biochemically, but the evolutionary record shows egg-laying preceded the hen. The genetic mutation evidence shows speciation starts in the zygote. Dr. Rostova credible with ovarian biology data. Dr. Vance credible with dinosaur egg fossil records. Motion to admit Exhibit D-1 granted.
-
-Parties will be notified of final ruling.`,
+      judge: `The Court is now deliberating on the scientific evidence. We will weigh the biochemical shell requirement against the evolutionary fossil record. A final verdict will be issued shortly.`,
       prosecutor: '',
       defense: '',
     },
@@ -119,15 +113,7 @@ Parties will be notified of final ruling.`,
     },
     // Phase 11: Jury instructions
     jury_instructions: {
-      judge: `Members of the jury, at this time the Court will provide you with instructions on the law. This is a fictional educational simulation and does not constitute legal advice.
-
-BURDEN OF PROOF: The plaintiff bears the burden of proving their claims by a preponderance of the evidence. This means it's more likely than not that the plaintiff's claims are true.
-
-EVIDENCE CONSIDERATION: You must consider all testimony and documents presented. Evaluate witness credibility based on consistency, potential bias, and corroboration.
-
-OBJECTIONS: Any objections raised during trial were ruled upon by the Court. You should not penalize a party for having an objection sustained or overruled.
-
-FINALLY: This simulation is for educational purposes only. Do not use this as legal advice in any real matter.`,
+      judge: `Members of the jury, evaluate the evidence fairly. The plaintiff bears the burden of proof. Consider the scientific credibility of both the biochemical and evolutionary arguments. This is an educational simulation.`,
       prosecutor: '',
       defense: '',
     },

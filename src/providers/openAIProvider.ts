@@ -104,8 +104,8 @@ export async function generateWithOpenAI(params: {
       body: JSON.stringify({
         model,
         messages,
-        temperature: 0.7,
-        max_tokens: 2048,
+        temperature: 0.5,
+        max_tokens: 220,
       }),
     });
 

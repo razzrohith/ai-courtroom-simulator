@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { TranscriptEntry, AgentRole } from '../types/courtroom';
 import { EmptyStatePlaceholder, CourtReporterDeskIllustration, EvidenceChipImproved, LoadingSpinner } from './visuals/CourtroomVisuals';
+import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis';
 
 // Typewriter hook - tracks completion per entry ID
 const typewriterState = new Map<string, { complete: boolean }>();
@@ -164,6 +165,35 @@ function TranscriptEntryItem({ entry, isLatest }: TranscriptEntryItemProps) {
 
 export function TranscriptPanel({ transcript, currentPhase }: TranscriptPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const { supported, voices, speaking, settings, updateSetting, speak, stopSpeaking } = useSpeechSynthesis();
+  
+  // Auto-read logic
+  const lastSpokenIdRef = useRef<string | null>(null);
+  const lastTranscriptLengthRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (transcript.length === 0) {
+      lastSpokenIdRef.current = null;
+      lastTranscriptLengthRef.current = 0;
+      return;
+    }
+
+    const latestEntry = transcript[transcript.length - 1];
+
+    // If a new turn starts, stop any ongoing speech immediately
+    if (transcript.length > lastTranscriptLengthRef.current) {
+      stopSpeaking();
+      lastTranscriptLengthRef.current = transcript.length;
+    }
+
+    // Only speak completed agent turns that we haven't spoken yet
+    if (latestEntry && latestEntry.isComplete && latestEntry.id !== lastSpokenIdRef.current) {
+      if (settings.enabled && settings.autoRead) {
+        speak(latestEntry);
+      }
+      lastSpokenIdRef.current = latestEntry.id;
+    }
+  }, [transcript, settings.enabled, settings.autoRead, speak, stopSpeaking]);
 
   useEffect(() => {
     if (containerRef.current) {
@@ -186,6 +216,110 @@ export function TranscriptPanel({ transcript, currentPhase }: TranscriptPanelPro
           <span className="text-xs text-gray-500">{currentPhase}</span>
         </div>
       </div>
+
+      {/* Voice Warning if not supported */}
+      {!supported && (
+        <div className="text-red-400 text-[11px] font-semibold px-3 py-1.5 bg-red-950/20 border-b border-red-900/30">
+          ⚠️ Voice playback is not available in this browser.
+        </div>
+      )}
+
+      {/* Voice Playback Toolbar */}
+      {supported && (
+        <div className="px-3 py-2 bg-gray-900/60 border-b border-gray-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {/* Enable/Disable button */}
+            <button
+              onClick={() => updateSetting('enabled', !settings.enabled)}
+              className={`px-2.5 py-1 rounded font-medium flex items-center gap-1.5 transition-all duration-200 ${
+                settings.enabled
+                  ? 'bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/40'
+                  : 'bg-gray-800 text-gray-400 border border-gray-700/60 hover:bg-gray-750'
+              }`}
+            >
+              {settings.enabled ? '🔊 Voice On' : '🔇 Voice Off'}
+            </button>
+
+            {settings.enabled && (
+              <>
+                {/* Auto-read Toggle */}
+                <button
+                  onClick={() => updateSetting('autoRead', !settings.autoRead)}
+                  className={`px-2.5 py-1 rounded font-medium flex items-center gap-1.5 transition-all duration-200 ${
+                    settings.autoRead
+                      ? 'bg-blue-600/30 text-blue-400 border border-blue-500/30 hover:bg-blue-600/40'
+                      : 'bg-gray-800 text-gray-500 border border-gray-700/60 hover:bg-gray-750'
+                  }`}
+                  title="Speak new completed turns automatically"
+                >
+                  {settings.autoRead ? '🤖 Auto-read On' : '🤖 Auto-read Off'}
+                </button>
+
+                {/* Play Latest Button */}
+                <button
+                  onClick={() => {
+                    if (transcript.length > 0) {
+                      const latest = transcript[transcript.length - 1];
+                      if (latest && latest.isComplete) {
+                        speak(latest);
+                      }
+                    }
+                  }}
+                  disabled={transcript.length === 0}
+                  className={`px-2.5 py-1 rounded font-medium flex items-center gap-1 transition-all duration-200 ${
+                    transcript.length > 0
+                      ? 'bg-yellow-600/20 text-yellow-500 border border-yellow-500/30 hover:bg-yellow-600/30 active:scale-95'
+                      : 'bg-gray-800/40 text-gray-600 border border-gray-800 cursor-not-allowed'
+                  }`}
+                >
+                  ▶️ Play Latest
+                </button>
+
+                {/* Stop Button */}
+                {speaking && (
+                  <button
+                    onClick={stopSpeaking}
+                    className="px-2.5 py-1 rounded font-medium flex items-center gap-1 bg-red-600/20 text-red-500 border border-red-500/30 hover:bg-red-600/30 active:scale-95"
+                  >
+                    ⏹️ Stop
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+
+          {settings.enabled && (
+            <div className="flex items-center gap-2 ml-auto sm:ml-0">
+              {/* Voice select */}
+              {voices.length > 0 && (
+                <select
+                  value={settings.voiceName}
+                  onChange={(e) => updateSetting('voiceName', e.target.value)}
+                  className="bg-gray-850 border border-gray-750 text-gray-300 rounded px-1.5 py-0.5 max-w-[130px] truncate focus:outline-none focus:border-yellow-500"
+                  title="Select Default Voice"
+                >
+                  <option value="">Auto (Distinct Voices)</option>
+                  {voices.filter(v => v.lang.toLowerCase().startsWith('en')).map(v => (
+                    <option key={v.name} value={v.name}>{v.name}</option>
+                  ))}
+                </select>
+              )}
+
+              {/* Speed select */}
+              <select
+                value={settings.speed}
+                onChange={(e) => updateSetting('speed', e.target.value as 'slow' | 'normal' | 'fast')}
+                className="bg-gray-850 border border-gray-750 text-gray-300 rounded px-1.5 py-0.5 focus:outline-none focus:border-yellow-500"
+                title="Select Speed"
+              >
+                <option value="slow">Slow</option>
+                <option value="normal">Normal</option>
+                <option value="fast">Fast</option>
+              </select>
+            </div>
+          )}
+        </div>
+      )}
 
       <div ref={containerRef} className="flex-1 overflow-y-auto p-4 space-y-2">
         {transcript.length === 0 ? (

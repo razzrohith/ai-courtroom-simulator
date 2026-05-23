@@ -70,8 +70,10 @@ export async function generateWithOpenRouter(params: {
   prompt: string;
 }): Promise<string> {
   const apiKey = loadApiKey('openrouter');
-  if (!apiKey) {
-    throw new Error('OpenRouter API key not configured');
+  const proxyUrl = import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL;
+  
+  if (!apiKey && !proxyUrl) {
+    throw new Error('Free demo gateway not configured. Use your own OpenRouter key.');
   }
 
   const context = buildContext({
@@ -85,14 +87,19 @@ export async function generateWithOpenRouter(params: {
   const systemPrompt = getSystemPromptForRole(params.role);
   
   try {
-    const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+    const url = apiKey ? `${OPENROUTER_BASE_URL}/chat/completions` : proxyUrl;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+      headers['HTTP-Referer'] = window.location.origin;
+      headers['X-Title'] = 'JudgeBench';
+    }
+
+    const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': window.location.origin,
-        'X-Title': 'JudgeBench',
-      },
+      headers,
       body: JSON.stringify({
         model: params.model,
         messages: [

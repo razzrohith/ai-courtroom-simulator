@@ -18,6 +18,7 @@ import {
   clearApiKey,
   maskApiKey,
   isProviderConfigured,
+  hasApiKey,
 } from '../types/providers';
 import { 
   fetchOpenRouterModels, 
@@ -33,6 +34,7 @@ import {
 } from '../providers/modelCatalog';
 import { LoadingSpinner } from './visuals/CourtroomVisuals';
 import { testProviderAndModel } from '../providers/runtime';
+import { useSpeechSynthesis, filterIndianVoices } from '../hooks/useSpeechSynthesis';
 
 interface ProviderSettingsProps {
   isOpen: boolean;
@@ -67,7 +69,8 @@ const DEFAULT_MODELS: Record<ProviderId, string[]> = {
 export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
   const [config, setConfig] = useState<CourtroomModelConfig>(DEFAULT_MODEL_CONFIG);
   const [isDirty, setIsDirty] = useState(false);
-  const [activeTab, setActiveTab] = useState<'agents' | 'api-keys'>('agents');
+  const [activeTab, setActiveTab] = useState<'agents' | 'api-keys' | 'voices'>('agents');
+  const speech = useSpeechSynthesis();
   const [keyInputs, setKeyInputs] = useState<Partial<Record<ProviderId, string>>>({});
   const [rememberKeys, setRememberKeys] = useState<Partial<Record<ProviderId, boolean>>>({});
 
@@ -332,6 +335,12 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
           >
             API Keys
           </button>
+          <button
+            onClick={() => setActiveTab('voices')}
+            className={`px-4 py-2 text-sm font-medium ${activeTab === 'voices' ? 'bg-gray-800 text-yellow-500 border-b-2 border-yellow-500' : 'text-gray-400 hover:text-white'}`}
+          >
+            Agent Voices
+          </button>
         </div>
 
         {/* Browser storage warning */}
@@ -342,7 +351,7 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
         )}
 
         <div className="flex-1 overflow-y-auto p-4 min-h-0">
-          {activeTab === 'agents' ? (
+          {activeTab === 'agents' && (
             /* Agent provider selection with model catalogs */
             <div className="space-y-4">
               <div className="mb-4 flex gap-2 flex-wrap items-center">
@@ -378,7 +387,19 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                 const agentConfig = (config as Record<AgentRole, AgentModelConfig>)[role];
                 const entry = getEntry(agentConfig?.providerId || 'mock');
                 const status = connectionStatus[agentConfig?.providerId || 'mock'];
-                const statusBadge = STATUS_BADGES[status];
+                let statusBadge = STATUS_BADGES[status] || { bg: 'bg-gray-900/50', text: 'text-gray-400', label: 'Unknown' };
+                
+                if (agentConfig?.providerId === 'openrouter') {
+                  const hasPersonalKey = hasApiKey('openrouter');
+                  const hasProxy = !!import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL;
+                  if (!hasPersonalKey && hasProxy) {
+                    statusBadge = { bg: 'bg-green-900/50', text: 'text-green-400', label: 'Free Demo Active' };
+                  } else if (!hasPersonalKey && !hasProxy) {
+                    statusBadge = { bg: 'bg-red-900/50', text: 'text-red-400', label: 'Free Demo Unavailable' };
+                  } else {
+                    statusBadge = { bg: 'bg-emerald-900/50', text: 'text-emerald-400', label: 'Personal API Active' };
+                  }
+                }
                 const loading = modelsLoading[agentConfig?.providerId || 'mock'];
                 const error = modelsError[agentConfig?.providerId || 'mock'];
                 const availableModels = getAvailableModels(agentConfig?.providerId || 'mock');
@@ -429,16 +450,22 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                         {loading ? ( <LoadingSpinner message="Loading models..." /> ) : error ? (
                           <div className="text-xs text-red-400">{error}</div>
                         ) : availableModels.length > 0 ? (
-                          <select
+                           <select
                             value={agentConfig?.model || ''}
                             onChange={(e) => updateAgentConfig(role, { model: e.target.value })}
                             className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm"
                           >
-                            {availableModels.map((m) => (
-                              <option key={m.id} value={m.id}>
-                                {m.name} {m.isFree ? '(free)' : ''} {m.isVision ? '[vision]' : ''}
-                              </option>
-                            ))}
+                            {availableModels.map((m) => {
+                              const isFreeModel = m.isFree || m.id.endsWith(':free');
+                              const isPersonalKeyConfigured = hasApiKey('openrouter');
+                              const isDemoMode = agentConfig?.providerId === 'openrouter' && !isPersonalKeyConfigured;
+                              const isDisabled = isDemoMode && !isFreeModel;
+                              return (
+                                <option key={m.id} value={m.id} disabled={isDisabled}>
+                                  {m.name} {isFreeModel ? '(free)' : isDisabled ? '(Requires your own OpenRouter key)' : ''} {m.isVision ? '[vision]' : ''}
+                                </option>
+                              );
+                            })}
                           </select>
                         ) : (
                           <input
@@ -457,8 +484,17 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                       <span className={`px-2 py-0.5 rounded text-xs ${statusBadge.bg} ${statusBadge.text}`}>
                         {statusBadge.label}
                       </span>
-                      <span className="text-xs text-gray-400">{entry.status}</span>
+                      <span className="text-xs text-gray-400">
+                        {agentConfig?.providerId === 'openrouter' && !hasApiKey('openrouter') && !!import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL
+                          ? 'Running on shared Free Demo Proxy gateway.'
+                          : entry.status}
+                      </span>
                     </div>
+                    {agentConfig?.providerId === 'openrouter' && !hasApiKey('openrouter') && !import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL && (
+                      <div className="mt-2 text-xs text-red-400 font-medium">
+                        Free demo gateway not configured. Use your own OpenRouter key.
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -479,7 +515,9 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                 </button>
               </div>
             </div>
-          ) : (
+          )}
+
+          {activeTab === 'api-keys' && (
             /* API Key management */
             <div className="space-y-3">
               {(Object.values(PROVIDER_REGISTRY) as ProviderRegistryEntry[]).map((provider) => {
@@ -547,6 +585,84 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {activeTab === 'voices' && (
+            <div className="space-y-4">
+              <div className="bg-gray-800/40 border border-gray-700/60 rounded-lg p-3 text-xs text-gray-300">
+                <span className="font-semibold text-yellow-500 block mb-1">Browser Voice Integration</span>
+                Voice availability depends entirely on your local operating system and web browser.
+                Indian English/Hindi/Telugu locale voices (e.g., Google or Microsoft Heera, Ravi, Neerja) will be auto-preferred if installed.
+              </div>
+
+              {!speech.supported ? (
+                <div className="bg-red-950/20 border border-red-900/50 rounded-lg p-4 text-center text-sm text-red-400 font-medium">
+                  Speech Synthesis is not supported in this browser.
+                </div>
+              ) : speech.voices.length === 0 ? (
+                <div className="bg-gray-900/40 border border-gray-700/50 rounded-lg p-4 text-center text-sm text-gray-400">
+                  Loading available browser voices...
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {(['judge', 'prosecutor', 'defense'] as AgentRole[]).map((role) => {
+                    const sortedVoices = (() => {
+                      const indian = filterIndianVoices(speech.voices);
+                      const nonIndianEnglish = speech.voices.filter(v => 
+                        v.lang.toLowerCase().startsWith('en') && !indian.some(iv => iv.name === v.name)
+                      );
+                      const others = speech.voices.filter(v => 
+                        !v.lang.toLowerCase().startsWith('en') && !indian.some(iv => iv.name === v.name)
+                      );
+                      return [...indian, ...nonIndianEnglish, ...others];
+                    })();
+
+                    const currentVoiceName = speech.agentVoices[role];
+                    const testMessage = role === 'judge' 
+                      ? "Order in the court. I am the Judge, presiding over today's simulation."
+                      : role === 'prosecutor'
+                      ? "The prosecution is ready to present the case, Your Honor."
+                      : "The defense stands ready to protect the rights of the accused.";
+
+                    return (
+                      <div key={role} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="font-medium text-white capitalize">{AGENT_LABELS[role]} Voice Settings</span>
+                          <button
+                            onClick={() => speech.speakText(testMessage, role)}
+                            className="bg-blue-700 hover:bg-blue-600 text-white text-xs px-3 py-1.5 rounded flex items-center gap-1 font-medium transition"
+                          >
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                            </svg>
+                            Test Voice
+                          </button>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">Select Voice</label>
+                          <select
+                            value={currentVoiceName || ''}
+                            onChange={(e) => speech.updateAgentVoice(role, e.target.value)}
+                            className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm text-gray-200"
+                          >
+                            <option value="">-- System Default (Auto-prefer Indian) --</option>
+                            {sortedVoices.map((v) => {
+                              const isIndian = filterIndianVoices([v]).length > 0;
+                              return (
+                                <option key={v.name} value={v.name}>
+                                  {v.name} ({v.lang}){isIndian ? ' 🇮🇳' : ''} {v.localService ? '(local)' : ''}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>

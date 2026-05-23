@@ -24,6 +24,7 @@ import StageEvidencePresenter from './StageEvidencePresenter';
 import CourtroomGallery from './CourtroomGallery';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { getRoleLabel } from '../../utils/languageMode';
+import { summarizeCourtroomUtterance } from '../../utils/sanitizeAgentResponse';
 
 /**
  * Model info interface - duplicated from CourtroomLayout to avoid circular deps
@@ -299,8 +300,7 @@ export function CourtroomStage({
               </div>
             </div>
             <p className="text-xs text-gray-205 leading-relaxed font-serif min-h-[36px] max-h-[100px] overflow-y-auto pr-1 select-text">
-              {latestEntry.message}
-              {isStageTyping && <span className="animate-pulse text-yellow-500"> ▋</span>}
+              {summarizeCourtroomUtterance(latestEntry.message, latestEntry.speakerRole, currentPhase)}
             </p>
             {latestEntry.evidenceRef && (
               <div className="mt-1.5 pt-1.5 border-t border-gray-900 flex items-center gap-2">

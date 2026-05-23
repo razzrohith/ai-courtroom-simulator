@@ -45,6 +45,9 @@ const statusStyles: Record<AgentConnectionStatus, { label: string; class: string
   connected: { label: 'Ready / Tested OK', class: 'bg-emerald-950/60 text-emerald-400 border border-emerald-900/50' },
   fallback: { label: 'Fallback active — mock mode', class: 'bg-amber-950/60 text-amber-400 border border-amber-900/50' },
   failed: { label: 'Failed', class: 'bg-red-950/60 text-red-400 border border-red-900/50' },
+  'free-demo-ready': { label: 'Free demo ready', class: 'bg-emerald-950/60 text-emerald-400 border border-emerald-900/50' },
+  'free-demo-unavailable': { label: 'Free demo unavailable', class: 'bg-red-950/60 text-red-400 border border-red-900/50' },
+  'personal-api-ready': { label: 'Personal API ready', class: 'bg-emerald-950/60 text-emerald-400 border border-emerald-900/50' },
 };
 
 export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo }: AgentPanelProps) {
@@ -156,7 +159,7 @@ export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo 
           </span>
           {modelInfo?.status === 'failed' && (
             <span className="text-[10px] text-red-400 text-center font-medium mt-1 leading-tight whitespace-pre-wrap break-all" title={errorMsg}>
-              {errorMsg || 'Connection failed'}
+              Failed — {errorMsg || 'Connection failed'}
             </span>
           )}
         </div>

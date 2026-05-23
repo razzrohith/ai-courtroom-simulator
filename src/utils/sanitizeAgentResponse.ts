@@ -109,3 +109,64 @@ export function sanitizeAgentResponse(text: string): string {
 
   return cleaned || '';
 }
+
+/**
+ * Summarize a courtroom utterance into a single short line (max ~120 characters) deterministically.
+ */
+export function summarizeCourtroomUtterance(text: string, role: string, _phase: string): string {
+  if (!text) return '';
+  let cleaned = text.trim();
+
+  // 1. Remove common courtroom filler words and phrases
+  const fillers = [
+    /^(?:Your Honor|Respectfully|With all due respect|May it please the court|Thank you Your Honor|Thank you)[,\s]*/i,
+    /^(?:the plaintiff submits that|the prosecution submits that|the defense submits that|we submit that)/i,
+    /^(?:I argue that|I submit that|I contend that|We argue that|We contend that)/i,
+    /^(?:It is clear that|It is obvious that|There is no doubt that)/i,
+    /^(?:Let me be clear|Let the record show that)/i,
+  ];
+  fillers.forEach(f => {
+    cleaned = cleaned.replace(f, '');
+  });
+  
+  // Clean up any starting lowercase or double spaces caused by strip
+  cleaned = cleaned.trim();
+  if (cleaned) {
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }
+
+  // 2. Select the first or main sentence.
+  const sentenceEndRegex = /(?<=[.!?])\s+(?=[A-Z])/;
+  const sentences = cleaned.split(sentenceEndRegex).map(s => s.trim()).filter(Boolean);
+  
+  let summary = sentences[0] || cleaned;
+
+  // Perform deterministic role prefixing
+  if (role === 'judge') {
+    summary = summary.replace(/^(?:I rule that|The court rules that|I order that|The court orders that)/i, '').trim();
+    summary = summary.charAt(0).toUpperCase() + summary.slice(1);
+    summary = `Judge: ${summary}`;
+  } else if (role === 'prosecutor') {
+    summary = summary.replace(/^(?:The prosecution argues that|I argue that|We argue that)/i, '').trim();
+    summary = summary.charAt(0).toUpperCase() + summary.slice(1);
+    summary = `Prosecutor: ${summary}`;
+  } else if (role === 'defense') {
+    summary = summary.replace(/^(?:The defense argues that|I argue that|We argue that)/i, '').trim();
+    summary = summary.charAt(0).toUpperCase() + summary.slice(1);
+    summary = `Defense: ${summary}`;
+  }
+
+  // 3. Truncate cleanly to around 120 characters, matching word boundary if possible, and add ellipsis.
+  const maxLength = 120;
+  if (summary.length > maxLength) {
+    let truncated = summary.slice(0, maxLength - 3);
+    const lastSpace = truncated.lastIndexOf(' ');
+    if (lastSpace > 60) {
+      truncated = truncated.slice(0, lastSpace);
+    }
+    summary = truncated.trim() + '...';
+  }
+
+  return summary;
+}
+

@@ -10,13 +10,20 @@ export interface VoiceSettings {
   pitch: number;
 }
 
+export interface AgentVoiceSettings {
+  judge: string;
+  prosecutor: string;
+  defense: string;
+}
+
 const STORAGE_KEY = 'judgebench.voiceSettings.v1';
+const AGENT_VOICES_STORAGE_KEY = 'judgebench.agentVoiceSettings.v1';
 
 const DEFAULT_SETTINGS: VoiceSettings = {
   enabled: false,
   autoRead: false,
   voiceName: '',
-  speed: 'slow',
+  speed: 'normal',
   volume: 1.0,
   pitch: 1.0,
 };
@@ -46,6 +53,38 @@ export function cleanTextForSpeech(text: string): string {
   return cleaned;
 }
 
+export function filterIndianVoices(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice[] {
+  return voices.filter(v => {
+    const lang = v.lang.toLowerCase();
+    const name = v.name.toLowerCase();
+    return (
+      lang.includes('en-in') ||
+      lang.includes('hi-in') ||
+      lang.includes('te-in') ||
+      name.includes('india') ||
+      name.includes('indian') ||
+      name.includes('heera') ||
+      name.includes('ravi') ||
+      name.includes('neerja') ||
+      name.includes('prabhat') ||
+      name.includes('google हिन्दी') ||
+      name.includes('telugu')
+    );
+  });
+}
+
+export function getDefaultVoicesForAgents(voices: SpeechSynthesisVoice[]): AgentVoiceSettings {
+  const indian = filterIndianVoices(voices);
+  const english = voices.filter(v => v.lang.toLowerCase().startsWith('en'));
+  const listToUse = indian.length > 0 ? indian : english;
+  
+  return {
+    judge: listToUse[0]?.name || '',
+    prosecutor: (listToUse[1] || listToUse[0])?.name || '',
+    defense: (listToUse[2] || listToUse[0])?.name || '',
+  };
+}
+
 export function useSpeechSynthesis() {
   const [supported, setSupported] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
@@ -62,6 +101,18 @@ export function useSpeechSynthesis() {
     return DEFAULT_SETTINGS;
   });
 
+  const [agentVoices, setAgentVoices] = useState<AgentVoiceSettings>(() => {
+    try {
+      const stored = localStorage.getItem(AGENT_VOICES_STORAGE_KEY);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      console.warn('Failed to load agent voice settings:', e);
+    }
+    return { judge: '', prosecutor: '', defense: '' };
+  });
+
   const settingsRef = useRef(settings);
   useEffect(() => {
     settingsRef.current = settings;
@@ -71,6 +122,14 @@ export function useSpeechSynthesis() {
       console.warn('Failed to save voice settings to localStorage:', e);
     }
   }, [settings]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(AGENT_VOICES_STORAGE_KEY, JSON.stringify(agentVoices));
+    } catch (e) {
+      console.warn('Failed to save agent voice settings:', e);
+    }
+  }, [agentVoices]);
 
   // Load voices and check support
   useEffect(() => {
@@ -126,24 +185,16 @@ export function useSpeechSynthesis() {
     
     // Load fresh voices list
     const voiceList = window.speechSynthesis.getVoices();
-    const englishVoices = voiceList.filter(v => v.lang.toLowerCase().startsWith('en'));
-
-    // Resolve voice per speaker role
+    const assignedVoiceName = agentVoices[entry.speakerRole];
     let selectedVoice: SpeechSynthesisVoice | null = null;
-    
-    if (settingsRef.current.voiceName) {
-      // User selected a specific voice
-      selectedVoice = voiceList.find(v => v.name === settingsRef.current.voiceName) || null;
-    } else if (englishVoices.length > 0) {
-      // Auto-assign distinct voices for Judge, Prosecutor, and Defense
-      if (entry.speakerRole === 'judge') {
-        selectedVoice = englishVoices[0] || null;
-      } else if (entry.speakerRole === 'prosecutor') {
-        selectedVoice = englishVoices[1] || englishVoices[0] || null;
-      } else if (entry.speakerRole === 'defense') {
-        // Try to get a third distinct voice if possible
-        selectedVoice = englishVoices[2] || englishVoices[0] || null;
-      }
+
+    if (assignedVoiceName) {
+      selectedVoice = voiceList.find(v => v.name === assignedVoiceName) || null;
+    }
+
+    if (!selectedVoice) {
+      const defaults = getDefaultVoicesForAgents(voiceList);
+      selectedVoice = voiceList.find(v => v.name === defaults[entry.speakerRole]) || null;
     }
 
     if (selectedVoice) {
@@ -159,7 +210,42 @@ export function useSpeechSynthesis() {
     utterance.onerror = () => setSpeaking(false);
 
     window.speechSynthesis.speak(utterance);
-  }, [supported]);
+  }, [supported, agentVoices]);
+
+  const speakText = useCallback((text: string, role: AgentRole) => {
+    if (!supported) return;
+    
+    // Stop any ongoing speech first
+    window.speechSynthesis.cancel();
+
+    const cleanMsg = cleanTextForSpeech(text);
+    if (!cleanMsg) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanMsg);
+    
+    const voiceList = window.speechSynthesis.getVoices();
+    const assignedVoiceName = agentVoices[role];
+    let selectedVoice = voiceList.find(v => v.name === assignedVoiceName) || null;
+
+    if (!selectedVoice) {
+      const defaults = getDefaultVoicesForAgents(voiceList);
+      selectedVoice = voiceList.find(v => v.name === defaults[role]) || null;
+    }
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+
+    utterance.rate = SPEED_RATES[settingsRef.current.speed] || 1.0;
+    utterance.volume = settingsRef.current.volume;
+    utterance.pitch = settingsRef.current.pitch;
+
+    utterance.onstart = () => setSpeaking(true);
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+
+    window.speechSynthesis.speak(utterance);
+  }, [supported, agentVoices]);
 
   const updateSetting = useCallback(<K extends keyof VoiceSettings>(key: K, value: VoiceSettings[K]) => {
     setSettings(prev => ({
@@ -176,5 +262,10 @@ export function useSpeechSynthesis() {
     updateSetting,
     speak,
     stopSpeaking,
+    agentVoices,
+    updateAgentVoice: (role: AgentRole, voiceName: string) => {
+      setAgentVoices(prev => ({ ...prev, [role]: voiceName }));
+    },
+    speakText,
   };
 }

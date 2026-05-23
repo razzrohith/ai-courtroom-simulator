@@ -47,47 +47,61 @@ interface OpenRouterModelsResponse {
   data: OpenRouterModel[];
 }
 
+export const OPENROUTER_FREE_MODELS: ModelInfo[] = [
+  { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash (free)', provider: 'Google', isFree: true },
+  { id: 'meta-llama/llama-3-8b-instruct:free', name: 'Llama 3 8B Instruct (free)', provider: 'Meta', isFree: true },
+  { id: 'mistralai/mistral-7b-instruct:free', name: 'Mistral 7B Instruct (free)', provider: 'Mistral', isFree: true },
+  { id: 'microsoft/phi-3-mini-128k-instruct:free', name: 'Phi 3 Mini 128k Instruct (free)', provider: 'Microsoft', isFree: true },
+  { id: 'qwen/qwen-2-7b-instruct:free', name: 'Qwen 2 7B Instruct (free)', provider: 'Qwen', isFree: true },
+];
+
 /**
  * Fetch models from OpenRouter catalog
  */
 export async function fetchOpenRouterModels(): Promise<ModelInfo[]> {
   const apiKey = loadApiKey('openrouter');
-  if (!apiKey) {
-    throw new Error('OpenRouter API key not configured');
-  }
-
-  const response = await fetch('https://openrouter.ai/api/v1/models', {
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': window.location.origin,
-    },
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to fetch models: ${response.status} - ${errorText}`);
-  }
-
-  const data: OpenRouterModelsResponse = await response.json();
   
-  return data.data.map((model) => {
-    const promptPrice = model.pricing?.prompt ? parseFloat(model.pricing.prompt) : 0;
-    const completionPrice = model.pricing?.completion ? parseFloat(model.pricing.completion) : 0;
-    const isFree = promptPrice === 0 && completionPrice === 0;
+  const headers: Record<string, string> = {
+    'HTTP-Referer': window.location.origin,
+  };
+  if (apiKey) {
+    headers['Authorization'] = `Bearer ${apiKey}`;
+  }
+
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/models', {
+      headers,
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch models: ${response.status}`);
+    }
+
+    const data: OpenRouterModelsResponse = await response.json();
     
-    return {
-      id: model.id,
-      name: model.name || model.id,
-      provider: model.provider_owner,
-      contextLength: model.context_length,
-      inputPrice: promptPrice,
-      outputPrice: completionPrice,
-      isFree,
-      isVision: model.architecture?.modality?.includes('image'),
-      isReasoning: model.id.toLowerCase().includes('reasoning') || model.id.toLowerCase().includes('o1'),
-      isCoding: model.id.toLowerCase().includes('code') || model.id.toLowerCase().includes('coder'),
-    };
-  });
+    return data.data.map((model) => {
+      const promptPrice = model.pricing?.prompt ? parseFloat(model.pricing.prompt) : 0;
+      const completionPrice = model.pricing?.completion ? parseFloat(model.pricing.completion) : 0;
+      const isFree = (promptPrice === 0 && completionPrice === 0) || model.id.endsWith(':free');
+      
+      return {
+        id: model.id,
+        name: model.name || model.id,
+        provider: model.provider_owner,
+        contextLength: model.context_length,
+        inputPrice: promptPrice,
+        outputPrice: completionPrice,
+        isFree,
+        isVision: model.architecture?.modality?.includes('image'),
+        isReasoning: model.id.toLowerCase().includes('reasoning') || model.id.toLowerCase().includes('o1'),
+        isCoding: model.id.toLowerCase().includes('code') || model.id.toLowerCase().includes('coder'),
+      };
+    });
+  } catch (error) {
+    console.warn('Failed to fetch live OpenRouter models, using static free models:', error);
+    return OPENROUTER_FREE_MODELS;
+  }
 }
 
 /**

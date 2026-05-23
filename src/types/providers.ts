@@ -193,19 +193,33 @@ export interface CourtroomModelConfig {
 // Storage key
 export const STORAGE_KEY = 'judgebench.agentModelConfig.v1';
 
+const hasProxy = !!import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL;
+
 // Default configuration
 export const DEFAULT_MODEL_CONFIG: CourtroomModelConfig = {
-  judge: {
+  judge: hasProxy ? {
+    providerId: 'openrouter',
+    model: 'google/gemini-2.0-flash-exp:free',
+    mode: 'api',
+  } : {
     providerId: 'mock',
     model: 'judge-reasoner-v1',
     mode: 'mock',
   },
-  prosecutor: {
+  prosecutor: hasProxy ? {
+    providerId: 'openrouter',
+    model: 'google/gemini-2.0-flash-exp:free',
+    mode: 'api',
+  } : {
     providerId: 'mock',
     model: 'prosecutor-advocate-v1',
     mode: 'mock',
   },
-  defense: {
+  defense: hasProxy ? {
+    providerId: 'openrouter',
+    model: 'google/gemini-2.0-flash-exp:free',
+    mode: 'api',
+  } : {
     providerId: 'mock',
     model: 'defense-strategist-v1',
     mode: 'mock',
@@ -362,6 +376,9 @@ export function isProviderConfigured(providerId: ProviderId): boolean {
   const entry = PROVIDER_REGISTRY[providerId];
   if (!entry) return false;
   
+  if (providerId === 'openrouter') {
+    return hasApiKey('openrouter') || !!import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL;
+  }
   if (entry.requiresApiKey) {
     return hasApiKey(providerId);
   }
@@ -379,7 +396,10 @@ export type AgentConnectionStatus =
   | 'testing'
   | 'connected'
   | 'fallback'
-  | 'failed';
+  | 'failed'
+  | 'free-demo-ready'
+  | 'free-demo-unavailable'
+  | 'personal-api-ready';
 
 export function getAgentConnectionStatus(
   role: AgentRole, 
@@ -387,6 +407,41 @@ export function getAgentConnectionStatus(
 ): AgentConnectionStatus {
   if (!config || !config.providerId || config.providerId === 'mock') {
     return 'mock';
+  }
+  
+  if (config.providerId === 'openrouter') {
+    const personalKeyExists = hasApiKey('openrouter');
+    const hasProxy = !!import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL;
+    const isModelFree = config.model.endsWith(':free');
+
+    // If model is paid but no personal key exists
+    if (!isModelFree && !personalKeyExists) {
+      return 'missing-key'; // requires own key
+    }
+
+    if (!personalKeyExists && !hasProxy) {
+      return 'free-demo-unavailable';
+    }
+
+    try {
+      const key = `judgebench.status.${role}.${config.providerId}.${config.model}`;
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        if (stored === 'connected') {
+          return personalKeyExists ? 'personal-api-ready' : 'free-demo-ready';
+        }
+        if (stored === 'fallback' || stored === 'testing' || stored === 'not-tested' || stored === 'failed') {
+          return stored as AgentConnectionStatus;
+        }
+        if (stored.startsWith('failed:')) {
+          return 'failed';
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load status:', e);
+    }
+
+    return personalKeyExists ? 'personal-api-ready' : 'free-demo-ready';
   }
   
   if (!isProviderConfigured(config.providerId)) {
@@ -398,7 +453,10 @@ export function getAgentConnectionStatus(
     const key = `judgebench.status.${role}.${config.providerId}.${config.model}`;
     const stored = localStorage.getItem(key);
     if (stored) {
-      if (stored === 'connected' || stored === 'fallback' || stored === 'testing' || stored === 'not-tested' || stored === 'failed') {
+      if (stored === 'connected') {
+        return 'personal-api-ready';
+      }
+      if (stored === 'fallback' || stored === 'testing' || stored === 'not-tested' || stored === 'failed') {
         return stored as AgentConnectionStatus;
       }
       if (stored.startsWith('failed:')) {
@@ -409,7 +467,7 @@ export function getAgentConnectionStatus(
     console.warn('Failed to load status:', e);
   }
 
-  return 'not-tested';
+  return 'personal-api-ready';
 }
 
 export function getAgentStatusError(

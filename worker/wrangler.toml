@@ -1,0 +1,11 @@
+# wrangler.toml — Wrangler configuration for deployment
+
+name = "judgebench-openrouter-proxy"
+main = "index.js"
+compatibility_date = "2024-05-23"
+
+# [vars]
+# VITE_OPENROUTER_FREE_PROXY_URL will point to this worker's deployment URL.
+# Note: Do NOT add OPENROUTER_API_KEY to this file. 
+# It must be configured as a Cloudflare Worker secret using:
+#   npx wrangler secret put OPENROUTER_API_KEY

@@ -16,6 +16,7 @@ interface AgentModelInfo {
   mode: string;
   isPlaceholder: boolean;
   status: AgentConnectionStatus;
+  openRouterMode?: 'demo' | 'personal';
 }
 
 interface AgentPanelProps {
@@ -159,7 +160,9 @@ export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo 
           </span>
           {modelInfo?.status === 'failed' && (
             <span className="text-[10px] text-red-400 text-center font-medium mt-1 leading-tight whitespace-pre-wrap break-all" title={errorMsg}>
-              Failed — {errorMsg || 'Connection failed'}
+              {modelInfo?.providerId === 'openrouter'
+                ? (modelInfo?.openRouterMode === 'demo' ? 'Free Demo Failed' : 'Personal API Failed')
+                : 'Failed'} — {errorMsg ? errorMsg.replace(/^Failed\s*—\s*/, '') : 'Connection failed'}
             </span>
           )}
         </div>

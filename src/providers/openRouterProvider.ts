@@ -5,7 +5,7 @@
  */
 
 import type { AgentRole, TranscriptEntry, Evidence, CourtPhase } from '../types/courtroom';
-import { loadApiKey } from '../types/providers';
+import { loadApiKey, loadCourtroomConfig } from '../types/providers';
 
 // Base URL configuration
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -69,11 +69,32 @@ export async function generateWithOpenRouter(params: {
   evidence: Evidence[];
   prompt: string;
 }): Promise<string> {
+  const config = loadCourtroomConfig();
+  const agentConfig = config[params.role];
+  const openRouterMode = agentConfig?.openRouterMode || 'personal';
+
   const apiKey = loadApiKey('openrouter');
   const proxyUrl = import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL;
   
-  if (!apiKey && !proxyUrl) {
-    throw new Error('Free demo gateway not configured. Use your own OpenRouter key.');
+  let url = '';
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (openRouterMode === 'demo') {
+    if (!proxyUrl) {
+      throw new Error('Free demo gateway not configured. Use your own OpenRouter key.');
+    }
+    url = proxyUrl;
+  } else {
+    // personal mode
+    if (!apiKey) {
+      throw new Error('OpenRouter API key not configured.');
+    }
+    url = `${OPENROUTER_BASE_URL}/chat/completions`;
+    headers['Authorization'] = `Bearer ${apiKey}`;
+    headers['HTTP-Referer'] = window.location.origin;
+    headers['X-Title'] = 'JudgeBench';
   }
 
   const context = buildContext({
@@ -87,15 +108,6 @@ export async function generateWithOpenRouter(params: {
   const systemPrompt = getSystemPromptForRole(params.role);
   
   try {
-    const url = apiKey ? `${OPENROUTER_BASE_URL}/chat/completions` : proxyUrl;
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (apiKey) {
-      headers['Authorization'] = `Bearer ${apiKey}`;
-      headers['HTTP-Referer'] = window.location.origin;
-      headers['X-Title'] = 'JudgeBench';
-    }
 
     const response = await fetch(url, {
       method: 'POST',

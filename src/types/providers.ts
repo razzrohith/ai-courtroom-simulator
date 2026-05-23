@@ -179,6 +179,7 @@ export interface AgentModelConfig {
   model: string;
   customBaseUrl?: string;
   mode: 'mock' | 'local' | 'api';
+  openRouterMode?: 'demo' | 'personal';
 }
 
 // Courtroom model configuration (all agents)
@@ -270,6 +271,11 @@ export function loadCourtroomConfig(): CourtroomModelConfig {
             // Ensure mode exists
             if (!agentConfig.mode) {
               agentConfig.mode = DEFAULT_MODEL_CONFIG[role].mode;
+              needsMigration = true;
+            }
+            // Ensure openRouterMode exists
+            if (!agentConfig.openRouterMode) {
+              agentConfig.openRouterMode = hasProxy ? 'demo' : 'personal';
               needsMigration = true;
             }
             migrated[role] = agentConfig;
@@ -412,36 +418,54 @@ export function getAgentConnectionStatus(
   if (config.providerId === 'openrouter') {
     const personalKeyExists = hasApiKey('openrouter');
     const hasProxy = !!import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL;
-    const isModelFree = config.model.endsWith(':free');
+    const mode = config.openRouterMode || (hasProxy ? 'demo' : 'personal');
 
-    // If model is paid but no personal key exists
-    if (!isModelFree && !personalKeyExists) {
-      return 'missing-key'; // requires own key
-    }
-
-    if (!personalKeyExists && !hasProxy) {
-      return 'free-demo-unavailable';
-    }
-
-    try {
-      const key = `judgebench.status.${role}.${config.providerId}.${config.model}`;
-      const stored = localStorage.getItem(key);
-      if (stored) {
-        if (stored === 'connected') {
-          return personalKeyExists ? 'personal-api-ready' : 'free-demo-ready';
-        }
-        if (stored === 'fallback' || stored === 'testing' || stored === 'not-tested' || stored === 'failed') {
-          return stored as AgentConnectionStatus;
-        }
-        if (stored.startsWith('failed:')) {
-          return 'failed';
-        }
+    if (mode === 'demo') {
+      if (!hasProxy) {
+        return 'free-demo-unavailable';
       }
-    } catch (e) {
-      console.warn('Failed to load status:', e);
+      try {
+        const key = `judgebench.status.${role}.${config.providerId}.${config.model}`;
+        const stored = localStorage.getItem(key);
+        if (stored) {
+          if (stored === 'connected') {
+            return 'free-demo-ready';
+          }
+          if (stored.startsWith('failed:')) {
+            return 'failed';
+          }
+          if (stored === 'testing' || stored === 'not-tested') {
+            return stored as AgentConnectionStatus;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load status:', e);
+      }
+      return 'free-demo-ready';
+    } else {
+      // personal mode
+      if (!personalKeyExists) {
+        return 'missing-key';
+      }
+      try {
+        const key = `judgebench.status.${role}.${config.providerId}.${config.model}`;
+        const stored = localStorage.getItem(key);
+        if (stored) {
+          if (stored === 'connected') {
+            return 'personal-api-ready';
+          }
+          if (stored.startsWith('failed:')) {
+            return 'failed';
+          }
+          if (stored === 'testing' || stored === 'not-tested') {
+            return stored as AgentConnectionStatus;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load status:', e);
+      }
+      return 'personal-api-ready';
     }
-
-    return personalKeyExists ? 'personal-api-ready' : 'free-demo-ready';
   }
   
   if (!isProviderConfigured(config.providerId)) {

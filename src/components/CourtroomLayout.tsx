@@ -42,6 +42,7 @@ interface AgentModelInfo {
   mode: string;
   isPlaceholder: boolean;
   status: AgentConnectionStatus;
+  openRouterMode?: 'demo' | 'personal';
 }
 
 interface CourtroomLayoutProps {
@@ -127,6 +128,7 @@ export function CourtroomLayout({
       mode: config.mode,
       isPlaceholder: isProviderPlaceholder(config.providerId),
       status: getAgentConnectionStatus(role, config),
+      openRouterMode: config.openRouterMode,
     };
   };
 

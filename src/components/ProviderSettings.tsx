@@ -18,7 +18,8 @@ import {
   clearApiKey,
   maskApiKey,
   isProviderConfigured,
-  hasApiKey,
+  getAgentConnectionStatus,
+  getAgentStatusError,
 } from '../types/providers';
 import { 
   fetchOpenRouterModels, 
@@ -73,6 +74,18 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
   const speech = useSpeechSynthesis();
   const [keyInputs, setKeyInputs] = useState<Partial<Record<ProviderId, string>>>({});
   const [rememberKeys, setRememberKeys] = useState<Partial<Record<ProviderId, boolean>>>({});
+  const [statusTrigger, setStatusTrigger] = useState(0);
+
+  useEffect(() => {
+    const handleStatusChange = () => {
+      setStatusTrigger(prev => prev + 1);
+    };
+    window.addEventListener('judgebench-provider-status-changed', handleStatusChange);
+    return () => {
+      window.removeEventListener('judgebench-provider-status-changed', handleStatusChange);
+    };
+  }, []);
+  
 
   
   // Model catalog state
@@ -314,7 +327,7 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" data-status-trigger={statusTrigger}>
       <div className="bg-courtroom-card border border-gray-700 rounded-lg w-full max-w-3xl max-h-[calc(100dvh-2rem)] overflow-hidden flex flex-col">
         <div className="p-4 border-b border-gray-700 flex items-center justify-between">
           <h2 className="text-lg font-bold text-yellow-500">Provider Configuration</h2>
@@ -354,6 +367,9 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
           {activeTab === 'agents' && (
             /* Agent provider selection with model catalogs */
             <div className="space-y-4">
+              <div className="bg-blue-950/40 border border-blue-900/50 p-3 rounded-lg text-xs text-blue-200 leading-relaxed">
+                ℹ️ <strong>Free Demo Connection Note:</strong> Free Demo uses the app's backend proxy and only supports free OpenRouter models. Paid models require your own OpenRouter API key.
+              </div>
               <div className="mb-4 flex gap-2 flex-wrap items-center">
                 <label className="text-xs text-gray-400">Filter models:</label>
                 <label className="flex items-center gap-1 text-xs">
@@ -386,18 +402,43 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
               {(Object.keys(AGENT_LABELS) as AgentRole[]).map((role) => {
                 const agentConfig = (config as Record<AgentRole, AgentModelConfig>)[role];
                 const entry = getEntry(agentConfig?.providerId || 'mock');
-                const status = connectionStatus[agentConfig?.providerId || 'mock'];
-                let statusBadge = STATUS_BADGES[status] || { bg: 'bg-gray-900/50', text: 'text-gray-400', label: 'Unknown' };
+                const agentStatus = getAgentConnectionStatus(role, agentConfig);
+                const errorMsg = agentStatus === 'failed' ? getAgentStatusError(role, agentConfig) : undefined;
                 
-                if (agentConfig?.providerId === 'openrouter') {
-                  const hasPersonalKey = hasApiKey('openrouter');
-                  const hasProxy = !!import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL;
-                  if (!hasPersonalKey && hasProxy) {
-                    statusBadge = { bg: 'bg-green-900/50', text: 'text-green-400', label: 'Free Demo Active' };
-                  } else if (!hasPersonalKey && !hasProxy) {
-                    statusBadge = { bg: 'bg-red-900/50', text: 'text-red-400', label: 'Free Demo Unavailable' };
-                  } else {
+                let statusBadge = { bg: 'bg-gray-900/50', text: 'text-gray-400', label: 'Unknown' };
+                switch (agentStatus) {
+                  case 'mock':
+                    statusBadge = { bg: 'bg-green-900/50', text: 'text-green-400', label: 'Mock Mode' };
+                    break;
+                  case 'free-demo-ready':
+                    statusBadge = { bg: 'bg-emerald-900/50', text: 'text-emerald-400', label: 'Free Demo Ready' };
+                    break;
+                  case 'free-demo-unavailable':
+                    statusBadge = { bg: 'bg-red-900/50', text: 'text-red-400', label: 'Free Demo Unavailable — proxy not configured' };
+                    break;
+                  case 'personal-api-ready':
                     statusBadge = { bg: 'bg-emerald-900/50', text: 'text-emerald-400', label: 'Personal API Active' };
+                    break;
+                  case 'missing-key':
+                    statusBadge = { bg: 'bg-red-900/50', text: 'text-red-400', label: 'Personal API Missing' };
+                    break;
+                  case 'testing':
+                    statusBadge = { bg: 'bg-blue-900/50', text: 'text-blue-400', label: 'Testing...' };
+                    break;
+                  case 'not-tested':
+                    statusBadge = { bg: 'bg-blue-900/50', text: 'text-blue-405', label: 'Not Tested' };
+                    break;
+                  case 'failed': {
+                    const mode = agentConfig?.openRouterMode || 'personal';
+                    const prefix = agentConfig?.providerId === 'openrouter'
+                      ? (mode === 'demo' ? 'Free Demo Failed' : 'Personal API Failed')
+                      : 'Failed';
+                    statusBadge = {
+                      bg: 'bg-red-900/50',
+                      text: 'text-red-400',
+                      label: `${prefix} — ${errorMsg ? errorMsg.replace(/^Failed\s*—\s*/, '') : 'Connection failed'}`
+                    };
+                    break;
                   }
                 }
                 const loading = modelsLoading[agentConfig?.providerId || 'mock'];
@@ -457,8 +498,7 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                           >
                             {availableModels.map((m) => {
                               const isFreeModel = m.isFree || m.id.endsWith(':free');
-                              const isPersonalKeyConfigured = hasApiKey('openrouter');
-                              const isDemoMode = agentConfig?.providerId === 'openrouter' && !isPersonalKeyConfigured;
+                              const isDemoMode = agentConfig?.providerId === 'openrouter' && agentConfig.openRouterMode === 'demo';
                               const isDisabled = isDemoMode && !isFreeModel;
                               return (
                                 <option key={m.id} value={m.id} disabled={isDisabled}>
@@ -479,22 +519,69 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                       </div>
                     </div>
 
-                    {/* Status indicator */}
-                    <div className="mt-3 flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded text-xs ${statusBadge.bg} ${statusBadge.text}`}>
-                        {statusBadge.label}
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        {agentConfig?.providerId === 'openrouter' && !hasApiKey('openrouter') && !!import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL
-                          ? 'Running on shared Free Demo Proxy gateway.'
-                          : entry.status}
-                      </span>
-                    </div>
-                    {agentConfig?.providerId === 'openrouter' && !hasApiKey('openrouter') && !import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL && (
-                      <div className="mt-2 text-xs text-red-400 font-medium">
-                        Free demo gateway not configured. Use your own OpenRouter key.
+                    {/* OpenRouter Mode Selector */}
+                    {agentConfig?.providerId === 'openrouter' && (
+                      <div className="mt-3 bg-gray-900/40 p-2.5 rounded-lg border border-gray-700/50">
+                        <label className="block text-xs font-semibold text-gray-305 mb-2">OpenRouter Connection Type</label>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                            <input
+                              type="radio"
+                              name={`or-mode-${role}`}
+                              checked={agentConfig.openRouterMode === 'demo'}
+                              onChange={() => {
+                                const defaultFreeModel = 'google/gemini-2.0-flash-exp:free';
+                                updateAgentConfig(role, { 
+                                  openRouterMode: 'demo',
+                                  model: defaultFreeModel 
+                                });
+                              }}
+                              className="text-yellow-500 focus:ring-yellow-500 bg-gray-950 border-gray-700"
+                            />
+                            <span>OpenRouter Free Demo</span>
+                          </label>
+                          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                            <input
+                              type="radio"
+                              name={`or-mode-${role}`}
+                              checked={agentConfig.openRouterMode === 'personal' || !agentConfig.openRouterMode}
+                              onChange={() => {
+                                updateAgentConfig(role, { openRouterMode: 'personal' });
+                              }}
+                              className="text-yellow-500 focus:ring-yellow-500 bg-gray-950 border-gray-700"
+                            />
+                            <span>Personal API Key</span>
+                          </label>
+                        </div>
                       </div>
                     )}
+
+                    {/* Status indicator and Test button */}
+                    <div className="mt-3 flex items-center justify-between gap-2 border-t border-gray-700/50 pt-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`px-2 py-0.5 rounded text-xs ${statusBadge.bg} ${statusBadge.text}`}>
+                          {statusBadge.label}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {agentConfig?.providerId === 'openrouter' && agentConfig?.openRouterMode === 'demo'
+                            ? 'Running on shared Free Demo Proxy gateway.'
+                            : entry.status}
+                        </span>
+                      </div>
+                      
+                      {agentConfig?.providerId !== 'mock' && (
+                        <button
+                          onClick={async () => {
+                            if (agentConfig) {
+                              await testProviderAndModel(role, agentConfig);
+                            }
+                          }}
+                          className="bg-yellow-600 hover:bg-yellow-500 text-white text-xs px-2.5 py-1 rounded font-medium transition"
+                        >
+                          Test Selected Mode
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}

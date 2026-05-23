@@ -3,6 +3,7 @@
  */
 
 import type { IModelProvider } from './modelProviderTypes';
+import { sanitizeAgentResponse } from '../utils/sanitizeAgentResponse';
 import type { AgentRole, CourtPhase, TranscriptEntry } from '../types/courtroom';
 
 /**
@@ -182,9 +183,11 @@ export function generateMockResponse(params: {
   
   const responses = mockResponses[phase]?.[role];
   if (Array.isArray(responses)) {
-    return responses[turnIndex] || responses[responses.length - 1] || `[${role} at ${phase} turn ${turnIndex}]`;
+    const raw = responses[turnIndex] || responses[responses.length - 1] || `[${role} at ${phase} turn ${turnIndex}]`;
+    return sanitizeAgentResponse(raw) || raw;
   }
-  return responses || `[${role} at ${phase}]`;
+  const raw = responses || `[${role} at ${phase}]`;
+  return sanitizeAgentResponse(raw) || raw;
 }
 
 /**

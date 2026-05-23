@@ -67,8 +67,9 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
   const [config, setConfig] = useState<CourtroomModelConfig>(DEFAULT_MODEL_CONFIG);
   const [isDirty, setIsDirty] = useState(false);
   const [activeTab, setActiveTab] = useState<'agents' | 'api-keys'>('agents');
-  const [keyInput, setKeyInput] = useState('');
-  const [rememberKey, setRememberKey] = useState(false);
+  const [keyInputs, setKeyInputs] = useState<Partial<Record<ProviderId, string>>>({});
+  const [rememberKeys, setRememberKeys] = useState<Partial<Record<ProviderId, boolean>>>({});
+
   
   // Model catalog state
   const [modelsLoading, setModelsLoading] = useState<Record<ProviderId, boolean>>({
@@ -158,19 +159,38 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
   }, []);
 
   const handleSaveApiKey = useCallback((providerId: ProviderId) => {
-    if (keyInput.trim()) {
-      saveApiKey(providerId, keyInput.trim(), rememberKey);
+    const key = (keyInputs[providerId] || '').trim();
+    const remember = rememberKeys[providerId] || false;
+    if (key) {
+      saveApiKey(providerId, key, remember);
       setConnectionStatus(prev => ({ ...prev, [providerId]: 'connected' }));
       // Load models for this provider after API key is saved
       loadModelsForProvider(providerId);
-      setKeyInput('');
+      // Clear only this provider's input
+      setKeyInputs(prev => {
+        const { [providerId]: _, ...rest } = prev;
+        return rest;
+      });
+      setRememberKeys(prev => {
+        const { [providerId]: _, ...rest } = prev;
+        return rest;
+      });
       window.dispatchEvent(new Event('judgebench-provider-status-changed'));
     }
-  }, [keyInput, rememberKey, loadModelsForProvider]);
+  }, [keyInputs, rememberKeys, loadModelsForProvider]);
 
   const handleClearApiKey = useCallback((providerId: ProviderId) => {
     clearApiKey(providerId);
     setConnectionStatus(prev => ({ ...prev, [providerId]: 'missing' }));
+    // Remove stored input and remember state for this provider
+    setKeyInputs(prev => {
+      const { [providerId]: _, ...rest } = prev;
+      return rest;
+    });
+    setRememberKeys(prev => {
+      const { [providerId]: _, ...rest } = prev;
+      return rest;
+    });
     window.dispatchEvent(new Event('judgebench-provider-status-changed'));
   }, []);
 
@@ -281,8 +301,8 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-courtroom-card border border-gray-700 rounded-lg w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
+      <div className="bg-courtroom-card border border-gray-700 rounded-lg w-full max-w-3xl max-h-[calc(100dvh-2rem)] overflow-hidden flex flex-col">
         <div className="p-4 border-b border-gray-700 flex items-center justify-between">
           <h2 className="text-lg font-bold text-yellow-500">Provider Configuration</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-xl">x</button>
@@ -311,7 +331,7 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 min-h-0">
           {activeTab === 'agents' ? (
             /* Agent provider selection with model catalogs */
             <div className="space-y-4">
@@ -489,8 +509,8 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                       <div className="space-y-2">
                         <input
                           type={isBaseUrl ? 'text' : 'password'}
-                          value={keyInput}
-                          onChange={(e) => setKeyInput(e.target.value)}
+                          value={keyInputs[provider.id] ?? ''}
+                          onChange={(e) => setKeyInputs(prev => ({ ...prev, [provider.id]: e.target.value }))}
                           placeholder={isBaseUrl ? 'http://localhost:11434' : `Enter ${provider.label} API key`}
                           className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-sm"
                         />
@@ -498,16 +518,16 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                           <label className="flex items-center gap-1 text-xs text-gray-400">
                             <input
                               type="checkbox"
-                              checked={rememberKey}
-                              onChange={(e) => setRememberKey(e.target.checked)}
+                              checked={rememberKeys[provider.id] ?? false}
+                              onChange={(e) => setRememberKeys(prev => ({ ...prev, [provider.id]: e.target.checked }))}
                               className="rounded"
                             />
                             Remember on this browser
                           </label>
                           <button
                             onClick={() => handleSaveApiKey(provider.id)}
-                            disabled={!keyInput.trim()}
-                            className={`ml-auto px-3 py-1 rounded text-xs ${keyInput.trim() ? 'bg-green-700 hover:bg-green-600 text-white' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`}
+                            disabled={!((keyInputs[provider.id] || '').trim())}
+                            className={`ml-auto px-3 py-1 rounded text-xs ${((keyInputs[provider.id] || '').trim()) ? 'bg-green-700 hover:bg-green-600 text-white' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`}
                           >
                             Save Key
                           </button>

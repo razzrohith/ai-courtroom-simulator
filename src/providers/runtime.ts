@@ -86,6 +86,12 @@ export async function testProviderAndModel(
     let failedReason = `Failed — ${sanitizedMsg}`;
     if (sanitizedMsg.toLowerCase().includes('api key') || sanitizedMsg.includes('401') || sanitizedMsg.toLowerCase().includes('unauthorized')) {
       failedReason = 'Failed — invalid API key';
+    } else if (sanitizedMsg.includes('429') || sanitizedMsg.toLowerCase().includes('rate_limited') || sanitizedMsg.toLowerCase().includes('rate-limit') || sanitizedMsg.toLowerCase().includes('too many requests')) {
+      if (config.providerId === 'openrouter' && config.openRouterMode === 'demo') {
+        failedReason = 'Failed — Free Demo rate-limited — try later or use your own OpenRouter key.';
+      } else {
+        failedReason = 'Failed — rate limited';
+      }
     } else if (sanitizedMsg.toLowerCase().includes('model not found') || sanitizedMsg.includes('404') || sanitizedMsg.toLowerCase().includes('does not exist')) {
       failedReason = 'Failed — model unavailable';
     } else if (sanitizedMsg.toLowerCase().includes('timeout') || sanitizedMsg.toLowerCase().includes('fetch failed')) {

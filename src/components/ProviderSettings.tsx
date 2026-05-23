@@ -430,13 +430,19 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                     break;
                   case 'failed': {
                     const mode = agentConfig?.openRouterMode || 'personal';
-                    const prefix = agentConfig?.providerId === 'openrouter'
-                      ? (mode === 'demo' ? 'Free Demo Failed' : 'Personal API Failed')
-                      : 'Failed';
+                    let label = '';
+                    if (agentConfig?.providerId === 'openrouter' && mode === 'demo' && errorMsg && (errorMsg.includes('rate-limited') || errorMsg.includes('429') || errorMsg.includes('rate_limited'))) {
+                      label = 'Free Demo rate-limited — try later or use your own OpenRouter key.';
+                    } else {
+                      const prefix = agentConfig?.providerId === 'openrouter'
+                        ? (mode === 'demo' ? 'Free Demo Failed' : 'Personal API Failed')
+                        : 'Failed';
+                      label = `${prefix} — ${errorMsg ? errorMsg.replace(/^Failed\s*—\s*/, '') : 'Connection failed'}`;
+                    }
                     statusBadge = {
                       bg: 'bg-red-900/50',
                       text: 'text-red-400',
-                      label: `${prefix} — ${errorMsg ? errorMsg.replace(/^Failed\s*—\s*/, '') : 'Connection failed'}`
+                      label: label
                     };
                     break;
                   }
@@ -530,7 +536,7 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                               name={`or-mode-${role}`}
                               checked={agentConfig.openRouterMode === 'demo'}
                               onChange={() => {
-                                const defaultFreeModel = 'google/gemini-2.0-flash-exp:free';
+                                const defaultFreeModel = 'meta-llama/llama-3.3-70b-instruct:free';
                                 updateAgentConfig(role, { 
                                   openRouterMode: 'demo',
                                   model: defaultFreeModel 

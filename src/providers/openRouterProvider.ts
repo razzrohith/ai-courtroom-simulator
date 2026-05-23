@@ -15,7 +15,8 @@ const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
  */
 export function isOpenRouterConfigured(): boolean {
   const apiKey = loadApiKey('openrouter');
-  return !!apiKey && apiKey.length > 0;
+  const hasProxy = !!import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL;
+  return (!!apiKey && apiKey.length > 0) || hasProxy;
 }
 
 /**

@@ -141,7 +141,45 @@ export default {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        return new Response(JSON.stringify({ error: `Proxy received error status: ${response.status}` }), {
+        let errorMsg = `Proxy received error status: ${response.status}`;
+        let category = "upstream_error";
+        
+        try {
+          const contentType = response.headers.get("Content-Type") || "";
+          if (contentType.includes("application/json")) {
+            const errData = await response.json();
+            const rawMsg = errData?.error?.message || errData?.error || "";
+            if (rawMsg) {
+              const cleanMsg = String(rawMsg)
+                .replace(/(?:sk-|Bearer\s+)[a-zA-Z0-9_\-]+/g, "***REDACTED***")
+                .substring(0, 200);
+              errorMsg = `OpenRouter: ${cleanMsg}`;
+            }
+          } else {
+            const rawMsg = await response.text();
+            if (rawMsg) {
+              const cleanMsg = rawMsg
+                .replace(/(?:sk-|Bearer\s+)[a-zA-Z0-9_\-]+/g, "***REDACTED***")
+                .substring(0, 150);
+              errorMsg = `OpenRouter response: ${cleanMsg}`;
+            }
+          }
+        } catch (_) {}
+
+        if (response.status === 429) {
+          category = "rate_limited";
+        } else if (response.status === 404 || errorMsg.toLowerCase().includes("model")) {
+          category = "model_unavailable";
+        } else if (response.status === 401 || response.status === 403) {
+          category = "invalid_key";
+        }
+
+        return new Response(JSON.stringify({
+          error: errorMsg,
+          category,
+          status: response.status,
+          model
+        }), {
           status: response.status,
           headers: { "Content-Type": "application/json", ...corsHeaders }
         });
@@ -155,9 +193,16 @@ export default {
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       const isAbort = err instanceof Error && err.name === "AbortError";
+      const cleanMsg = errorMsg
+        .replace(/(?:sk-|Bearer\s+)[a-zA-Z0-9_\-]+/g, "***REDACTED***")
+        .substring(0, 150);
+      
       return new Response(
         JSON.stringify({ 
-          error: isAbort ? "Proxy connection timed out" : "Internal proxy gateway error"
+          error: isAbort ? "Proxy connection timed out" : `Internal proxy gateway error: ${cleanMsg}`,
+          category: isAbort ? "timeout" : "upstream_error",
+          status: isAbort ? 504 : 500,
+          model: body?.model || "unknown"
         }), {
           status: isAbort ? 504 : 500,
           headers: { "Content-Type": "application/json", ...corsHeaders }

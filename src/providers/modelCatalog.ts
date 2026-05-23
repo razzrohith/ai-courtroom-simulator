@@ -48,11 +48,11 @@ interface OpenRouterModelsResponse {
 }
 
 export const OPENROUTER_FREE_MODELS: ModelInfo[] = [
-  { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash (free)', provider: 'Google', isFree: true },
-  { id: 'meta-llama/llama-3-8b-instruct:free', name: 'Llama 3 8B Instruct (free)', provider: 'Meta', isFree: true },
-  { id: 'mistralai/mistral-7b-instruct:free', name: 'Mistral 7B Instruct (free)', provider: 'Mistral', isFree: true },
-  { id: 'microsoft/phi-3-mini-128k-instruct:free', name: 'Phi 3 Mini 128k Instruct (free)', provider: 'Microsoft', isFree: true },
-  { id: 'qwen/qwen-2-7b-instruct:free', name: 'Qwen 2 7B Instruct (free)', provider: 'Qwen', isFree: true },
+  { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B Instruct (free)', provider: 'Meta', isFree: true },
+  { id: 'meta-llama/llama-3.2-3b-instruct:free', name: 'Llama 3.2 3B Instruct (free)', provider: 'Meta', isFree: true },
+  { id: 'nousresearch/hermes-3-llama-3.1-405b:free', name: 'Hermes 3 405B Instruct (free)', provider: 'Nous', isFree: true },
+  { id: 'google/gemma-4-31b-it:free', name: 'Gemma 4 31B (free)', provider: 'Google', isFree: true },
+  { id: 'deepseek/deepseek-v4-flash:free', name: 'DeepSeek V4 Flash (free)', provider: 'DeepSeek', isFree: true },
 ];
 
 /**

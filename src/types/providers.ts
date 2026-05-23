@@ -200,7 +200,7 @@ const hasProxy = !!import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL;
 export const DEFAULT_MODEL_CONFIG: CourtroomModelConfig = {
   judge: hasProxy ? {
     providerId: 'openrouter',
-    model: 'google/gemini-2.0-flash-exp:free',
+    model: 'meta-llama/llama-3.3-70b-instruct:free',
     mode: 'api',
   } : {
     providerId: 'mock',
@@ -209,7 +209,7 @@ export const DEFAULT_MODEL_CONFIG: CourtroomModelConfig = {
   },
   prosecutor: hasProxy ? {
     providerId: 'openrouter',
-    model: 'google/gemini-2.0-flash-exp:free',
+    model: 'meta-llama/llama-3.3-70b-instruct:free',
     mode: 'api',
   } : {
     providerId: 'mock',
@@ -218,7 +218,7 @@ export const DEFAULT_MODEL_CONFIG: CourtroomModelConfig = {
   },
   defense: hasProxy ? {
     providerId: 'openrouter',
-    model: 'google/gemini-2.0-flash-exp:free',
+    model: 'meta-llama/llama-3.3-70b-instruct:free',
     mode: 'api',
   } : {
     providerId: 'mock',

@@ -149,24 +149,18 @@ function getPhaseInstruction(phase: CourtPhase, role: AgentRole): string {
   return role === 'judge' ? judgeInstr[phase] : lawyerInstr[phase];
 }
 
-/**
- * Provide a safe fallback message when sanitization results in an empty string.
- * Ensures the UI always displays a valid courtroom utterance.
- */
 function getFallbackMessage(role: AgentRole): string {
   switch (role) {
     case 'judge':
-      return 'The court proceeds.';
+      return 'Thank you. The court will proceed to the next matter.';
     case 'prosecutor':
-      return 'Proceed with your argument.';
+      return 'Your Honor, the plaintiff is ready to proceed.';
     case 'defense':
-      return 'Proceed with your argument.';
+      return 'Your Honor, the defense is ready to respond.';
     default:
       return 'Continuing...';
   }
 }
-
-
 
 function getPersonaInstructions(role: AgentRole): string {
   const base = role === 'judge' 
@@ -175,8 +169,14 @@ function getPersonaInstructions(role: AgentRole): string {
     ? `You are Plaintiff Counsel representing the Hen. Argue simply and persuasively in plain English.`
     : `You are Defense Counsel representing the Egg. Challenge arguments and explain concepts in clear layman terms.`;
 
-  const lengthRule = `\n\nRESPONSE LENGTH & STYLE RULES (CRITICAL):
-- Target 2 to 5 short sentences (maximum 80-140 words).
+  const outputRule = `\n\nOUTPUT FORMAT RULES (CRITICAL):
+- You must output ONLY the direct spoken response of your character.
+- Do NOT include planning notes, introduction headers, reasoning, stage directions, or meta-commentary (e.g., do NOT output "We must keep...", "Let's craft...", "Something like:", etc.).
+- Do NOT wrap your output in quotation marks or code blocks unless quoting evidence.
+- Answer directly as your character.`;
+
+  const lengthRule = `\n\nRESPONSE LENGTH & STYLE RULES:
+- Keep your response brief: target 2 to 5 short sentences (maximum 80-140 words).
 - Write in plain English, short, layman-friendly, and human style.
 - Avoid long legalistic essays, excessive markdown, and heavy jargon.
 - If discussing the Chicken and Egg case:
@@ -186,7 +186,7 @@ function getPersonaInstructions(role: AgentRole): string {
 
   const restrictions = `\n\nIMPORTANT CONSTRAINTS:\n- NEVER give legal advice outside simulation.\n- Cite evidence IDs when discussing evidence (e.g., E01, E02).\n- Stay in character throughout.\n- Use proper courtroom decorum.\n- This is an educational simulation - not real legal counsel.`;
 
-  return base + lengthRule + restrictions;
+  return base + outputRule + lengthRule + restrictions;
 }
 
 /**
@@ -224,7 +224,7 @@ export async function generateAgentResponse(params: {
   const phaseInstruction = getPhaseInstruction(phase, role);
   const persona = getPersonaInstructions(role);
 
-  const prompt = `${persona}\n\n${contextStr}\n\nTask: ${phaseInstruction}`;
+  const prompt = `${persona}\n\n${contextStr}\n\nTask: ${phaseInstruction}\n\nREMINDER: You must output ONLY the direct courtroom speech of your character. Do NOT include planning notes, meta-commentary, or instructions.`;
 
   try {
     const ready = await isProviderReady(providerId);

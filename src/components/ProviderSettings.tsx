@@ -32,6 +32,7 @@ import {
   type ModelInfo 
 } from '../providers/modelCatalog';
 import { LoadingSpinner } from './visuals/CourtroomVisuals';
+import { testProviderAndModel } from '../providers/runtime';
 
 interface ProviderSettingsProps {
   isOpen: boolean;
@@ -149,6 +150,15 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
     setConfig(updated);
     setIsDirty(false);
     window.dispatchEvent(new Event('judgebench-provider-status-changed'));
+
+    // Automatically test selected non-mock provider/model for all active agents
+    const roles: AgentRole[] = ['judge', 'prosecutor', 'defense'];
+    roles.forEach(role => {
+      const agentConfig = updated[role];
+      if (agentConfig && agentConfig.providerId !== 'mock') {
+        testProviderAndModel(role, agentConfig);
+      }
+    });
   }, [config]);
 
   const handleReset = useCallback(() => {

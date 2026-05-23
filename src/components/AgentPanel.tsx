@@ -8,6 +8,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { getRoleLabel } from '../utils/languageMode';
 import { CourtroomAvatar } from './visuals/CourtroomVisuals';
 import type { AgentConnectionStatus } from '../types/providers';
+import { getAgentStatusError } from '../types/providers';
 
 interface AgentModelInfo {
   providerId: string;
@@ -40,14 +41,24 @@ const statusStyles: Record<AgentConnectionStatus, { label: string; class: string
   mock: { label: 'Mock Mode', class: 'bg-green-950/60 text-green-400 border border-green-900/50' },
   'missing-key': { label: 'Missing API Key', class: 'bg-red-950/60 text-red-400 border border-red-900/50' },
   'not-tested': { label: 'API key configured — not tested', class: 'bg-blue-950/60 text-blue-400 border border-blue-900/50' },
-  connected: { label: 'Connected', class: 'bg-emerald-950/60 text-emerald-400 border border-emerald-900/50' },
-  fallback: { label: 'Fallback: Mock', class: 'bg-amber-950/60 text-amber-400 border border-amber-900/50' },
+  testing: { label: 'Testing...', class: 'bg-blue-950/60 text-blue-400 border border-blue-900/50 animate-pulse' },
+  connected: { label: 'Ready / Tested OK', class: 'bg-emerald-950/60 text-emerald-400 border border-emerald-900/50' },
+  fallback: { label: 'Fallback active — mock mode', class: 'bg-amber-950/60 text-amber-400 border border-amber-900/50' },
+  failed: { label: 'Failed', class: 'bg-red-950/60 text-red-400 border border-red-900/50' },
 };
 
 export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo }: AgentPanelProps) {
   const { mode } = useLanguage();
   const colors = roleColors[participant.role];
   const isSpeaking = isActive && isCurrentSpeaker;
+
+  const configToTest = modelInfo ? {
+    providerId: modelInfo.providerId as any,
+    model: modelInfo.model,
+    mode: modelInfo.mode as any
+  } : undefined;
+
+  const errorMsg = modelInfo?.status === 'failed' ? getAgentStatusError(participant.role, configToTest) : undefined;
 
   // Build compact provider info string for avatar
   const providerInfo = modelInfo ? (
@@ -143,6 +154,11 @@ export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo 
           <span className={`px-2 py-1 rounded text-xs text-center font-medium ${statusInfo.class}`}>
             {statusInfo.label}
           </span>
+          {modelInfo?.status === 'failed' && (
+            <span className="text-[10px] text-red-400 text-center font-medium mt-1 leading-tight whitespace-pre-wrap break-all" title={errorMsg}>
+              {errorMsg || 'Connection failed'}
+            </span>
+          )}
         </div>
       </div>
     </div>

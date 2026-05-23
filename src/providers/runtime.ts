@@ -7,6 +7,7 @@
 
 import type { AgentRole, TranscriptEntry, Evidence, CourtPhase } from '../types/courtroom';
 import type { AgentModelConfig, ProviderId } from '../types/providers';
+import { setAgentConnectionStatus, loadApiKey } from '../types/providers';
 import { generateMockResponse } from './mockModelProvider';
 import { generateWithOpenRouter, isOpenRouterConfigured, getOpenRouterStatus } from './openRouterProvider';
 import { generateWithOllama, isOllamaAvailable } from './ollamaProvider';
@@ -14,6 +15,86 @@ import { generateWithOpenAI, isOpenAIConfigured, getOpenAIStatus } from './openA
 import { generateWithAnthropic, isAnthropicConfigured, getAnthropicStatus } from './anthropicProvider';
 import { generateWithGemini, isGeminiConfigured, getGeminiStatus } from './geminiProvider';
 import { generateWithLMStudio, isLMStudioAvailable } from './lmStudioProvider';
+
+/**
+ * Test a specific provider & model configuration for an agent and update status.
+ */
+export async function testProviderAndModel(
+  role: AgentRole,
+  config: AgentModelConfig
+): Promise<void> {
+  const providerId = config.providerId;
+  if (providerId === 'mock') {
+    setAgentConnectionStatus(role, providerId, config.model, 'mock');
+    return;
+  }
+
+  setAgentConnectionStatus(role, providerId, config.model, 'testing');
+
+  const testPrompt = "Reply with only: OK";
+  const params = {
+    role,
+    model: config.model,
+    phase: 'court_opening' as CourtPhase,
+    transcript: [] as TranscriptEntry[],
+    evidence: [] as Evidence[],
+    prompt: testPrompt,
+  };
+
+  try {
+    let result = '';
+    switch (providerId) {
+      case 'openrouter':
+        result = await generateWithOpenRouter(params);
+        break;
+      case 'ollama': {
+        result = await generateWithOllama({ ...params, prompt: testPrompt }); // ollama expects specific endpoint
+        break;
+      }
+      case 'openai':
+        result = await generateWithOpenAI(params);
+        break;
+      case 'anthropic':
+        result = await generateWithAnthropic(params);
+        break;
+      case 'gemini':
+        result = await generateWithGemini(params);
+        break;
+      case 'lmstudio': {
+        const baseUrl = loadApiKey('lmstudio') || 'http://localhost:1234';
+        result = await generateWithLMStudio({ ...params, baseUrl });
+        break;
+      }
+      case 'custom-openai': {
+        const baseUrl = loadApiKey('custom-openai') || 'http://localhost:1234';
+        result = await generateWithLMStudio({ ...params, baseUrl });
+        break;
+      }
+      default:
+        throw new Error(`Unsupported provider: ${providerId}`);
+    }
+
+    if (!result || result.trim().length === 0) {
+      throw new Error('Empty response from model');
+    }
+
+    setAgentConnectionStatus(role, providerId, config.model, 'connected');
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    const sanitizedMsg = errorMsg.replace(/(?:sk-|AIzaSy)[a-zA-Z0-9_\-]+/g, '***REDACTED***');
+    
+    let failedReason = `Failed — ${sanitizedMsg}`;
+    if (sanitizedMsg.toLowerCase().includes('api key') || sanitizedMsg.includes('401') || sanitizedMsg.toLowerCase().includes('unauthorized')) {
+      failedReason = 'Failed — invalid API key';
+    } else if (sanitizedMsg.toLowerCase().includes('model not found') || sanitizedMsg.includes('404') || sanitizedMsg.toLowerCase().includes('does not exist')) {
+      failedReason = 'Failed — model unavailable';
+    } else if (sanitizedMsg.toLowerCase().includes('timeout') || sanitizedMsg.toLowerCase().includes('fetch failed')) {
+      failedReason = 'Failed — provider timeout';
+    }
+    
+    setAgentConnectionStatus(role, providerId, config.model, `failed:${failedReason}`);
+  }
+}
 
 /**
  * Response metadata from provider calls

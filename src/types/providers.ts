@@ -376,8 +376,10 @@ export type AgentConnectionStatus =
   | 'mock'
   | 'missing-key'
   | 'not-tested'
+  | 'testing'
   | 'connected'
-  | 'fallback';
+  | 'fallback'
+  | 'failed';
 
 export function getAgentConnectionStatus(
   role: AgentRole, 
@@ -390,13 +392,18 @@ export function getAgentConnectionStatus(
   if (!isProviderConfigured(config.providerId)) {
     return 'missing-key';
   }
-
+  
   // Load from localStorage status cache
   try {
     const key = `judgebench.status.${role}.${config.providerId}.${config.model}`;
     const stored = localStorage.getItem(key);
-    if (stored === 'connected' || stored === 'fallback') {
-      return stored as AgentConnectionStatus;
+    if (stored) {
+      if (stored === 'connected' || stored === 'fallback' || stored === 'testing' || stored === 'not-tested' || stored === 'failed') {
+        return stored as AgentConnectionStatus;
+      }
+      if (stored.startsWith('failed:')) {
+        return 'failed';
+      }
     }
   } catch (e) {
     console.warn('Failed to load status:', e);
@@ -405,11 +412,30 @@ export function getAgentConnectionStatus(
   return 'not-tested';
 }
 
+export function getAgentStatusError(
+  role: AgentRole,
+  config?: AgentModelConfig
+): string | undefined {
+  if (!config || !config.providerId || config.providerId === 'mock') {
+    return undefined;
+  }
+  try {
+    const key = `judgebench.status.${role}.${config.providerId}.${config.model}`;
+    const stored = localStorage.getItem(key);
+    if (stored && stored.startsWith('failed:')) {
+      return stored.substring(7);
+    }
+  } catch (e) {
+    console.warn('Failed to load status:', e);
+  }
+  return undefined;
+}
+
 export function setAgentConnectionStatus(
   role: AgentRole,
   providerId: ProviderId,
   model: string,
-  status: 'connected' | 'fallback'
+  status: 'connected' | 'fallback' | 'testing' | 'not-tested' | 'failed' | string
 ): void {
   try {
     const key = `judgebench.status.${role}.${providerId}.${model}`;

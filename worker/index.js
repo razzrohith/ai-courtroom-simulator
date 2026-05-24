@@ -6,7 +6,8 @@
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:3000",
-  "https://razzrohith.github.io"
+  "https://razzrohith.com",
+  "https://www.razzrohith.com"
 ];
 
 function isOriginAllowed(origin) {

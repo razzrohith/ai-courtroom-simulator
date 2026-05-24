@@ -101,6 +101,7 @@ export function CourtroomLayout({
   const [showExhibitView, setShowExhibitView] = useState(false);
   const [modelConfig, setModelConfig] = useState<CourtroomModelConfig | null>(null);
   const [statusTick, setStatusTick] = useState(0);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     const config = loadCourtroomConfig();
@@ -137,268 +138,404 @@ export function CourtroomLayout({
   };
 
   return (
-    <div className="min-h-screen bg-courtroom-bg p-4 md:p-6 pb-52 sm:pb-36 md:pb-40">
-      <div className="max-w-7xl mx-auto space-y-4">
-        <header className="text-center py-4 border-b border-gray-700">
-          <h1 className="text-2xl md:text-3xl font-bold text-yellow-500 mb-2">
-            ⚖️ JudgeBench
-          </h1>
-          <p className="text-sm text-gray-400">
-            AI Courtroom Simulator — Education & Experimentation
-          </p>
-        </header>
+    <div className="min-h-screen bg-[#090d11] text-gray-100 flex flex-col lg:flex-row font-sans">
+      {/* Mobile Top Bar */}
+      <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-[#0d131a] border-b border-gray-800 sticky top-0 z-50">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">⚖️</span>
+          <span className="font-bold text-yellow-500 tracking-wider font-sans">JudgeBench</span>
+        </div>
+        <button
+          onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+          className="p-1 text-gray-400 hover:text-white focus:outline-none"
+        >
+          {mobileSidebarOpen ? (
+            <span className="text-lg font-bold">✕</span>
+          ) : (
+            <span className="text-lg font-bold">☰</span>
+          )}
+        </button>
+      </div>
 
-        {/* Sticky Top Status & Speaker Banner */}
-        <div className="sticky top-[16px] z-40 bg-gray-900/90 backdrop-blur-md border border-gray-700/60 shadow-lg py-2 px-4 rounded-xl flex flex-wrap items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-2">
-            <span className={`w-2.5 h-2.5 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-gray-500'}`}></span>
-            <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Status:</span>
-            <span className="text-sm font-semibold text-yellow-500">{isActive ? phaseLabel : 'Awaiting Setup'}</span>
+      {/* Sidebar Navigation */}
+      <div
+        className={`fixed inset-y-0 left-0 transform ${
+          mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:translate-x-0 lg:static lg:inset-auto transition-transform duration-300 ease-in-out z-40 w-64 bg-[#0d131a] border-r border-gray-800 flex flex-col justify-between shrink-0 h-screen lg:sticky lg:top-0`}
+      >
+        <div className="flex flex-col overflow-y-auto">
+          {/* Logo / Branding */}
+          <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-850">
+            <div className="w-10 h-10 rounded-xl bg-yellow-950/40 border border-yellow-750/30 flex items-center justify-center text-xl text-yellow-500 shadow-md">
+              ⚖️
+            </div>
+            <div>
+              <h1 className="font-extrabold text-sm text-yellow-500 tracking-wider uppercase leading-none font-sans">
+                JudgeBench
+              </h1>
+              <span className="text-[10px] text-gray-400 font-semibold tracking-wide">Courtroom Simulator</span>
+            </div>
           </div>
-          
-          {caseData && caseData.title && (
-            <div className="flex items-center gap-2 px-3 py-1 bg-yellow-950/20 border border-yellow-750/30 rounded-full text-xs max-w-xs md:max-w-md truncate">
-              <span className="text-gray-400">Case:</span>
-              <span className="font-semibold text-yellow-500 truncate animate-pulse" title={caseData.title}>
-                {caseData.title}
+
+          {/* Menu Items */}
+          <div className="px-4 py-6 space-y-1.5">
+            <span className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest px-3 mb-2 font-sans">
+              Simulator Menu
+            </span>
+            <button
+              onClick={() => {
+                setMobileSidebarOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold bg-yellow-950/35 border border-yellow-750/20 text-yellow-500 transition-all duration-200"
+            >
+              <span className="text-sm">⚖️</span>
+              <span>Simulator Panel</span>
+            </button>
+            <button
+              onClick={() => {
+                setShowSettings(true);
+                setMobileSidebarOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-gray-200 hover:bg-gray-800/40 border border-transparent hover:border-gray-800 transition-all duration-200"
+            >
+              <span className="text-sm">⚙️</span>
+              <span>Provider Configuration</span>
+            </button>
+            <button
+              onClick={() => {
+                if (onReset) onReset();
+                setMobileSidebarOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-gray-200 hover:bg-gray-800/40 border border-transparent hover:border-gray-800 transition-all duration-200 animate-none"
+            >
+              <span className="text-sm">🔄</span>
+              <span>Reset Courtroom</span>
+            </button>
+          </div>
+
+          {/* Session Actions (Save, Load, Clear) */}
+          <div className="px-4 py-4 border-t border-gray-800/80 space-y-2">
+            <span className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest px-3 mb-2 font-sans">
+              Simulation Sessions
+            </span>
+            {onSave && (
+              <button
+                onClick={onSave}
+                disabled={isGenerating}
+                className="w-full flex items-center gap-2.5 px-3 py-2 bg-blue-900/25 hover:bg-blue-800/30 border border-blue-800/20 hover:border-blue-700/30 text-blue-400 font-semibold rounded-xl transition-all duration-200 text-xs active:scale-[0.98] disabled:opacity-50"
+              >
+                <span>💾</span>
+                <span>Save Case Session</span>
+              </button>
+            )}
+            {onLoad && (
+              <button
+                onClick={onLoad}
+                disabled={isGenerating}
+                className="w-full flex items-center gap-2.5 px-3 py-2 bg-purple-900/25 hover:bg-purple-800/30 border border-purple-800/20 hover:border-purple-700/30 text-purple-400 font-semibold rounded-xl transition-all duration-200 text-xs active:scale-[0.98] disabled:opacity-50"
+              >
+                <span>📂</span>
+                <span>Load Saved Case</span>
+              </button>
+            )}
+            {onClear && hasSavedSession && (
+              <button
+                onClick={onClear}
+                disabled={isGenerating}
+                className="w-full flex items-center gap-2.5 px-3 py-2 bg-red-900/25 hover:bg-red-800/30 border border-red-800/20 hover:border-red-700/30 text-red-400 font-semibold rounded-xl transition-all duration-200 text-xs active:scale-[0.98] disabled:opacity-50"
+              >
+                <span>🗑️</span>
+                <span>Clear Local Cache</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Sidebar Footer / Gateway Status */}
+        <div className="p-4 border-t border-gray-800/80 bg-[#0a0e14]">
+          <div className="rounded-xl p-3 border border-gray-800 bg-[#0d131a] space-y-2">
+            <div className="flex items-center gap-2">
+              <span className={`w-2.5 h-2.5 rounded-full ${isOpenRouterConfigured() ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">API Gateway</span>
+            </div>
+            <p className="text-[11px] font-bold text-gray-200 leading-tight">
+              {isOpenRouterConfigured() ? 'OpenRouter Free Demo' : 'Mock Fallback Mode'}
+            </p>
+            <button
+              onClick={() => setShowSettings(true)}
+              className="w-full text-center text-[10px] text-blue-400 hover:text-blue-300 font-bold hover:underline block pt-1.5 border-t border-gray-800 mt-2"
+            >
+              Gateway Settings ⚙️
+            </button>
+          </div>
+          <p className="text-[9px] text-gray-500 text-center mt-3 tracking-wider">
+            JUDGEBENCH SIMULATOR
+          </p>
+        </div>
+      </div>
+
+      {/* Backdrop for mobile menu */}
+      {mobileSidebarOpen && (
+        <div
+          onClick={() => setMobileSidebarOpen(false)}
+          className="fixed inset-0 bg-black/70 z-30 lg:hidden"
+        ></div>
+      )}
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden relative pb-32 lg:pb-28">
+        {/* Sticky Dashboard Header */}
+        <div className="bg-[#0b0f15]/95 border-b border-gray-800/80 sticky top-0 z-20 backdrop-blur-md px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-md">
+          <div>
+            <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-gray-400 mb-0.5">
+              <span>COURTROOM STATE</span>
+              <span>/</span>
+              <span className="text-yellow-500 font-bold uppercase">
+                {isActive ? phaseLabel : 'Awaiting Case File'}
               </span>
             </div>
-          )}
-          
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              {isActive && caseData?.title ? (
+                <>
+                  <span className="text-yellow-500">⚖️</span>
+                  <span className="font-sans">{caseData.title}</span>
+                </>
+              ) : (
+                'Simulation Sandbox'
+              )}
+            </h2>
+          </div>
+
           <div className="flex items-center gap-3">
             {isActive && currentSpeaker && (
-              <div className="flex items-center gap-2 bg-gray-950/60 px-3 py-1 rounded-full border border-gray-800">
-                <span className="text-xs text-gray-400">Active:</span>
-                <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <span className={`w-2 h-2 rounded-full ${
+              <div className="flex items-center gap-2 bg-gray-900 border border-gray-800 px-3 py-1 rounded-full text-xs shadow-inner">
+                <span className="text-gray-400">Speaker:</span>
+                <span className="font-bold text-white flex items-center gap-1.5">
+                  <span className={`w-2.5 h-2.5 rounded-full ${
                     currentSpeaker === 'judge' ? 'bg-yellow-500 animate-pulse' :
                     currentSpeaker === 'prosecutor' ? 'bg-blue-500 animate-pulse' :
                     'bg-green-500 animate-pulse'
                   }`}></span>
-                  {getParticipantName(state, currentSpeaker)} 
-                  <span className="opacity-60 text-[10px]">({currentSpeaker.toUpperCase()})</span>
+                  {getParticipantName(state, currentSpeaker)}
+                  <span className="opacity-60 text-[9px] font-mono">({currentSpeaker.toUpperCase()})</span>
                 </span>
               </div>
             )}
-            
+
             {isGenerating && (
-              <div className="flex items-center gap-1.5 bg-yellow-950/40 text-yellow-500 px-3 py-1 rounded-full border border-yellow-500/20 text-xs animate-pulse">
-                <span>⏳ Generating response...</span>
+              <div className="flex items-center gap-1.5 bg-yellow-950/40 text-yellow-500 px-3 py-1.5 rounded-full border border-yellow-500/20 text-xs animate-pulse font-bold">
+                <span>⏳ Running Agent LLM...</span>
               </div>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Courtroom Stage - Cinematic top */}
-          {isActive && (
-            <div className="lg:col-span-12">
-              <CourtroomStage
-                judge={{
-                  ...participants.find(p => p.role === 'judge')!,
-                  modelInfo: getAgentModelInfo('judge')
-                }}
-                prosecutor={{
-                  ...participants.find(p => p.role === 'prosecutor')!,
-                  modelInfo: getAgentModelInfo('prosecutor')
-                }}
-                defense={{
-                  ...participants.find(p => p.role === 'defense')!,
-                  modelInfo: getAgentModelInfo('defense')
-                }}
-                currentSpeaker={stageEntry?.speakerRole || null}
-                isSpeaking={isStageTyping}
-                currentPhase={currentPhase}
-                isActive={isActive}
-                evidence={evidence}
-                activeObjection={objectionHistory.find(o => o.status === 'pending')}
-                showVerdict={currentPhase === 'verdict' && !!verdict}
-                verdict={verdict}
-                compact={false}
-                latestEntry={stageEntry}
-                isStageTyping={isStageTyping}
-                simulationSpeaker={currentSpeaker}
-                isGenerating={isGenerating}
-              />
-            </div>
-          )}
-          
-          <div className="lg:col-span-3 space-y-4">
-            <AgentPanel
-              participant={participants.find(p => p.role === 'judge')!}
-              isCurrentSpeaker={currentSpeaker === 'judge'}
-              isActive={isActive}
-              modelInfo={getAgentModelInfo('judge')}
-            />
-            <AgentPanel
-              participant={participants.find(p => p.role === 'prosecutor')!}
-              isCurrentSpeaker={currentSpeaker === 'prosecutor'}
-              isActive={isActive}
-              modelInfo={getAgentModelInfo('prosecutor')}
-            />
-            <AgentPanel
-              participant={participants.find(p => p.role === 'defense')!}
-              isCurrentSpeaker={currentSpeaker === 'defense'}
-              isActive={isActive}
-              modelInfo={getAgentModelInfo('defense')}
-            />
-          </div>
-
-          <div className="lg:col-span-6 space-y-4">
-            {isActive && (
-              <CaseContextCard caseData={caseData} />
-            )}
-            <PhaseTimeline currentPhase={currentPhase} />
-            <div className="h-[600px] md:h-[650px] flex flex-col">
-              {!isActive ? (
+        {/* Dashboard Grid Content */}
+        <div className="p-4 md:p-6 space-y-6">
+          {!isActive ? (
+            /* Setup State Layout: Spacious welcome on left, case setup on right */
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              <div className="lg:col-span-8 h-full">
                 <WelcomePanel
                   caseData={caseData}
                   onStart={onStart}
                   onOpenSettings={() => setShowSettings(true)}
                   isOpenRouterConfigured={isOpenRouterConfigured()}
                 />
-              ) : verdict && currentPhase === 'verdict' ? (
-                <VerdictPanel verdict={verdict} evidence={evidence} objections={objectionHistory} />
-              ) : (
-                <TranscriptPanel transcript={transcript} currentPhase={phaseLabel} speech={speech} />
-              )}
+              </div>
+              <div className="lg:col-span-4">
+                <CaseSetupPanel caseData={caseData} onUpdateCase={onCaseUpdate} />
+              </div>
             </div>
-          </div>
+          ) : (
+            /* Simulation State Layout: Cinematic Stage + Grid of Panels */
+            <div className="space-y-6">
+              {/* Row 1: Courtroom Stage Visualizer */}
+              <div className="bg-[#0d131a] rounded-xl border border-gray-800 overflow-hidden shadow-lg">
+                <CourtroomStage
+                  judge={{
+                    ...participants.find(p => p.role === 'judge')!,
+                    modelInfo: getAgentModelInfo('judge')
+                  }}
+                  prosecutor={{
+                    ...participants.find(p => p.role === 'prosecutor')!,
+                    modelInfo: getAgentModelInfo('prosecutor')
+                  }}
+                  defense={{
+                    ...participants.find(p => p.role === 'defense')!,
+                    modelInfo: getAgentModelInfo('defense')
+                  }}
+                  currentSpeaker={stageEntry?.speakerRole || null}
+                  isSpeaking={isStageTyping}
+                  currentPhase={currentPhase}
+                  isActive={isActive}
+                  evidence={evidence}
+                  activeObjection={objectionHistory.find(o => o.status === 'pending')}
+                  showVerdict={currentPhase === 'verdict' && !!verdict}
+                  verdict={verdict}
+                  compact={false}
+                  latestEntry={stageEntry}
+                  isStageTyping={isStageTyping}
+                  simulationSpeaker={currentSpeaker}
+                  isGenerating={isGenerating}
+                />
+              </div>
 
-          <div className="lg:col-span-3 space-y-4">
-            {currentPhase === 'case_setup' ? (
-              <CaseSetupPanel caseData={caseData} onUpdateCase={onCaseUpdate} />
-            ) : (
-              <>
-                {/* Phase 8: Add toggle for evidence timeline or standard view */}
-                <div className="flex gap-2 mb-2">
-                  <button
-                    onClick={() => setShowTimeline(!showTimeline)}
-                    className={`text-xs px-2 py-1 rounded ${showTimeline ? 'bg-blue-700' : 'bg-gray-700'} text-gray-300`}
-                  >
-                    {showTimeline ? 'Timeline' : 'Evidence'}
-                  </button>
-                  <button
-                    onClick={() => setShowExhibitView(!showExhibitView)}
-                    className={`text-xs px-2 py-1 rounded ${showExhibitView ? 'bg-purple-700' : 'bg-gray-700'} text-gray-300`}
-                  >
-                    Exhibits
-                  </button>
+              {/* Row 2: Runtime 3-Column Panel Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* Column 1: Agent Profiles (lg:col-span-3) */}
+                <div className="lg:col-span-3 space-y-4">
+                  <span className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest px-1">
+                    Courtroom Counsel & Judge
+                  </span>
+                  <AgentPanel
+                    participant={participants.find(p => p.role === 'judge')!}
+                    isCurrentSpeaker={currentSpeaker === 'judge'}
+                    isActive={isActive}
+                    modelInfo={getAgentModelInfo('judge')}
+                  />
+                  <AgentPanel
+                    participant={participants.find(p => p.role === 'prosecutor')!}
+                    isCurrentSpeaker={currentSpeaker === 'prosecutor'}
+                    isActive={isActive}
+                    modelInfo={getAgentModelInfo('prosecutor')}
+                  />
+                  <AgentPanel
+                    participant={participants.find(p => p.role === 'defense')!}
+                    isCurrentSpeaker={currentSpeaker === 'defense'}
+                    isActive={isActive}
+                    modelInfo={getAgentModelInfo('defense')}
+                  />
                 </div>
-                
-                {showTimeline ? (
-                  <EvidenceTimeline evidence={evidence} />
-                ) : showExhibitView ? (
-                  <ExhibitPanel exhibits={evidence} showRestricted={false} />
-                ) : (
-                  <EvidenceBoard evidence={evidence} />
-                )}
-                
-                <ObjectionHistoryPanel objections={objectionHistory} onRuling={onObjectionRuling} />
 
-                {/* Phase 9: Witness and Motion panels */}
-                {(currentPhase === 'witness_testimony' || currentPhase === 'motion_hearing' || currentPhase === 'cross_examination') && (
-                  <>
-                    <WitnessPanel witnesses={witnesses} />
-                    <MotionPanel 
-                      motions={motionHistory} 
-                      onRuling={(mid, granted) => { 
-                        // Simple handler - will integrate with parent
-                        console.log('Motion ruling:', mid, granted); 
-                      }} 
+                {/* Column 2: Main Proceeding Feed (lg:col-span-6) */}
+                <div className="lg:col-span-6 space-y-4">
+                  <span className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest px-1">
+                    Court Transcript
+                  </span>
+                  {isActive && (
+                    <CaseContextCard caseData={caseData} />
+                  )}
+                  <PhaseTimeline currentPhase={currentPhase} />
+                  <div className="h-[600px] md:h-[650px] flex flex-col bg-[#0d131a] rounded-xl border border-gray-800 overflow-hidden shadow-lg">
+                    {verdict && currentPhase === 'verdict' ? (
+                      <VerdictPanel verdict={verdict} evidence={evidence} objections={objectionHistory} />
+                    ) : (
+                      <TranscriptPanel transcript={transcript} currentPhase={phaseLabel} speech={speech} />
+                    )}
+                  </div>
+                </div>
+
+                {/* Column 3: Evidence, Objections & Logs (lg:col-span-3) */}
+                <div className="lg:col-span-3 space-y-4">
+                  <span className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest px-1">
+                    Registry & Records
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowTimeline(!showTimeline)}
+                      className={`text-xs px-2.5 py-1.5 rounded-lg font-bold border transition-all duration-200 ${
+                        showTimeline 
+                          ? 'bg-yellow-950/40 text-yellow-500 border-yellow-750/30' 
+                          : 'bg-gray-800/40 text-gray-400 border-gray-700/50 hover:bg-gray-800/60'
+                      }`}
+                    >
+                      {showTimeline ? 'Timeline View' : 'Evidence List'}
+                    </button>
+                    <button
+                      onClick={() => setShowExhibitView(!showExhibitView)}
+                      className={`text-xs px-2.5 py-1.5 rounded-lg font-bold border transition-all duration-200 ${
+                        showExhibitView 
+                          ? 'bg-yellow-950/40 text-yellow-500 border-yellow-750/30' 
+                          : 'bg-gray-800/40 text-gray-400 border-gray-700/50 hover:bg-gray-800/60'
+                      }`}
+                    >
+                      Exhibits Folder
+                    </button>
+                  </div>
+                  
+                  {showTimeline ? (
+                    <EvidenceTimeline evidence={evidence} />
+                  ) : showExhibitView ? (
+                    <ExhibitPanel exhibits={evidence} showRestricted={false} />
+                  ) : (
+                    <EvidenceBoard evidence={evidence} />
+                  )}
+                  
+                  <ObjectionHistoryPanel objections={objectionHistory} onRuling={onObjectionRuling} />
+
+                  {(currentPhase === 'witness_testimony' || currentPhase === 'motion_hearing' || currentPhase === 'cross_examination') && (
+                    <>
+                      <WitnessPanel witnesses={witnesses} />
+                      <MotionPanel 
+                        motions={motionHistory} 
+                        onRuling={(mid, granted) => { 
+                          console.log('Motion ruling:', mid, granted); 
+                        }} 
+                      />
+                    </>
+                  )}
+
+                  {currentPhase === 'jury_instructions' && (
+                    <JuryInstructionPanel instructions={
+                      transcript.find(t => t.speakerRole === 'judge' && t.phase === 'jury_instructions')?.message
+                    } />
+                  )}
+
+                  {currentPhase === 'judge_deliberation' && (
+                    <DeliberationPanel 
+                      summary={verdict?.deliberationSummary}
+                      evidenceImpact="Exhibits E01-E04 reviewed. Speciation genetics validated."
+                      witnessImpact={verdict?.witnessImpact}
+                      motionImpact={verdict?.motionImpact}
+                      objectionImpact="Objection to hearsay ruled upon by the court."
                     />
-                  </>
-                )}
+                  )}
 
-                {/* Phase 11: Jury Instructions */}
-                {currentPhase === 'jury_instructions' && (
-                  <JuryInstructionPanel instructions={
-                    transcript.find(t => t.speakerRole === 'judge' && t.phase === 'jury_instructions')?.message
-                  } />
-                )}
+                  {(currentPhase === 'verdict' || currentPhase === 'case_summary') && (
+                    <AppealPanel 
+                      grounds={verdict?.appealGrounds}
+                      decision={verdict?.decision}
+                    />
+                  )}
 
-                {/* Phase 12: Deliberation Chamber */}
-                {currentPhase === 'judge_deliberation' && (
-                  <DeliberationPanel 
-                    summary={verdict?.deliberationSummary}
-                    evidenceImpact="Exhibits E01-E04 reviewed. Force majeure valid for April."
-                    witnessImpact={verdict?.witnessImpact}
-                    motionImpact={verdict?.motionImpact}
-                    objectionImpact="Prosecution objection to hearsay GRANTED. Defense relevance challenge OVERRULED."
-                  />
-                )}
-
-                {/* Phase 12: Appeal Grounds (show after verdict/case_summary) */}
-                {(currentPhase === 'verdict' || currentPhase === 'case_summary') && (
-                  <AppealPanel 
-                    grounds={verdict?.appealGrounds}
-                    decision={verdict?.decision}
-                  />
-                )}
-
-                {/* Phase 8: Case summary report */}
-                <CaseSummaryReport state={state} />
-              </>
-            )}
-          </div>
+                  <CaseSummaryReport state={state} />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        <footer className="text-center py-4 border-t border-gray-700 mt-8">
-          <p className="text-xs text-gray-500">
-            ⚠️ DISCLAIMER: This is an AI courtroom simulation for education and experimentation only.
-            It is not legal advice and should not be used for any legal proceeding.
-          </p>
-        </footer>
-      </div>
-
-      <ProviderSettings 
-        isOpen={showSettings} 
-        onClose={() => {
-          setShowSettings(false);
-          setModelConfig(loadCourtroomConfig());
-        }} 
-      />
-      
-      {/* Provider Runtime Status */}
-      <ProviderRuntimeStatusPanel 
-        configs={modelConfig !== null ? modelConfig : DEFAULT_MODEL_CONFIG} 
-        onStatusChange={() => setStatusTick(t => t + 1)}
-        key={`runtime-status-${statusTick}`}
-      />
-
-      {/* Sticky Bottom Control Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900/90 backdrop-blur-md border-t border-gray-700/60 shadow-[0_-8px_30px_rgb(0,0,0,0.5)] px-4 py-3 md:py-4">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-          {/* Left part: Phase info */}
-          <div className="hidden sm:flex items-center gap-2">
-            <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Phase:</span>
+        {/* Sticky Bottom Control Bar */}
+        <div className="fixed bottom-0 left-0 lg:left-64 right-0 z-30 bg-[#0d131a]/95 border-t border-gray-800/80 backdrop-blur-md px-6 py-4 shadow-xl flex items-center justify-between">
+          <div className="hidden md:flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Active Phase</span>
             <span className="text-sm font-bold text-yellow-500">{phaseLabel}</span>
           </div>
 
-          {/* Center part: Main control buttons */}
-          <div className="flex flex-1 sm:flex-initial items-center justify-center gap-2 md:gap-3 w-full sm:w-auto">
+          <div className="flex flex-1 md:flex-initial items-center justify-center gap-3">
             {!isActive ? (
               <button
                 onClick={onStart}
                 disabled={!isCaseSetupComplete(caseData)}
-                className={`w-full sm:w-auto px-6 py-2.5 font-bold rounded-lg shadow-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm md:text-base ${
+                className={`w-full md:w-auto px-6 py-3 font-bold rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm ${
                   isCaseSetupComplete(caseData)
-                    ? 'bg-yellow-600 hover:bg-yellow-500 active:scale-95 shadow-yellow-900/20 animate-pulse text-white'
-                    : 'bg-gray-700 text-gray-500 cursor-not-allowed shadow-none'
+                    ? 'bg-yellow-600 hover:bg-yellow-500 active:scale-[0.98] shadow-yellow-950/20 text-white animate-pulse-glow'
+                    : 'bg-gray-850 text-gray-500 cursor-not-allowed border border-gray-800'
                 }`}
                 title={isCaseSetupComplete(caseData) ? 'Start the simulation' : 'Case setup is incomplete'}
               >
-                ▶️ Start Simulation
+                ⚖️ Start Courtroom Simulation
               </button>
             ) : (
               <>
                 <button
                   onClick={onNextTurn}
                   disabled={!canAdvance || isGenerating || (isAutoplay && !isAutoplayPaused)}
-                  className={`w-full sm:w-auto px-6 py-2.5 font-bold rounded-lg shadow-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm md:text-base active:scale-95 ${
+                  className={`w-full md:w-auto px-6 py-3 font-bold rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm active:scale-[0.98] ${
                     canAdvance && !isGenerating && !(isAutoplay && !isAutoplayPaused)
                       ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/20'
-                      : 'bg-gray-700 text-gray-500 cursor-not-allowed shadow-none'
+                      : 'bg-gray-850 text-gray-500 cursor-not-allowed border border-gray-800'
                   }`}
                 >
                   {isGenerating 
@@ -413,37 +550,35 @@ export function CourtroomLayout({
                 </button>
 
                 {/* Autoplay Controls */}
-                <div className="flex items-center gap-1.5 bg-gray-800/80 border border-gray-700 rounded-lg p-1">
+                <div className="flex items-center gap-2 bg-[#090d11] border border-gray-800 rounded-xl p-1 shadow-inner">
                   <button
                     onClick={onToggleAutoplay}
-                    className={`px-3 py-1 rounded font-semibold text-xs md:text-sm transition-all duration-200 ${
+                    className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all duration-200 ${
                       isAutoplay
-                        ? 'bg-yellow-600 text-white hover:bg-yellow-500'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-650'
+                        ? 'bg-yellow-600 text-white hover:bg-yellow-500 shadow-sm'
+                        : 'bg-gray-800 text-gray-400 hover:bg-gray-750'
                     }`}
-                    title={isAutoplay ? 'Turn off autoplay' : 'Turn on autoplay'}
                   >
-                    {isAutoplay ? '🤖 Auto ON' : '🤖 Auto OFF'}
+                    {isAutoplay ? 'Auto ON' : 'Auto OFF'}
                   </button>
 
                   {isAutoplay && (
                     <>
                       <button
                         onClick={onToggleAutoplayPause}
-                        className={`px-2 py-1 rounded font-semibold text-xs md:text-sm transition-all duration-200 ${
+                        className={`px-2.5 py-1.5 rounded-lg font-semibold text-xs transition-all duration-200 ${
                           isAutoplayPaused
-                            ? 'bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/40'
-                            : 'bg-amber-600/30 text-amber-400 border border-amber-500/30 hover:bg-amber-600/40'
+                            ? 'bg-emerald-950/30 text-emerald-400 border border-emerald-800/30 hover:bg-emerald-950/50'
+                            : 'bg-amber-950/30 text-amber-400 border border-amber-800/30 hover:bg-amber-950/50'
                         }`}
                       >
-                        {isAutoplayPaused ? '▶️ Resume' : '⏸️ Pause'}
+                        {isAutoplayPaused ? 'Resume' : 'Pause'}
                       </button>
 
                       <select
                         value={autoplaySpeed}
                         onChange={(e) => onChangeAutoplaySpeed?.(e.target.value as 'slow' | 'normal' | 'fast')}
-                        className="bg-gray-900 border border-gray-700 text-gray-300 text-xs md:text-sm rounded px-1 py-1 focus:outline-none focus:border-yellow-500 font-medium"
-                        title="Select Autoplay Speed"
+                        className="bg-gray-900 border border-gray-800 text-gray-300 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-yellow-500 font-medium"
                       >
                         <option value="slow">Slow</option>
                         <option value="normal">Normal</option>
@@ -457,69 +592,36 @@ export function CourtroomLayout({
                   <button
                     onClick={onSkip}
                     disabled={isGenerating}
-                    className="px-3 md:px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium rounded-lg border border-gray-700 transition-all duration-200 text-xs md:text-sm active:scale-95"
-                    title="Skip Phase"
+                    className="px-4 py-3 bg-[#131a24] hover:bg-[#1a2533] text-gray-300 font-semibold rounded-xl border border-gray-800 transition-all duration-200 text-sm active:scale-[0.98]"
                   >
-                    ⏭️ Skip
+                    Skip ⏭️
                   </button>
                 )}
               </>
             )}
-
-            {onSave && (
-              <button
-                onClick={onSave}
-                disabled={isGenerating}
-                className="px-3 md:px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-all duration-200 text-xs md:text-sm active:scale-95"
-                title="Save Simulation"
-              >
-                💾 Save
-              </button>
-            )}
-
-            {onLoad && (
-              <button
-                onClick={onLoad}
-                disabled={isGenerating}
-                className="px-3 md:px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-medium rounded-lg transition-all duration-200 text-xs md:text-sm active:scale-95"
-                title="Load Simulation"
-              >
-                📂 Load
-              </button>
-            )}
-
-            {onClear && hasSavedSession && (
-              <button
-                onClick={onClear}
-                disabled={isGenerating}
-                className="px-3 md:px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded-lg transition-all duration-200 text-xs md:text-sm active:scale-95"
-                title="Clear Saved Session"
-              >
-                🗑️ Clear
-              </button>
-            )}
-
-            {isActive && (
-              <button
-                onClick={onReset}
-                disabled={isGenerating}
-                className="px-3 md:px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium rounded-lg border border-gray-700 transition-all duration-200 text-xs md:text-sm active:scale-95"
-                title="Reset Simulation"
-              >
-                🔄 Reset
-              </button>
-            )}
           </div>
 
-          {/* Right part: Provider Settings */}
-          <button
-            onClick={() => setShowSettings(true)}
-            className="w-full sm:w-auto px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium rounded-lg border border-gray-700 transition-all duration-200 flex items-center justify-center gap-1.5 text-xs md:text-sm active:scale-95"
-          >
-            ⚙️ Settings
-          </button>
-        </div>
+          <div className="hidden lg:block">
+            <span className="text-[10px] text-gray-500 tracking-wider">
+              JUDGEBENCH SIMULATOR
+            </span>
+          </div>
       </div>
+      </div>
+
+      <ProviderSettings 
+        isOpen={showSettings} 
+        onClose={() => {
+          setShowSettings(false);
+          setModelConfig(loadCourtroomConfig());
+        }} 
+      />
+      
+      <ProviderRuntimeStatusPanel 
+        configs={modelConfig !== null ? modelConfig : DEFAULT_MODEL_CONFIG} 
+        onStatusChange={() => setStatusTick(t => t + 1)}
+        key={`runtime-status-${statusTick}`}
+      />
     </div>
   );
 }

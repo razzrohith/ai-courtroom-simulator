@@ -4,7 +4,7 @@
  * Phase 3: Runtime foundation
  */
 
-import type { AgentRole, TranscriptEntry, Evidence, CourtPhase } from '../types/courtroom';
+import type { AgentRole, TranscriptEntry, Evidence, CourtPhase, CaseData } from '../types/courtroom';
 
 // Environment configuration
 const OLLAMA_BASE_URL = import.meta.env.VITE_OLLAMA_BASE_URL || 'http://localhost:11434';
@@ -49,10 +49,18 @@ function buildContext(params: {
   phase: CourtPhase;
   transcript: TranscriptEntry[];
   evidence: Evidence[];
+  caseData?: CaseData;
 }): string {
-  const { role, phase, transcript, evidence } = params;
+  const { role, phase, transcript, evidence, caseData } = params;
   
   let context = `You are role: ${role.toUpperCase()}\n`;
+  if (caseData) {
+    context += `Case Title: ${caseData.title}\n`;
+    context += `Case Type: ${caseData.caseType}\n`;
+    context += `Plaintiff Side: ${caseData.plaintiffSide}\n`;
+    context += `Defense Side: ${caseData.defenseSide}\n`;
+    context += `Claim Summary: ${caseData.claimSummary}\n\n`;
+  }
   context += `Phase: ${phase}\n`;
   
   if (transcript.length > 0) {
@@ -80,12 +88,14 @@ export async function generateWithOllama(params: {
   transcript: TranscriptEntry[];
   evidence: Evidence[];
   prompt: string;
+  caseData?: CaseData;
 }): Promise<string> {
   const context = buildContext({
     role: params.role,
     phase: params.phase,
     transcript: params.transcript,
     evidence: params.evidence,
+    caseData: params.caseData,
   });
 
   const systemPrompt = getSystemPromptForRole(params.role);

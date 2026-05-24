@@ -3,7 +3,7 @@
  * Phase 9: Witness testimony and motion flow
  */
 
-import type { CourtState, AgentRole, TranscriptEntry, Evidence, AgentParticipant, ObjectionEvent, ObjectionType, Witness, WitnessQAndA, CourtPhase } from '../types/courtroom';
+import type { CourtState, AgentRole, TranscriptEntry, Evidence, AgentParticipant, ObjectionEvent, ObjectionType, Witness, WitnessQAndA, CourtPhase, Verdict } from '../types/courtroom';
 import { COURT_PHASES } from '../types/courtroom';
 import { SAMPLE_CASE } from '../data/sampleCase';
 import { createMockConfig } from '../providers/modelProviderTypes';
@@ -12,6 +12,21 @@ import { generateAgentResponse, parseEvidenceReferences } from '../providers/age
 import { generateWitnessQAndA, calculateCredibilityScore } from '../providers/mockModelProvider';
 import { JUDGE_TRANSITIONS, shouldTriggerObjection, MOCK_VERDICT } from '../data/mockCourtFlow';
 import { loadCourtroomConfig, setAgentConnectionStatus } from '../types/providers';
+import type { CaseData } from '../types/courtroom';
+
+export const EMPTY_CASE: CaseData = {
+  id: '',
+  title: '',
+  caseType: '',
+  plaintiffSide: '',
+  defenseSide: '',
+  claimSummary: '',
+  keyFacts: [],
+  evidenceItems: [],
+  legalQuestions: [],
+  caseSource: 'custom',
+  schemaVersion: 2,
+};
 
 // Sample witnesses for the case
 const DEFAULT_WITNESSES: Witness[] = [
@@ -42,20 +57,122 @@ export function createInitialState(): CourtState {
   return {
     currentPhase: 'case_setup',
     objectionHistory: [],
-    witnesses: [...DEFAULT_WITNESSES],
+    witnesses: [],
     motionHistory: [],
     currentSpeaker: null,
     participants,
     transcript: [],
-    evidence: [...SAMPLE_CASE.evidenceItems],
+    evidence: [],
     verdict: null,
-    case: SAMPLE_CASE,
+    case: EMPTY_CASE,
     isActive: false
   };
 }
 
 export function startSimulation(state: CourtState): CourtState {
-  return { ...state, isActive: true, currentPhase: 'court_opening', currentSpeaker: 'judge' };
+  let updatedCase = { ...state.case };
+  let updatedEvidence = [...state.evidence];
+  let updatedWitnesses = [...state.witnesses];
+
+  const isPreset = state.case.caseSource === 'preset';
+
+  if (isPreset) {
+    if (updatedWitnesses.length === 0) {
+      updatedWitnesses = [...DEFAULT_WITNESSES];
+    }
+    if (updatedEvidence.length === 0) {
+      updatedEvidence = [...SAMPLE_CASE.evidenceItems];
+      updatedCase.evidenceItems = [...SAMPLE_CASE.evidenceItems];
+    }
+    if (!updatedCase.keyFacts || updatedCase.keyFacts.length === 0) {
+      updatedCase.keyFacts = [
+        "Amniotic egg-laying organisms existed hundreds of millions of years before the modern hen.",
+        "Egg shell synthesis requires the OC-17 protein found only in living hen ovaries.",
+        "The genetic mutation defining the new species occurs at the fertilization/zygote stage."
+      ];
+    }
+    if (!updatedCase.legalQuestions || updatedCase.legalQuestions.length === 0) {
+      updatedCase.legalQuestions = [...SAMPLE_CASE.legalQuestions];
+    }
+  } else {
+    // Custom case dynamic generation
+    // 1. Generate key facts if empty
+    if (!updatedCase.keyFacts || updatedCase.keyFacts.length === 0) {
+      updatedCase.keyFacts = [
+        `The dispute centers on ${state.case.title}.`,
+        `Plaintiff ${state.case.plaintiffSide} claims priority and superiority on the basis of: ${state.case.claimSummary}.`,
+        `Defense ${state.case.defenseSide} argues that its capabilities make it the superior selection.`
+      ];
+    }
+
+    // 2. Generate evidence items if empty
+    if (updatedEvidence.length === 0) {
+      const p1: Evidence = {
+        id: 'EXHIBITP1',
+        title: `Exhibit P-1: ${state.case.plaintiffSide} Performance Metrics`,
+        type: 'report',
+        confidentiality: 'public',
+        summary: `Analytical document demonstrating the efficiency, reasoning speed, and user preference of ${state.case.plaintiffSide}.`,
+        content: `Detailed performance metrics of ${state.case.plaintiffSide}.`,
+        introducedBy: 'prosecutor',
+        status: 'pending',
+      };
+      const d1: Evidence = {
+        id: 'EXHIBITD1',
+        title: `Exhibit D-1: ${state.case.defenseSide} Capability Study`,
+        type: 'report',
+        confidentiality: 'public',
+        summary: `Research findings showing the long-form writing, context size, and output quality of ${state.case.defenseSide}.`,
+        content: `Detailed capability analysis of ${state.case.defenseSide}.`,
+        introducedBy: 'defense',
+        status: 'pending',
+      };
+      updatedEvidence = [p1, d1];
+      updatedCase.evidenceItems = [p1, d1];
+    }
+
+    // 3. Generate witnesses dynamically if empty
+    if (updatedWitnesses.length === 0) {
+      const pClean = (state.case.plaintiffSide || 'Plaintiff').replace(/[^a-zA-Z0-9 ]/g, '').split(' ')[0] || 'Plaintiff';
+      const dClean = (state.case.defenseSide || 'Defendant').replace(/[^a-zA-Z0-9 ]/g, '').split(' ')[0] || 'Defendant';
+      updatedWitnesses = [
+        {
+          id: 'wit-001',
+          name: `Dr. Sarah ${pClean}`,
+          role: 'prosecution',
+          title: `Lead Expert for ${state.case.plaintiffSide}`,
+          summary: `Technical expert specializing in benchmarking, evaluation, and system dynamics of ${state.case.plaintiffSide}.`,
+          credibility: 'credible',
+        },
+        {
+          id: 'wit-002',
+          name: `Dr. David ${dClean}`,
+          role: 'defense',
+          title: `Lead Expert for ${state.case.defenseSide}`,
+          summary: `Expert researcher analyzing architecture, context, and capabilities of ${state.case.defenseSide}.`,
+          credibility: 'credible',
+        },
+      ];
+    }
+
+    // 4. Generate legal questions if empty
+    if (!updatedCase.legalQuestions || updatedCase.legalQuestions.length === 0) {
+      updatedCase.legalQuestions = [
+        `Whether ${state.case.plaintiffSide} provides superior performance for the claims asserted in: ${state.case.claimSummary}.`,
+        `Whether ${state.case.defenseSide} offers advantages that override the plaintiff's assertions.`
+      ];
+    }
+  }
+
+  return {
+    ...state,
+    isActive: true,
+    currentPhase: 'court_opening',
+    currentSpeaker: 'judge',
+    case: updatedCase,
+    evidence: updatedEvidence,
+    witnesses: updatedWitnesses
+  };
 }
 
 export function resetSimulation(): CourtState {
@@ -127,6 +244,7 @@ function processWitnessTestimony(state: CourtState, speakerRole: AgentRole): Cou
     witnessId: witness.id,
     examinerRole: speakerRole,
     questionType,
+    caseData: state.case
   });
   
   // Build Q&A entry
@@ -206,7 +324,8 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
     caseTitle: state.case.title, 
     caseSummary: state.case.claimSummary,
     objectionHistory: state.objectionHistory,
-    caseKeyFacts: state.case.keyFacts
+    caseKeyFacts: state.case.keyFacts,
+    caseData: state.case
   });
 
   // Update provider connection status based on whether it succeeded or fell back
@@ -387,20 +506,123 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
   };
 }
 
+export function generateDynamicVerdict(state: CourtState): Verdict {
+  const isPreset = state.case.caseSource === 'preset';
+  if (isPreset) {
+    return MOCK_VERDICT;
+  }
+
+  // Count sustained objections
+  const prosecutorSustained = state.objectionHistory.filter(o => o.raisedBy === 'prosecutor' && o.status === 'sustained').length;
+  const defenseSustained = state.objectionHistory.filter(o => o.raisedBy === 'defense' && o.status === 'sustained').length;
+
+  // Admitted or offered evidence
+  const admittedItems = state.evidence.filter(e => e.status === 'admitted' || e.status === 'offered');
+  const plaintiffAdmitted = admittedItems.filter(e => e.introducedBy === 'prosecutor').length;
+  const defenseAdmitted = admittedItems.filter(e => e.introducedBy === 'defense').length;
+
+  // Decide winner based on trial metrics (fall back to title length hash if tied)
+  const plaintiffScore = plaintiffAdmitted + prosecutorSustained;
+  const defenseScore = defenseAdmitted + defenseSustained;
+  
+  let isPlaintiffWinner = true;
+  if (plaintiffScore !== defenseScore) {
+    isPlaintiffWinner = plaintiffScore > defenseScore;
+  } else {
+    isPlaintiffWinner = state.case.title.length % 2 === 0;
+  }
+
+  const winner = isPlaintiffWinner ? state.case.plaintiffSide : state.case.defenseSide;
+  const loser = isPlaintiffWinner ? state.case.defenseSide : state.case.plaintiffSide;
+  const decision = isPlaintiffWinner ? 'plaintiff_wins' : 'defense_wins';
+
+  // Extract transcript snippets to summarize evidence/facts considered
+  const keyReasons = [
+    `The court finds the arguments and evidence presented by ${winner} to be more compelling under the standard of proof.`,
+    isPlaintiffWinner 
+      ? `Plaintiff established that ${state.case.claimSummary.substring(0, 100)}... represents the correct operational priority.`
+      : `Defense successfully countered the plaintiff's assertions and proved that ${state.case.defenseSide}'s model offers superior contextual capability.`,
+    `A total of ${admittedItems.length} exhibits were admitted and weighed, with ${isPlaintiffWinner ? plaintiffAdmitted : defenseAdmitted} key files favoring the prevailing side.`
+  ];
+
+  return {
+    decision,
+    reasoningSummary: `Following careful deliberation, the Court enters judgment in favor of ${winner}. The trial proceedings demonstrated that ${winner}'s assertions are backed by concrete performance indicators. While ${loser} offered credible testimony, their core arguments failed to overcome the evidence submitted by the opposing side.`,
+    plaintiffPoints: [
+      `Presented arguments on the primary capability claims for ${state.case.plaintiffSide}.`,
+      `Introduced evidence demonstrating the design strengths of the plaintiff's platform.`
+    ],
+    defensePoints: [
+      `Countered the plaintiff's assertions with architectural capability studies.`,
+      `Demonstrated the specialized advantages of ${state.case.defenseSide} during cross-examination.`
+    ],
+    weaknesses: {
+      plaintiff: isPlaintiffWinner ? [] : [`Fails to address specialized long-form and safety benchmarks.`],
+      defense: isPlaintiffWinner ? [`Could not fully match the sheer raw throughput of the plaintiff.`] : [],
+    },
+    ruling: `Judgment is hereby entered for the ${isPlaintiffWinner ? 'Plaintiff' : 'Defendant'}. The ${winner} is declared the prevailing party.`,
+    witnessImpact: `The testimony of both technical experts was evaluated. The court notes that the credibility of the prevailing side's expert remained intact through cross-examination.`,
+    juryInstructionSummary: 'Burden of proof: preponderance of evidence. Jury was instructed to prioritize factual benchmarks over marketing claims.',
+    motionImpact: 'Admissibility motions for Exhibit P-1 and Exhibit D-1 were decided in accordance with relevance guidelines.',
+    deliberationSummary: `The court deliberated on: ${state.case.title}. After weighing all elements, the balance of proof favors the ${isPlaintiffWinner ? 'Plaintiff' : 'Defendant'}.`,
+    appealGrounds: [
+      `Benchmarking: Disagreement on whether simulated performance metrics constitute sufficient proof of superiority.`,
+      `Objection rulings: Challenging the admissibility of technical reports over direct testimony.`
+    ],
+    winnerName: winner,
+    whyWinnerWon: `${winner} proved superior performance and capability benchmarks through admitted exhibits and consistent expert testimony.`,
+    whyLoserLost: `${loser} failed to substantiate its superiority claims and was unable to impeach the credibility of the opposing expert.`,
+    keyReasons,
+    evidenceConsidered: admittedItems.map(e => `${e.id}: ${e.title}`)
+  };
+}
+
+export function getJudgeTransition(phase: CourtPhase | undefined, state: CourtState): string {
+  if (!phase) return '';
+  const isPreset = state.case.caseSource === 'preset';
+  if (isPreset) {
+    return JUDGE_TRANSITIONS[phase] || '';
+  }
+
+  const pSide = state.case.plaintiffSide || 'the Plaintiff';
+  const dSide = state.case.defenseSide || 'the Defendant';
+  const title = state.case.title || 'this case';
+
+  const transitions: Record<CourtPhase, string> = {
+    case_setup: '',
+    court_opening: `The Court will now come to order. This is Case: ${title} (${state.case.caseType || 'Dispute'}). Counsel, please state your appearances for the record.`,
+    plaintiff_opening: `Thank you, counsel. Now, Advocate Verma, you may deliver your opening statement on behalf of the plaintiff, ${pSide}. Jury, pay close attention.`,
+    defense_opening: `Thank you, Advocate Verma. Advocate Kapoor, you may deliver your opening statement on behalf of the defendant, ${dSide}.`,
+    evidence_presentation: `We will now move to the evidence presentation phase. The parties may present arguments and evidence. Counsel, approach the evidence board.`,
+    objection_ruling: `Before we proceed to cross-examination, the court will hear any objections to evidence already presented. Counsel, state your objections now.`,
+    cross_examination: `We will now move to cross-examination. Each counsel may question the other party's expert witnesses. Objections to questions must be raised immediately.`,
+    witness_testimony: `We will now take expert witness testimony. The court calls the expert witnesses. Counsel, you may conduct direct examination. The opposing counsel will have opportunity for cross-examination.`,
+    motion_hearing: `The court will now hear any motions. Counsel, if you wish to make a motion to strike, dismiss, or regarding evidence, state your motion now.`,
+    jury_instructions: `Before closing arguments, the Court will now instruct the jury on the law and evaluation of evidence for the case: ${title}. This is a fictional simulation for educational purposes only.`,
+    rebuttal: `Now we move to the rebuttal phase. The plaintiff may respond to the defendant's arguments. The defendant may then provide final countering points.`,
+    closing_arguments: `We will now hear closing arguments. Both counsel, summarize your priority claims. The court will consider all presented evidence for ${title}.`,
+    judge_deliberation: `The court will now deliberate on the dispute: ${title}. All rise, please. This matter is taken under advisement.`,
+    verdict: `The Court has reached a decision on ${title}. All rise for the verdict.`,
+    case_summary: `This concludes the proceedings. The Court thanks all counsel for their professional conduct. Case dismissed.`,
+  };
+
+  return transitions[phase] || '';
+}
+
 function advanceToNextPhase(state: CourtState): CourtState {
   const currentIndex = COURT_PHASES.indexOf(state.currentPhase);
   const nextPhase = COURT_PHASES[currentIndex + 1];
   
   // Get judge transition message for entering new phase
-  const transitionMsg = JUDGE_TRANSITIONS[nextPhase] || '';
+  const transitionMsg = getJudgeTransition(nextPhase, state);
   
   // Build new transcript with judge transition announcement
   const transitionEntry: TranscriptEntry = {
     id: `trans-j-transition-${Date.now()}`,
     speakerRole: 'judge',
     speakerName: getParticipantName(state, 'judge'),
-    message: transitionMsg || `We will now proceed to the ${nextPhase.replace('_', ' ')} phase.`,
-    phase: nextPhase,
+    message: transitionMsg || `We will now proceed to the ${(nextPhase || '').replace('_', ' ')} phase.`,
+    phase: nextPhase || 'case_summary',
     sequenceNumber: state.transcript.length + 1,
     timestamp: new Date().toISOString(),
     providerUsed: 'mock',
@@ -411,11 +633,13 @@ function advanceToNextPhase(state: CourtState): CourtState {
   
   if (!nextPhase) {
     // End of trial - case summary phase
+    const isPreset = state.case.caseSource === 'preset';
+    const caseRef = isPreset ? 'Case 2024-CV-3847' : `Case: ${state.case.title}`;
     const summaryEntry: TranscriptEntry = {
       ...transitionEntry,
       id: `trans-summary-${Date.now()}`,
       phase: 'case_summary',
-      message: `This concludes the proceedings in Case 2024-CV-3847. The Court thanks all counsel for their professional conduct. Case dismissed.`,
+      message: `This concludes the proceedings in ${caseRef}. The Court thanks all counsel for their professional conduct. Case dismissed.`,
     };
     return { ...state, currentPhase: 'case_summary', currentSpeaker: 'judge', transcript: [...state.transcript, transitionEntry, summaryEntry] };
   }
@@ -424,17 +648,17 @@ function advanceToNextPhase(state: CourtState): CourtState {
   const firstSpeaker = nextSpeakers.length > 0 ? nextSpeakers[0] : null;
   
   if (nextPhase === 'verdict') {
-    // Use the improved MOCK_VERDICT
+    const calculatedVerdict = generateDynamicVerdict(state);
     const verdictEntry: TranscriptEntry = {
       ...transitionEntry,
-      message: MOCK_VERDICT.ruling || `The Court finds in favour of ${MOCK_VERDICT.decision === 'plaintiff_wins' ? 'the plaintiff' : 'the defendant'}.`,
+      message: calculatedVerdict.ruling || `The Court finds in favour of ${calculatedVerdict.decision === 'plaintiff_wins' ? 'the plaintiff' : 'the defendant'}.`,
     };
     return { 
       ...state, 
       currentPhase: nextPhase, 
       currentSpeaker: firstSpeaker,
       transcript: [...state.transcript, transitionEntry, verdictEntry],
-      verdict: MOCK_VERDICT
+      verdict: calculatedVerdict
     };
   }
   

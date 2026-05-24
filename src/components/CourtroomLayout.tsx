@@ -152,6 +152,15 @@ export function CourtroomLayout({
             <span className="text-sm font-semibold text-yellow-500">{isActive ? phaseLabel : 'Awaiting Setup'}</span>
           </div>
           
+          {caseData && caseData.title && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-yellow-950/20 border border-yellow-750/30 rounded-full text-xs max-w-xs md:max-w-md truncate">
+              <span className="text-gray-400">Case:</span>
+              <span className="font-semibold text-yellow-500 truncate animate-pulse" title={caseData.title}>
+                {caseData.title}
+              </span>
+            </div>
+          )}
+          
           <div className="flex items-center gap-3">
             {isActive && currentSpeaker && (
               <div className="flex items-center gap-2 bg-gray-950/60 px-3 py-1 rounded-full border border-gray-800">
@@ -232,6 +241,9 @@ export function CourtroomLayout({
           </div>
 
           <div className="lg:col-span-6 space-y-4">
+            {isActive && (
+              <CaseContextCard caseData={caseData} />
+            )}
             <PhaseTimeline currentPhase={currentPhase} />
             <div className="h-[600px] md:h-[650px] flex flex-col">
               {verdict && currentPhase === 'verdict' ? (
@@ -357,7 +369,13 @@ export function CourtroomLayout({
             {!isActive ? (
               <button
                 onClick={onStart}
-                className="w-full sm:w-auto px-6 py-2.5 bg-yellow-600 hover:bg-yellow-500 active:scale-95 text-white font-bold rounded-lg shadow-lg shadow-yellow-900/20 transition-all duration-200 flex items-center justify-center gap-2 text-sm md:text-base animate-pulse"
+                disabled={!isCaseSetupComplete(caseData)}
+                className={`w-full sm:w-auto px-6 py-2.5 font-bold rounded-lg shadow-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm md:text-base ${
+                  isCaseSetupComplete(caseData)
+                    ? 'bg-yellow-600 hover:bg-yellow-500 active:scale-95 shadow-yellow-900/20 animate-pulse text-white'
+                    : 'bg-gray-700 text-gray-500 cursor-not-allowed shadow-none'
+                }`}
+                title={isCaseSetupComplete(caseData) ? 'Start the simulation' : 'Case setup is incomplete'}
               >
                 ▶️ Start Simulation
               </button>
@@ -481,6 +499,63 @@ export function CourtroomLayout({
           >
             ⚙️ Settings
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const isCaseSetupComplete = (c: CaseData): boolean => {
+  return !!(
+    c.title?.trim() &&
+    c.caseType?.trim() &&
+    c.plaintiffSide?.trim() &&
+    c.defenseSide?.trim() &&
+    c.claimSummary?.trim()
+  );
+};
+
+function CaseContextCard({ caseData }: { caseData: CaseData }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="bg-gray-900/50 backdrop-blur-md border border-gray-700/50 rounded-xl overflow-hidden transition-all duration-300">
+      <div 
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="p-3 flex items-center justify-between cursor-pointer hover:bg-gray-800/40 select-none transition-colors duration-200"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-base">📋</span>
+          <span className="text-xs font-semibold text-yellow-500 uppercase tracking-wider">Active Case Context</span>
+          <span className="text-xs text-gray-400 px-2 py-0.5 bg-gray-800 rounded-full truncate max-w-[200px] sm:max-w-xs">
+            {caseData.title}
+          </span>
+        </div>
+        <span className="text-gray-400 text-xs font-bold transition-transform duration-200">
+          {isExpanded ? '▲ Collapse' : '▼ Expand'}
+        </span>
+      </div>
+
+      <div className={`transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-96 opacity-100 border-t border-gray-800' : 'max-h-0 opacity-0 pointer-events-none'}`}>
+        <div className="p-4 space-y-3 text-xs sm:text-sm">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-emerald-950/20 border border-emerald-800/30 rounded-lg p-2.5">
+              <span className="block text-[10px] text-emerald-400 font-bold uppercase mb-0.5">Plaintiff</span>
+              <span className="text-gray-200 font-medium">{caseData.plaintiffSide}</span>
+            </div>
+            <div className="bg-rose-950/20 border border-rose-800/30 rounded-lg p-2.5">
+              <span className="block text-[10px] text-rose-400 font-bold uppercase mb-0.5">Defendant</span>
+              <span className="text-gray-200 font-medium">{caseData.defenseSide}</span>
+            </div>
+          </div>
+          <div>
+            <span className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Case Type</span>
+            <span className="text-gray-300">{caseData.caseType}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Claim Summary</span>
+            <span className="text-gray-300 leading-relaxed">{caseData.claimSummary}</span>
+          </div>
         </div>
       </div>
     </div>

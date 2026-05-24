@@ -4,7 +4,7 @@
  * Phase 3: Runtime foundation
  */
 
-import type { AgentRole, TranscriptEntry, Evidence, CourtPhase } from '../types/courtroom';
+import type { AgentRole, TranscriptEntry, Evidence, CourtPhase, CaseData } from '../types/courtroom';
 import { loadApiKey, loadCourtroomConfig, setAgentConnectionStatus } from '../types/providers';
 
 // Base URL configuration
@@ -36,10 +36,18 @@ function buildContext(params: {
   phase: CourtPhase;
   transcript: TranscriptEntry[];
   evidence: Evidence[];
+  caseData?: CaseData;
 }): string {
-  const { role, phase, transcript, evidence } = params;
+  const { role, phase, transcript, evidence, caseData } = params;
   
   let context = `You are playing the role of ${role.toUpperCase()} in a courtroom simulation.\n`;
+  if (caseData) {
+    context += `Case Title: ${caseData.title}\n`;
+    context += `Case Type: ${caseData.caseType}\n`;
+    context += `Plaintiff Side: ${caseData.plaintiffSide}\n`;
+    context += `Defense Side: ${caseData.defenseSide}\n`;
+    context += `Claim Summary: ${caseData.claimSummary}\n\n`;
+  }
   context += `Current phase: ${phase}\n\n`;
   
   // Recent transcript context (last 5 entries)
@@ -69,6 +77,7 @@ export async function generateWithOpenRouter(params: {
   transcript: TranscriptEntry[];
   evidence: Evidence[];
   prompt: string;
+  caseData?: CaseData;
 }): Promise<string> {
   const config = loadCourtroomConfig();
   const agentConfig = config[params.role];
@@ -103,6 +112,7 @@ export async function generateWithOpenRouter(params: {
     phase: params.phase,
     transcript: params.transcript,
     evidence: params.evidence,
+    caseData: params.caseData,
   });
 
   const systemPrompt = getSystemPromptForRole(params.role);

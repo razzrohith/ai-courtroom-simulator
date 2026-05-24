@@ -3,9 +3,9 @@
  * Phase 7: Improved context building with phase instructions and objection awareness
  */
 
-import type { AgentRole, TranscriptEntry, Evidence, CourtPhase, CourtroomContext, ObjectionEvent } from '../types/courtroom';
+import type { AgentRole, TranscriptEntry, Evidence, CourtPhase, CourtroomContext, ObjectionEvent, CaseData } from '../types/courtroom';
 import type { AgentModelConfig } from '../types/providers';
-import { generateResponse, isProviderReady } from './runtime';
+import { generateResponseWithMetadata, isProviderReady } from './runtime';
 import { sanitizeAgentResponse } from '../utils/sanitizeAgentResponse';
 import { PHASE_INSTRUCTIONS, getJuryInstruction } from '../data/mockCourtFlow';
 
@@ -102,45 +102,54 @@ function truncate(text: string, maxLen: number): string {
 /**
  * Get detailed phase instruction by role - Phase 7 version
  */
-function getPhaseInstruction(phase: CourtPhase, role: AgentRole): string {
-  // Try to get from mockCourtFlow first
-  const phaseInstr = PHASE_INSTRUCTIONS as Record<string, Record<string, string>>;
-  if (phaseInstr[phase]?.[role]) {
-    return phaseInstr[phase][role];
+function getPhaseInstruction(phase: CourtPhase, role: AgentRole, caseData?: CaseData): string {
+  // Try to get from mockCourtFlow first if it's the Hen/Egg preset
+  const isHenEgg = caseData?.title?.toLowerCase().includes('hen') && caseData?.title?.toLowerCase().includes('egg');
+  if (isHenEgg) {
+    const phaseInstr = PHASE_INSTRUCTIONS as Record<string, Record<string, string>>;
+    if (phaseInstr[phase]?.[role]) {
+      return phaseInstr[phase][role];
+    }
   }
 
-  // Fallback to simple instructions
+  const plaintiffSide = caseData?.plaintiffSide || 'the Plaintiff';
+  const defenseSide = caseData?.defenseSide || 'the Defendant';
+  const caseTitle = caseData?.title || 'this case';
+
+  // Fallback to simple instructions dynamically populated
   const judgeInstr = {
     case_setup: 'Confirm case is ready to proceed.',
-    court_opening: 'Open court formally. State case number and nature. Have counsel state appearances.',
-    plaintiff_opening: 'Acknowledge plaintiff opening. Note key points. Invite defense.',
-    defense_opening: 'Acknowledge defense opening. Note position. Move to evidence.',
-    evidence_presentation: 'Oversee evidence introduction. Note relevance. Admit or exclude as appropriate.',
+    court_opening: `Open court formally. State the case title "${caseTitle}" and case type. Have counsel state appearances.`,
+    plaintiff_opening: `Acknowledge plaintiff's opening statement. Note key points. Invite defense.`,
+    defense_opening: `Acknowledge defense's opening statement. Note position. Move to evidence presentation.`,
+    evidence_presentation: 'Oversee evidence introduction. Note any relevance issues. Rule on objections if raised.',
     objection_ruling: 'Rule on any objections promptly and decisively. State reasoning briefly.',
-    cross_examination: 'Control questioning. Allow relevant queries. Sustain or overrule.',
+    cross_examination: 'Control questioning. Allow both sides to test witness credibility. Rule on objections.',
     witness_testimony: 'Supervise testimony. Allow examination. Assess credibility.',
     motion_hearing: 'Hear motions. Consider legal basis. Rule.',
     rebuttal: 'Allow rebuttal. Keep focused on disputed facts.',
     closing_arguments: 'Hear closing summaries. Note key arguments. Prepare deliberation.',
-    judge_deliberation: 'Consider all evidence and arguments. Apply law fairly. Reach just verdict.',
-    verdict: 'Deliver verdict clearly. State reasoning. Issue final ruling.',
+    judge_deliberation: `Consider all evidence and arguments for ${caseTitle}. Apply law fairly. Reach just verdict.`,
+    verdict: 'Deliver verdict clearly. State reasoning and ruling. Thank counsel.',
     case_summary: 'Summarize case outcome. Thank counsel. Dismiss court.',
-    jury_instructions: 'Provide jury instructions on burden of proof, evidence evaluation, witness credibility, and objection treatment. Remind this is educational only.',
+    jury_instructions: `Provide jury instructions on burden of proof, evidence evaluation, witness credibility, and objection treatment for the case: ${caseTitle}.`,
   } as const;
 
   const lawyerInstr = {
     case_setup: 'Be prepared. Know your case facts and evidence.',
     court_opening: 'Stand ready. State your appearance when recognized.',
-    plaintiff_opening: 'Deliver clear opening. State facts, damages, relief sought. Engage jury.',
-    defense_opening: 'Present defense position. Counter plaintiff claims. Question damages.',
-    evidence_presentation: 'Present compelling evidence. Connect to key facts. Establish foundation.',
+    plaintiff_opening: `Deliver clear opening. State facts supporting ${plaintiffSide}, damages, relief sought. Engage jury.`,
+    defense_opening: `Present defense position for ${defenseSide}. Counter ${plaintiffSide}'s claims.`,
+    evidence_presentation: `Present compelling evidence supporting ${role === 'prosecutor' ? plaintiffSide : defenseSide}. Connect to key facts. Cite exhibits (e.g. EXHIBITP1 or EXHIBITD1).`,
     objection_ruling: 'Knowingly raise valid objections. Cite rules.',
-    cross_examination: 'Question effectively. Establish favourable facts. Impeach credibility.',
-    witness_testimony: 'Conduct direct or cross-examination. Establish facts.',
+    cross_examination: `Question opposing witness. Establish facts favorable to ${role === 'prosecutor' ? plaintiffSide : defenseSide}. Challenging credibility.`,
+    witness_testimony: `Conduct direct or cross-examination. Establish key facts.`,
     motion_hearing: 'Make appropriate motions. Cite legal grounds.',
     jury_instructions: 'Listen to jury instructions. Note how they should evaluate evidence.',
-    rebuttal: 'Counter defense arguments with evidence. Address weaknesses.',
-    closing_arguments: 'Summarize favourable evidence. Attack defense case. Request favourable verdict.',
+    rebuttal: role === 'prosecutor' 
+      ? `Counter defense arguments for ${defenseSide} with evidence. Address weaknesses.` 
+      : `Counter plaintiff rebuttals. Highlight remaining key facts.`,
+    closing_arguments: `Summarize favorable evidence for ${role === 'prosecutor' ? plaintiffSide : defenseSide}. Request a favorable verdict.`,
     judge_deliberation: 'Wait respectfully. Accept verdict.',
     verdict: 'Accept verdict gracefully. Thank the court.',
     case_summary: 'Express gratitude for fair proceedings.',
@@ -162,12 +171,15 @@ function getFallbackMessage(role: AgentRole): string {
   }
 }
 
-function getPersonaInstructions(role: AgentRole): string {
+function getPersonaInstructions(role: AgentRole, caseData?: CaseData): string {
+  const plaintiffSide = caseData?.plaintiffSide || 'the Plaintiff';
+  const defenseSide = caseData?.defenseSide || 'the Defendant';
+
   const base = role === 'judge' 
     ? `You are the Presiding Judge. Remain neutral, fair, and procedural. Control the courtroom firmly but courteously. Keep arguments simple and clear.`
     : role === 'prosecutor'
-    ? `You are Plaintiff Counsel representing the Hen. Argue simply and persuasively in plain English.`
-    : `You are Defense Counsel representing the Egg. Challenge arguments and explain concepts in clear layman terms.`;
+    ? `You are Plaintiff Counsel representing ${plaintiffSide}. Argue simply and persuasively in plain English.`
+    : `You are Defense Counsel representing ${defenseSide}. Challenge arguments and explain concepts in clear layman terms.`;
 
   const outputRule = `\n\nOUTPUT FORMAT RULES (CRITICAL):
 - You must output ONLY the direct spoken response of your character.
@@ -179,12 +191,12 @@ function getPersonaInstructions(role: AgentRole): string {
 - Keep your response brief: target 2 to 5 short sentences (maximum 80-140 words).
 - Write in plain English, short, layman-friendly, and human style.
 - Avoid long legalistic essays, excessive markdown, and heavy jargon.
-- If discussing the Chicken and Egg case:
-  * Plaintiff (Hen side) must keep it simple: an egg needs a living bird (hen) to lay it first (the living bird requirement).
-  * Defense (Egg side) must keep it simple: evolution/mutation occurred in a proto-bird, so the egg existed before the modern hen.
+- If discussing the case:
+  * Plaintiff counsel (${plaintiffSide} side) must argue in favor of their claim and evidence.
+  * Defense counsel (${defenseSide} side) must counter their points and argue in favor of their defense and evidence.
   * Judge must remain neutral, simple, and direct.`;
 
-  const restrictions = `\n\nIMPORTANT CONSTRAINTS:\n- NEVER give legal advice outside simulation.\n- Cite evidence IDs when discussing evidence (e.g., E01, E02).\n- Stay in character throughout.\n- Use proper courtroom decorum.\n- This is an educational simulation - not real legal counsel.`;
+  const restrictions = `\n\nIMPORTANT CONSTRAINTS:\n- NEVER give legal advice outside simulation.\n- Cite evidence IDs when discussing evidence (e.g., EXHIBITP1, EXHIBITD1, E01, E02).\n- Stay in character throughout.\n- Use proper courtroom decorum.\n- This is an educational simulation - not real legal counsel.`;
 
   return base + outputRule + lengthRule + restrictions;
 }
@@ -202,13 +214,14 @@ export async function generateAgentResponse(params: {
   caseSummary: string;
   objectionHistory?: ObjectionEvent[];
   caseKeyFacts?: string[];
+  caseData?: CaseData;
 }): Promise<{
   message: string;
   providerUsed: string;
   modelUsed: string;
   responseSource: 'mock' | 'real' | 'fallback';
 }> {
-  const { role, config, phase, transcript, evidence, caseSummary, objectionHistory = [], caseKeyFacts = [] } = params;
+  const { role, config, phase, transcript, evidence, caseSummary, objectionHistory = [], caseKeyFacts = [], caseData } = params;
   const providerId = (config as any).providerId || 'mock';
 
   const context = buildCourtroomContext({
@@ -221,8 +234,8 @@ export async function generateAgentResponse(params: {
   });
 
   const contextStr = formatContextAsPrompt(context);
-  const phaseInstruction = getPhaseInstruction(phase, role);
-  const persona = getPersonaInstructions(role);
+  const phaseInstruction = getPhaseInstruction(phase, role, caseData);
+  const persona = getPersonaInstructions(role, caseData);
 
   const prompt = `${persona}\n\n${contextStr}\n\nTask: ${phaseInstruction}\n\nREMINDER: You must output ONLY the direct courtroom speech of your character. Do NOT include planning notes, meta-commentary, or instructions.`;
 
@@ -230,13 +243,14 @@ export async function generateAgentResponse(params: {
     const ready = await isProviderReady(providerId);
 
     if (ready) {
-      const message = await generateResponse({
+      const { message } = await generateResponseWithMetadata({
         role,
         config,
         phase,
         transcript,
         evidence,
         prompt,
+        caseData,
       });
 
       return {
@@ -246,17 +260,18 @@ export async function generateAgentResponse(params: {
         responseSource: 'real',
       };
     } else {
-      const msg = await generateResponse({
+      const { message } = await generateResponseWithMetadata({
         role,
         config,
         phase,
         transcript,
         evidence,
         prompt,
+        caseData,
       });
 
       return {
-        message: sanitizeAgentResponse(msg) || getFallbackMessage(role),
+        message: sanitizeAgentResponse(message) || getFallbackMessage(role),
         providerUsed: 'mock',
         modelUsed: config.model,
         responseSource: 'fallback',
@@ -264,17 +279,18 @@ export async function generateAgentResponse(params: {
     }
   } catch (error) {
     console.error(`Provider error: ${providerId}`, error);
-    const fallback = await generateResponse({
+    const { message } = await generateResponseWithMetadata({
       role,
       config,
       phase,
       transcript,
       evidence,
       prompt,
+      caseData,
     });
 
     return {
-      message: sanitizeAgentResponse(fallback) || getFallbackMessage(role),
+      message: sanitizeAgentResponse(message) || getFallbackMessage(role),
       providerUsed: 'mock',
       modelUsed: config.model,
       responseSource: 'fallback',

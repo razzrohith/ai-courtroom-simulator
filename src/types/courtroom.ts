@@ -198,6 +198,12 @@ export interface Verdict {
   // Phase 12: Deliberation and appeals
   deliberationSummary?: string;
   appealGrounds?: string[];
+  // Verdict Clarity Enhancements
+  winnerName?: string;
+  whyWinnerWon?: string;
+  whyLoserLost?: string;
+  keyReasons?: string[];
+  evidenceConsidered?: string[];
 }
 
 export interface CaseData {
@@ -210,6 +216,9 @@ export interface CaseData {
   keyFacts: string[];
   evidenceItems: Evidence[];
   legalQuestions: string[];
+  caseSource?: 'custom' | 'preset';
+  presetId?: string;
+  schemaVersion?: number;
 }
 
 export interface CourtState {

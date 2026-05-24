@@ -46,9 +46,47 @@ export function VerdictPanel({ verdict, evidence, objections }: VerdictPanelProp
           <VerdictStampAnimation show={true} verdict={decision.label} />
         </div>
 
+        {/* Verdict Clarity Details */}
+        {verdict.winnerName && (
+          <div className="bg-yellow-950/20 border border-yellow-750/30 rounded-lg p-4 space-y-3">
+            <div>
+              <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Winner</span>
+              <span className="text-base font-bold text-yellow-500">{verdict.winnerName}</span>
+            </div>
+            <div>
+              <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Why this side won</span>
+              <span className="text-sm text-gray-200">{verdict.whyWinnerWon}</span>
+            </div>
+            <div>
+              <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Why the other side did not win</span>
+              <span className="text-sm text-gray-200">{verdict.whyLoserLost}</span>
+            </div>
+            {verdict.keyReasons && verdict.keyReasons.length > 0 && (
+              <div>
+                <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Key reasons</span>
+                <ul className="text-xs text-gray-300 space-y-1 list-disc pl-4">
+                  {verdict.keyReasons.map((reason, i) => (
+                    <li key={i}>{reason}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {verdict.evidenceConsidered && verdict.evidenceConsidered.length > 0 && (
+              <div>
+                <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Evidence/facts considered</span>
+                <ul className="text-xs text-gray-300 space-y-1 list-disc pl-4">
+                  {verdict.evidenceConsidered.map((ev, i) => (
+                    <li key={i}>{ev}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Reasoning */}
         <div>
-          <h4 className="text-sm font-medium text-gray-400 mb-2">Reasoning</h4>
+          <h4 className="text-sm font-medium text-gray-400 mb-2">Reasoning Summary</h4>
           <p className="text-sm">{verdict.reasoningSummary}</p>
         </div>
 

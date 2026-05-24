@@ -8,7 +8,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { CourtroomLayout } from './components/CourtroomLayout';
 import { createInitialState, startSimulation, processNextTurnAsync, resetSimulation, skipToNextPhase, ruleOnObjection, getNextSpeakerRole } from './orchestration/courtControllerAsync';
-import { saveSession, loadSession, clearSession, hasSavedSession } from './data/sessionPersistence';
+import { saveSession, loadSession, clearSession } from './data/sessionPersistence';
 import type { CourtState, TranscriptEntry, CaseData } from './types/courtroom';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 import { LanguageProvider } from './contexts/LanguageContext';
@@ -35,7 +35,8 @@ function App() {
 
   // Check for saved session on mount
   useEffect(() => {
-    setHasSession(hasSavedSession());
+    const saved = loadSession();
+    setHasSession(saved !== null);
   }, []);
 
   const lastProcessedEntryIdRef = useRef<string | null>(null);

@@ -3,7 +3,7 @@
  * Phase 17.5: Add LM Studio support
  */
 
-import type { TranscriptEntry, Evidence, CourtPhase } from '../types/courtroom';
+import type { TranscriptEntry, Evidence, CourtPhase, CaseData } from '../types/courtroom';
 import type { AgentRole } from '../types/courtroom';
 
 /**
@@ -85,10 +85,12 @@ export async function generateWithLMStudio(params: {
   evidence: Evidence[];
   prompt: string;
   baseUrl?: string;
+  caseData?: CaseData;
 }): Promise<string> {
   const baseUrl = params.baseUrl || 'http://localhost:1234';
   
-  const { role, model, phase, transcript, evidence, prompt } = params;
+  const { role, model, phase, transcript, evidence, prompt, caseData } = params;
+  void caseData;
   
   // Build evidence context
   const evidenceContext = evidence.length > 0 

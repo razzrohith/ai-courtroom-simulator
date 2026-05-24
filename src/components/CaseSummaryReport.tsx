@@ -111,9 +111,25 @@ export function CaseSummaryReport({ state }: CaseSummaryReportProps) {
       addSep(lines, '-'.repeat(30));
       lines.push(`Decision: ${verdict.decision.replace('_', ' ')}`);
       lines.push('');
+      
+      if (verdict.winnerName) {
+        lines.push(`Winner: ${verdict.winnerName}`);
+        lines.push(`Why this side won: ${verdict.whyWinnerWon}`);
+        lines.push(`Why the other side did not win: ${verdict.whyLoserLost}`);
+        if (verdict.keyReasons && verdict.keyReasons.length > 0) {
+          lines.push('Key reasons:');
+          verdict.keyReasons.forEach(r => lines.push(`- ${r}`));
+        }
+        if (verdict.evidenceConsidered && verdict.evidenceConsidered.length > 0) {
+          lines.push('Evidence/facts considered:');
+          verdict.evidenceConsidered.forEach(ev => lines.push(`- ${ev}`));
+        }
+        lines.push('');
+      }
+
       lines.push(verdict.ruling);
       lines.push('');
-      lines.push('Reasoning:');
+      lines.push('Reasoning Summary:');
       lines.push(verdict.reasoningSummary);
       lines.push('');
       

@@ -20,6 +20,7 @@ import {
   isProviderConfigured,
   getAgentConnectionStatus,
   getAgentStatusError,
+  API_KEY_STORAGE_KEYS,
 } from '../types/providers';
 import { 
   fetchOpenRouterModels, 
@@ -31,7 +32,8 @@ import {
   getCachedModels,
   setCachedModels,
   filterModels,
-  type ModelInfo 
+  type ModelInfo,
+  OPENROUTER_FREE_MODELS,
 } from '../providers/modelCatalog';
 import { LoadingSpinner } from './visuals/CourtroomVisuals';
 import { testProviderAndModel } from '../providers/runtime';
@@ -77,6 +79,15 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
   const [keyInputs, setKeyInputs] = useState<Partial<Record<ProviderId, string>>>({});
   const [rememberKeys, setRememberKeys] = useState<Partial<Record<ProviderId, boolean>>>({});
   const [statusTrigger, setStatusTrigger] = useState(0);
+  const [autoPickStatus, setAutoPickStatus] = useState<Record<AgentRole, {
+    running: boolean;
+    success?: boolean;
+    message?: string;
+  }>>({
+    judge: { running: false },
+    prosecutor: { running: false },
+    defense: { running: false },
+  });
 
   useEffect(() => {
     const handleStatusChange = () => {
@@ -87,8 +98,6 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
       window.removeEventListener('judgebench-provider-status-changed', handleStatusChange);
     };
   }, []);
-  
-
   
   // Model catalog state
   const [modelsLoading, setModelsLoading] = useState<Record<ProviderId, boolean>>({
@@ -147,10 +156,17 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
     setConfig(loaded);
     
     const newStatus: Record<ProviderId, 'connected' | 'missing'> = {} as typeof connectionStatus;
+    const initialRemember: Partial<Record<ProviderId, boolean>> = {};
+
     (Object.keys(PROVIDER_REGISTRY) as ProviderId[]).forEach(pid => {
       newStatus[pid] = isProviderConfigured(pid) ? 'connected' : 'missing';
+      const storageKey = API_KEY_STORAGE_KEYS[pid];
+      if (storageKey) {
+        initialRemember[pid] = localStorage.getItem(storageKey) !== null;
+      }
     });
     setConnectionStatus(newStatus);
+    setRememberKeys(initialRemember);
     
     // Pre-load models for all configured providers
     (Object.keys(AGENT_LABELS) as AgentRole[]).forEach((role) => {
@@ -323,14 +339,131 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
       search: modelFilters.search,
     });
   }, [modelCache, modelFilters]);
-
   const getEntry = (providerId: ProviderId): ProviderRegistryEntry => getProviderEntry(providerId);
+
+  // Sequential test loop for auto-picking free OpenRouter models
+  const handleAutoPick = async (role: AgentRole) => {
+    setAutoPickStatus(prev => ({
+      ...prev,
+      [role]: { running: true, message: 'Starting model test loop...' }
+    }));
+
+    const agentConfig = config[role];
+    const personalKey = loadApiKey('openrouter');
+    const proxyUrl = import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL;
+    const mode = agentConfig?.openRouterMode || (proxyUrl ? 'demo' : 'personal');
+
+    let url = '';
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (mode === 'demo') {
+      if (!proxyUrl) {
+        setAutoPickStatus(prev => ({
+          ...prev,
+          [role]: { running: false, success: false, message: 'Error: Free demo gateway not configured.' }
+        }));
+        return;
+      }
+      url = proxyUrl;
+    } else {
+      if (!personalKey) {
+        setAutoPickStatus(prev => ({
+          ...prev,
+          [role]: { running: false, success: false, message: 'Error: Personal API key is missing.' }
+        }));
+        return;
+      }
+      url = 'https://openrouter.ai/api/v1/chat/completions';
+      headers['Authorization'] = `Bearer ${personalKey}`;
+      headers['HTTP-Referer'] = window.location.origin;
+    }
+
+    const testPrompt = 'say OK';
+    let workingModel: string | null = null;
+    let finalMessage = '';
+
+    for (const modelInfo of OPENROUTER_FREE_MODELS) {
+      setAutoPickStatus(prev => ({
+        ...prev,
+        [role]: { running: true, message: `Testing: ${modelInfo.name}...` }
+      }));
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000); // 4-second timeout limit
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            model: modelInfo.id,
+            messages: [
+              { role: 'user', content: testPrompt }
+            ],
+            max_tokens: 5,
+          }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const resData = await response.json();
+          if (resData?.choices?.[0]?.message?.content) {
+            workingModel = modelInfo.id;
+            finalMessage = `Success: Selected ${modelInfo.name}!`;
+            break;
+          } else {
+            throw new Error('Invalid response structure');
+          }
+        } else {
+          const errText = await response.text();
+          // Error classification
+          if (response.status === 429) {
+            throw new Error('Rate limit exceeded (429)');
+          } else if (response.status === 401 || response.status === 403) {
+            throw new Error('Authentication/Auth error');
+          } else if (response.status === 503 || response.status === 504) {
+            throw new Error('Model temporarily busy/unavailable');
+          } else {
+            throw new Error(`API error ${response.status}: ${errText.substring(0, 50)}`);
+          }
+        }
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        let errorType = 'Network or connection error';
+        if (err.name === 'AbortError') {
+          errorType = 'Timeout (took > 4s)';
+        } else if (err instanceof Error) {
+          errorType = err.message;
+        }
+        console.warn(`Auto-pick test failed for ${modelInfo.id}: ${errorType}`);
+        finalMessage = `Failed ${modelInfo.name}: ${errorType}`;
+      }
+    }
+
+    if (workingModel) {
+      updateAgentConfig(role, { model: workingModel });
+      setAutoPickStatus(prev => ({
+        ...prev,
+        [role]: { running: false, success: true, message: finalMessage }
+      }));
+      setConnectionStatus(prev => ({ ...prev, openrouter: 'connected' }));
+    } else {
+      setAutoPickStatus(prev => ({
+        ...prev,
+        [role]: { running: false, success: false, message: `Auto-pick failed: All tested free models are currently busy or rate-limited.` }
+      }));
+    }
+  };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" data-status-trigger={statusTrigger}>
-      <div className="bg-courtroom-card border border-gray-700 rounded-lg w-full max-w-3xl max-h-[calc(100dvh-2rem)] overflow-hidden flex flex-col">
+      <div className="bg-courtroom-card border border-gray-700 rounded-lg w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
         <div className="p-4 border-b border-gray-700 flex items-center justify-between">
           <h2 className="text-lg font-bold text-yellow-500">Provider Configuration</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-xl">x</button>
@@ -536,37 +669,72 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
 
                     {/* OpenRouter Mode Selector */}
                     {agentConfig?.providerId === 'openrouter' && (
-                      <div className="mt-3 bg-gray-900/40 p-2.5 rounded-lg border border-gray-700/50">
-                        <label className="block text-xs font-semibold text-gray-305 mb-2">OpenRouter Connection Type</label>
-                        <div className="flex gap-4">
-                          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-                            <input
-                              type="radio"
-                              name={`or-mode-${role}`}
-                              checked={agentConfig.openRouterMode === 'demo' || (!agentConfig.openRouterMode && hasProxy)}
-                              onChange={() => {
-                                const defaultFreeModel = 'meta-llama/llama-3.3-70b-instruct:free';
-                                updateAgentConfig(role, { 
-                                  openRouterMode: 'demo',
-                                  model: defaultFreeModel 
-                                });
-                              }}
-                              className="text-yellow-500 focus:ring-yellow-500 bg-gray-950 border-gray-700"
-                            />
-                            <span>OpenRouter Free Demo</span>
-                          </label>
-                          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-                            <input
-                              type="radio"
-                              name={`or-mode-${role}`}
-                              checked={agentConfig.openRouterMode === 'personal' || (!agentConfig.openRouterMode && !hasProxy)}
-                              onChange={() => {
-                                updateAgentConfig(role, { openRouterMode: 'personal' });
-                              }}
-                              className="text-yellow-500 focus:ring-yellow-500 bg-gray-950 border-gray-700"
-                            />
-                            <span>Personal API Key</span>
-                          </label>
+                      <div className="mt-3 bg-gray-900/40 p-2.5 rounded-lg border border-gray-700/50 space-y-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-305 mb-2">OpenRouter Connection Type</label>
+                          <div className="flex gap-4">
+                            <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                              <input
+                                type="radio"
+                                name={`or-mode-${role}`}
+                                checked={agentConfig.openRouterMode === 'demo' || (!agentConfig.openRouterMode && hasProxy)}
+                                onChange={() => {
+                                  const defaultFreeModel = 'meta-llama/llama-3.3-70b-instruct:free';
+                                  updateAgentConfig(role, { 
+                                    openRouterMode: 'demo',
+                                    model: defaultFreeModel 
+                                  });
+                                }}
+                                className="text-yellow-500 focus:ring-yellow-500 bg-gray-950 border-gray-700"
+                              />
+                              <span>OpenRouter Free Demo</span>
+                            </label>
+                            <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                              <input
+                                type="radio"
+                                name={`or-mode-${role}`}
+                                checked={agentConfig.openRouterMode === 'personal' || (!agentConfig.openRouterMode && !hasProxy)}
+                                onChange={() => {
+                                  updateAgentConfig(role, { openRouterMode: 'personal' });
+                                }}
+                                className="text-yellow-500 focus:ring-yellow-500 bg-gray-950 border-gray-700"
+                              />
+                              <span>Personal API Key</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Auto-pick working free OpenRouter model */}
+                        <div className="border-t border-gray-800 pt-2.5 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-gray-300">
+                              Auto-pick working free OpenRouter model
+                            </span>
+                            <button
+                              onClick={() => handleAutoPick(role)}
+                              disabled={autoPickStatus[role]?.running}
+                              className={`text-xs px-2.5 py-1 rounded transition-colors ${
+                                autoPickStatus[role]?.running
+                                  ? 'bg-blue-800 text-blue-300 cursor-not-allowed'
+                                  : 'bg-purple-600 hover:bg-purple-500 text-white'
+                              }`}
+                            >
+                              {autoPickStatus[role]?.running ? '⏳ Testing...' : '⚡ Auto-Pick Now'}
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-gray-400">
+                            Sequentially tests free OpenRouter models (max 4s timeout) and selects a working one.
+                            Uses your configured OpenRouter API key or proxy if available (free models do not always mean keyless access).
+                          </p>
+                          {autoPickStatus[role]?.message && (
+                            <div className={`text-xs p-1.5 rounded ${
+                              autoPickStatus[role]?.success 
+                                ? 'bg-emerald-950/20 text-emerald-400 border border-emerald-900/30' 
+                                : 'bg-red-950/20 text-red-400 border border-red-900/30'
+                            }`}>
+                              {autoPickStatus[role]?.message}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -600,22 +768,6 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                   </div>
                 );
               })}
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  onClick={handleSave}
-                  disabled={!isDirty}
-                  className={`px-4 py-2 rounded text-sm ${isDirty ? 'bg-yellow-700 hover:bg-yellow-600 text-white' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`}
-                >
-                  Save Configuration
-                </button>
-                <button
-                  onClick={handleReset}
-                  className="px-4 py-2 rounded text-sm bg-gray-700 hover:bg-gray-600 text-gray-300"
-                >
-                  Reset to Defaults
-                </button>
-              </div>
             </div>
           )}
 
@@ -699,7 +851,7 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
               </div>
 
               {!speech.supported ? (
-                <div className="bg-red-950/20 border border-red-900/50 rounded-lg p-4 text-center text-sm text-red-400 font-medium">
+                <div className="bg-red-955/20 border border-red-900/50 rounded-lg p-4 text-center text-sm text-red-400 font-medium">
                   Speech Synthesis is not supported in this browser.
                 </div>
               ) : speech.voices.length === 0 ? (
@@ -767,6 +919,33 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
               )}
             </div>
           )}
+        </div>
+
+        {/* Sticky/Fixed Footer */}
+        <div className="p-4 border-t border-gray-700 bg-gray-900 flex justify-end gap-3">
+          <button
+            onClick={handleReset}
+            className="px-4 py-2 rounded text-sm bg-gray-850 hover:bg-gray-750 text-gray-355 transition-colors duration-200"
+          >
+            Reset to Defaults
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!isDirty}
+            className={`px-4 py-2 rounded text-sm transition-colors duration-200 ${
+              isDirty 
+                ? 'bg-yellow-600 hover:bg-yellow-555 text-white font-bold' 
+                : 'bg-gray-800 text-gray-500 cursor-not-allowed shadow-none'
+            }`}
+          >
+            Save Configuration
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded text-sm bg-gray-700 hover:bg-gray-650 text-white transition-colors duration-200"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>

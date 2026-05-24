@@ -3,7 +3,7 @@
  * Phase 14: Direct Anthropic runtime
  */
 
-import type { TranscriptEntry, Evidence, CourtPhase } from '../types/courtroom';
+import type { TranscriptEntry, Evidence, CourtPhase, CaseData } from '../types/courtroom';
 import type { AgentRole } from '../types/courtroom';
 import { loadApiKey } from '../types/providers';
 
@@ -75,13 +75,15 @@ export async function generateWithAnthropic(params: {
   transcript: TranscriptEntry[];
   evidence: Evidence[];
   prompt: string;
+  caseData?: CaseData;
 }): Promise<string> {
   const apiKey = loadApiKey('anthropic');
   if (!apiKey) {
     throw new Error('Anthropic API key not configured');
   }
 
-  const { role, model, phase, transcript, evidence, prompt } = params;
+  const { role, model, phase, transcript, evidence, prompt, caseData } = params;
+  void caseData;
   
   // Build evidence context
   const evidenceContext = evidence.length > 0 

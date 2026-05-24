@@ -5,7 +5,7 @@
  * Phase 17: Enhanced with token usage tracking
  */
 
-import type { AgentRole, TranscriptEntry, Evidence, CourtPhase } from '../types/courtroom';
+import type { AgentRole, TranscriptEntry, Evidence, CourtPhase, CaseData } from '../types/courtroom';
 import type { AgentModelConfig, ProviderId } from '../types/providers';
 import { setAgentConnectionStatus, loadApiKey } from '../types/providers';
 import { generateMockResponse } from './mockModelProvider';
@@ -182,20 +182,21 @@ export async function generateResponse(params: {
   transcript: TranscriptEntry[];
   evidence: Evidence[];
   prompt: string;
+  caseData?: CaseData;
 }): Promise<string> {
-  const { role, config, phase, prompt } = params;
+  const { role, config, phase, prompt, caseData } = params;
   const providerId = config.providerId;
   
   // Use mock for 'mock' provider
   if (providerId === 'mock') {
-    return generateMockResponse({ role, phase, prompt, transcript: params.transcript });
+    return generateMockResponse({ role, phase, prompt, transcript: params.transcript, caseData });
   }
   
   // OpenRouter
   if (providerId === 'openrouter') {
     if (!isOpenRouterConfigured()) {
       console.warn('OpenRouter API key not configured, falling back to mock');
-      return generateMockResponse({ role, phase, prompt, transcript: params.transcript });
+      return generateMockResponse({ role, phase, prompt, transcript: params.transcript, caseData });
     }
     
     try {
@@ -206,10 +207,11 @@ export async function generateResponse(params: {
         transcript: params.transcript,
         evidence: params.evidence,
         prompt,
+        caseData,
       });
     } catch (error) {
       console.error('OpenRouter error, falling back to mock:', error);
-      return generateMockResponse({ role, phase, prompt, transcript: params.transcript });
+      return generateMockResponse({ role, phase, prompt, transcript: params.transcript, caseData });
     }
   }
   
@@ -218,7 +220,7 @@ export async function generateResponse(params: {
     const available = await isOllamaAvailable();
     if (!available) {
       console.warn('Ollama unavailable, falling back to mock');
-      return generateMockResponse({ role, phase, prompt, transcript: params.transcript });
+      return generateMockResponse({ role, phase, prompt, transcript: params.transcript, caseData });
     }
     
     try {
@@ -229,10 +231,11 @@ export async function generateResponse(params: {
         transcript: params.transcript,
         evidence: params.evidence,
         prompt,
+        caseData,
       });
     } catch (error) {
       console.error('Ollama error, falling back to mock:', error);
-      return generateMockResponse({ role, phase, prompt, transcript: params.transcript });
+      return generateMockResponse({ role, phase, prompt, transcript: params.transcript, caseData });
     }
   }
   
@@ -240,7 +243,7 @@ export async function generateResponse(params: {
   if (providerId === 'openai') {
     if (!isOpenAIConfigured()) {
       console.warn('OpenAI API key not configured, falling back to mock');
-      return generateMockResponse({ role, phase, prompt, transcript: params.transcript });
+      return generateMockResponse({ role, phase, prompt, transcript: params.transcript, caseData });
     }
     
     try {
@@ -251,10 +254,11 @@ export async function generateResponse(params: {
         transcript: params.transcript,
         evidence: params.evidence,
         prompt,
+        caseData,
       });
     } catch (error) {
       console.error('OpenAI error, falling back to mock:', error);
-      return generateMockResponse({ role, phase, prompt, transcript: params.transcript });
+      return generateMockResponse({ role, phase, prompt, transcript: params.transcript, caseData });
     }
   }
   
@@ -262,7 +266,7 @@ export async function generateResponse(params: {
   if (providerId === 'anthropic') {
     if (!isAnthropicConfigured()) {
       console.warn('Anthropic API key not configured, falling back to mock');
-      return generateMockResponse({ role, phase, prompt, transcript: params.transcript });
+      return generateMockResponse({ role, phase, prompt, transcript: params.transcript, caseData });
     }
     
     try {
@@ -273,10 +277,11 @@ export async function generateResponse(params: {
         transcript: params.transcript,
         evidence: params.evidence,
         prompt,
+        caseData,
       });
     } catch (error) {
       console.error('Anthropic error, falling back to mock:', error);
-      return generateMockResponse({ role, phase, prompt, transcript: params.transcript });
+      return generateMockResponse({ role, phase, prompt, transcript: params.transcript, caseData });
     }
   }
   
@@ -284,7 +289,7 @@ export async function generateResponse(params: {
   if (providerId === 'gemini') {
     if (!isGeminiConfigured()) {
       console.warn('Gemini API key not configured, falling back to mock');
-      return generateMockResponse({ role, phase, prompt, transcript: params.transcript });
+      return generateMockResponse({ role, phase, prompt, transcript: params.transcript, caseData });
     }
     
     try {
@@ -295,10 +300,11 @@ export async function generateResponse(params: {
         transcript: params.transcript,
         evidence: params.evidence,
         prompt,
+        caseData,
       });
     } catch (error) {
       console.error('Gemini error, falling back to mock:', error);
-      return generateMockResponse({ role, phase, prompt, transcript: params.transcript });
+      return generateMockResponse({ role, phase, prompt, transcript: params.transcript, caseData });
     }
   }
   
@@ -307,7 +313,7 @@ export async function generateResponse(params: {
     const available = await isLMStudioAvailable();
     if (!available) {
       console.warn('LM Studio unavailable, falling back to mock');
-      return generateMockResponse({ role, phase, prompt, transcript: params.transcript });
+      return generateMockResponse({ role, phase, prompt, transcript: params.transcript, caseData });
     }
     
     try {
@@ -318,16 +324,17 @@ export async function generateResponse(params: {
         transcript: params.transcript,
         evidence: params.evidence,
         prompt,
+        caseData,
       });
     } catch (error) {
       console.error('LM Studio error, falling back to mock:', error);
-      return generateMockResponse({ role, phase, prompt, transcript: params.transcript });
+      return generateMockResponse({ role, phase, prompt, transcript: params.transcript, caseData });
     }
   }
   
   // Unknown provider, use mock
   console.warn(`Unknown provider ${providerId}, using mock`);
-  return generateMockResponse({ role, phase, prompt, transcript: params.transcript });
+  return generateMockResponse({ role, phase, prompt, transcript: params.transcript, caseData });
 }
 
 // Helper to check if a provider is ready
@@ -362,8 +369,9 @@ export async function generateResponseWithMetadata(params: {
   transcript: TranscriptEntry[];
   evidence: Evidence[];
   prompt: string;
+  caseData?: CaseData;
 }): Promise<{ message: string; metadata: ResponseMetadata }> {
-  const { role, config, phase, transcript, evidence, prompt } = params;
+  const { role, config, phase, transcript, evidence, prompt, caseData } = params;
   const startTime = Date.now();
   const providerId = config.providerId;
   const modelName = config.model;
@@ -375,6 +383,7 @@ export async function generateResponseWithMetadata(params: {
     transcript,
     evidence,
     prompt,
+    caseData,
   });
   const latencyMs = Date.now() - startTime;
   

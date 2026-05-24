@@ -36,7 +36,22 @@ export function loadSession(): Partial<CourtState> | null {
   try {
     const saved = localStorage.getItem(SESSION_KEY);
     if (!saved) return null;
-    return JSON.parse(saved);
+    const parsed = JSON.parse(saved);
+    
+    // Check if it's a stale Hen/Egg session (without schemaVersion or caseSource)
+    if (parsed && parsed.case) {
+      const isStaleHenEgg = 
+        !parsed.case.schemaVersion && 
+        (parsed.case.title?.toLowerCase().includes('hen') && parsed.case.title?.toLowerCase().includes('egg'));
+      
+      if (isStaleHenEgg) {
+        console.warn('Discarding stale Hen/Egg session');
+        clearSession();
+        return null;
+      }
+    }
+    
+    return parsed;
   } catch (err) {
     console.error('Failed to load session:', err);
     return null;

@@ -4,7 +4,7 @@
 
 import type { IModelProvider } from './modelProviderTypes';
 import { sanitizeAgentResponse } from '../utils/sanitizeAgentResponse';
-import type { AgentRole, CourtPhase, TranscriptEntry } from '../types/courtroom';
+import type { AgentRole, CourtPhase, TranscriptEntry, CaseData } from '../types/courtroom';
 
 /**
  * Mock provider implementation
@@ -43,8 +43,9 @@ export function generateMockResponse(params: {
   phase: CourtPhase;
   prompt: string;
   transcript?: TranscriptEntry[];
+  caseData?: CaseData;
 }): string {
-  const { role, phase, transcript } = params;
+  const { role, phase, transcript, caseData } = params;
   
   // Calculate how many substantive entries exist for this speaker in current phase
   const substantiveEntries = transcript ? transcript.filter(
@@ -55,6 +56,157 @@ export function generateMockResponse(params: {
          !t.id.startsWith('trans-ruling-')
   ) : [];
   const turnIndex = substantiveEntries.length;
+
+  const isHenEgg = caseData?.title?.toLowerCase().includes('hen') && caseData?.title?.toLowerCase().includes('egg');
+  if (caseData && !isHenEgg) {
+    const plaintiff = caseData.plaintiffSide || 'the Plaintiff';
+    const defense = caseData.defenseSide || 'the Defendant';
+    const title = caseData.title || 'this dispute';
+    const summary = caseData.claimSummary || 'the active claim';
+    const judgeName = 'Justice Arvind Menon';
+    const prosecutorName = 'Advocate Rahul Verma';
+    const defenseName = 'Advocate Sneha Kapoor';
+
+    const pClean = plaintiff.replace(/[^a-zA-Z0-9 ]/g, '').split(' ')[0] || 'Plaintiff';
+    const dClean = defense.replace(/[^a-zA-Z0-9 ]/g, '').split(' ')[0] || 'Defendant';
+    const pWitnessName = `Dr. Sarah ${pClean}`;
+    const dWitnessName = `Dr. David ${dClean}`;
+    const pWitnessLastName = pClean;
+    const dWitnessLastName = dClean;
+
+    const dynamicResponses: Record<CourtPhase, Record<AgentRole, string | string[]>> = {
+      case_setup: {
+        judge: `This court is now in session. We will proceed with the case of ${title}.`,
+        prosecutor: `Your Honor, we are prepared to present the plaintiff's case on behalf of ${plaintiff}.`,
+        defense: `Your Honor, the defense is ready to represent ${defense}.`,
+      },
+      court_opening: {
+        judge: [
+          `This court is now in session. The Honorable ${judgeName} presiding. We are here to resolve the dispute: ${title}. Counsel, please state your appearances for the record.`,
+          `Excellent. Counsel for both parties have introduced themselves. We will now proceed to opening statements. Advocate ${prosecutorName.split(' ')[1]}, you may begin.`
+        ],
+        prosecutor: `Yes, Your Honor. Representing the Plaintiff, ${plaintiff}, I am Advocate ${prosecutorName}. We are ready to proceed.`,
+        defense: `Representing the Defendant, ${defense}, I am Advocate ${defenseName}. We are also ready, Your Honor.`,
+      },
+      plaintiff_opening: {
+        judge: [
+          `Advocate ${prosecutorName.split(' ')[1]}, please present the opening statement for the Plaintiff.`,
+          `Save it for your opening, Advocate ${defenseName.split(' ')[1]}. Advocate ${prosecutorName.split(' ')[1]} has laid out the plaintiff's foundation. Advocate ${defenseName.split(' ')[1]}, you may now present the defense's opening statement.`
+        ],
+        prosecutor: `Good morning, Your Honor. The Plaintiff, ${plaintiff}, claims that we are entitled to a favorable judgment because: ${summary}. We will show that our position is supported by the facts and evidence.`,
+        defense: `Your Honor, if I may object—the plaintiff's claims are completely unfounded.`,
+      },
+      defense_opening: {
+        judge: [
+          `Advocate ${defenseName.split(' ')[1]}, the floor is yours for the Defense's opening.`,
+          `Order, counsel. We will let the evidence speak. Let us transition to the official evidence presentation.`
+        ],
+        prosecutor: `We ask the court to note that the plaintiff's arguments remain solid.`,
+        defense: [
+          `Thank you, Your Honor. The Plaintiff focuses on incorrect premises. In contrast, the Defendant, ${defense}, will demonstrate that the truth is otherwise. We will show that ${summary} should lead to a verdict in our favor.`
+        ],
+      },
+      evidence_presentation: {
+        judge: [
+          `Advocate ${prosecutorName.split(' ')[1]}, please present your primary evidence.`,
+          `Wait, Advocate ${defenseName.split(' ')[1]}. Are you arguing that the opposing side's evidence is irrelevant?`,
+          `This is a key point of disagreement. Let us hear from the expert witnesses to clarify these boundaries.`
+        ],
+        prosecutor: [
+          `Your Honor, we submit Exhibit P-1, our technical report. It shows that the metrics and benchmarks favor ${plaintiff} decisively. We ask the court to admit it.`,
+          `Exactly, Your Honor! If the evidence supports ${plaintiff}, how could any other conclusion be reached?`
+        ],
+        defense: [
+          `The Plaintiff ignores key contextual elements. We present Exhibit D-1, detailing our own capability study. It shows that ${defense} has superior specialized attributes and performance details.`,
+          `No, Your Honor. The evidence in Exhibit D-1 shows a clear advantage for ${defense} in real-world scenarios.`
+        ],
+      },
+      objection_ruling: {
+        judge: `I will rule on this objection. The relevance of this evidence is critical to establishing the parameters of this dispute. The objection is overruled. The testimony shall proceed.`,
+        prosecutor: '',
+        defense: '',
+      },
+      cross_examination: {
+        judge: [
+          `Advocate ${prosecutorName.split(' ')[1]}, you may cross-examine the defense's expert witness, ${dWitnessName}.`,
+          `Counsel, let the witness answer. Dr. ${dWitnessLastName} has shown that these transitions are gradual. I will note these arguments.`
+        ],
+        prosecutor: [
+          `Dr. ${dWitnessLastName}, you state that the benchmarks are mixed. But isn't it true that your claims ignore the key advantages of ${plaintiff}?`,
+          `Dr. ${dWitnessLastName}, isn't it true that our technical report contains undisputed proof?`
+        ],
+        defense: [
+          `If I may interject, Dr. ${dWitnessLastName}'s report already clarifies that other parameters homologous to our system could achieve similar results.`,
+          `Your Honor, the exact composition of the benchmarks is secondary to the real-world utility.`
+        ],
+      },
+      witness_testimony: {
+        judge: [
+          `Let us proceed with the witness testimony. Advocate ${prosecutorName.split(' ')[1]}, call your witness.`,
+          `Understood, Advocate ${defenseName.split(' ')[1]}. Dr. ${pWitnessLastName}, please explain the priority from your perspective.`
+        ],
+        prosecutor: `I call ${pWitnessName}, our technical expert, to explain the performance synthesis.`,
+        defense: `Your Honor, we do not contest the identity of the witness, but rather their significance in priority.`,
+      },
+      motion_hearing: {
+        judge: [
+          `The court is open to motions regarding the admissibility of scientific exhibits.`,
+          `Both Exhibit P-1 and Exhibit D-1 are hereby admitted into the official record. They will be heavily weighed.`
+        ],
+        prosecutor: `Your Honor, we move to admit Exhibit P-1, the benchmarking analysis, as primary proof of ${plaintiff}'s claims.`,
+        defense: `We do not object, provided Exhibit D-1, the capability study, is also fully admitted to show defense priority.`,
+      },
+      jury_instructions: {
+        judge: `Members of the jury, you must decide this case based on the standard of proof. Weigh the technical benchmarks of ${plaintiff} against the capability study of ${defense}. Remember, this is a simulated legal exploration.`,
+        prosecutor: '',
+        defense: '',
+      },
+      rebuttal: {
+        judge: [
+          `We will now hear rebuttals. Advocate ${prosecutorName.split(' ')[1]}, you may go first.`
+        ],
+        prosecutor: [
+          `Thank you, Your Honor. The Defense's theory relies on abstract claims. But the benchmarks are clear. You cannot achieve these results without ${plaintiff}'s design, which is the material initiator of the priority.`,
+          `But their model cannot express itself without our design machinery!`
+        ],
+        defense: [
+          `Your Honor, materiality starts with the architecture. The Plaintiff's design is just a container. The actual value—the performance—starts inside the model. That is the origin of the priority.`,
+          `And that architecture was a transitional one, meaning the system containing the first true capability came first!`
+        ],
+      },
+      closing_arguments: {
+        judge: [
+          `Counsel, present your final closing arguments.`,
+          `Thank you, Counsel. The arguments have been exceptionally well-presented. This court will now recess for deliberation.`
+        ],
+        prosecutor: `The benchmarks dictate that ${plaintiff} is the superior choice. We ask the court to rule in favor of the plaintiff, ${plaintiff}.`,
+        defense: `The capability study dictates that ${defense} came first. We ask the court to rule in favor of the defendant, ${defense}.`,
+      },
+      judge_deliberation: {
+        judge: `The Court is now deliberating on ${title}. On one hand, we have the material proof of Exhibit P-1. On the other hand, the capability study of Exhibit D-1 establishes priority for the defense. We will balance these two perspectives.`,
+        prosecutor: '',
+        defense: '',
+      },
+      verdict: {
+        judge: `After careful consideration, this court rules in favor of the Defendant, ${defense}. The performance benchmarks and capability metrics establish priority for the defense. Verdict for the Defendant.`,
+        prosecutor: '',
+        defense: '',
+      },
+      case_summary: {
+        judge: `This concludes the proceedings of this simulated court. We thank Advocate ${prosecutorName} and Advocate ${defenseName} for their outstanding advocacy. This case demonstrates the beautiful intersection of design and capability. Court is dismissed.`,
+        prosecutor: '',
+        defense: '',
+      },
+    };
+
+    const responses = dynamicResponses[phase]?.[role];
+    if (Array.isArray(responses)) {
+      const raw = responses[turnIndex] || responses[responses.length - 1] || `[${role} at ${phase} turn ${turnIndex}]`;
+      return sanitizeAgentResponse(raw) || raw;
+    }
+    const raw = responses || `[${role} at ${phase}]`;
+    return sanitizeAgentResponse(raw) || raw;
+  }
   
   const mockResponses: Record<CourtPhase, Record<AgentRole, string | string[]>> = {
     case_setup: {
@@ -198,14 +350,71 @@ export function generateWitnessQAndA(params: {
   witnessId: string;
   examinerRole: 'prosecutor' | 'defense' | 'judge';
   questionType: 'direct' | 'cross' | 'clarification';
+  caseData?: CaseData;
 }): {
   question: string;
   answer: string;
   examinerRole: 'prosecutor' | 'defense' | 'judge';
   evidenceIds?: string[];
 } {
-  const { witnessId, examinerRole, questionType } = params;
+  const { witnessId, examinerRole, questionType, caseData } = params;
   
+  const isHenEgg = caseData?.title?.toLowerCase().includes('hen') && caseData?.title?.toLowerCase().includes('egg');
+  if (caseData && !isHenEgg) {
+    const plaintiff = caseData.plaintiffSide || 'the Plaintiff';
+    const defense = caseData.defenseSide || 'the Defendant';
+    const pClean = plaintiff.replace(/[^a-zA-Z0-9 ]/g, '').split(' ')[0] || 'Plaintiff';
+    const dClean = defense.replace(/[^a-zA-Z0-9 ]/g, '').split(' ')[0] || 'Defendant';
+    
+    if (witnessId === 'wit-001') {
+      if (questionType === 'direct') {
+        return {
+          question: `Dr. ${pClean}, please describe your findings regarding ${plaintiff}.`,
+          answer: `Through detailed benchmark tests, we found that ${plaintiff} provides superior efficiency and capabilities as documented in Exhibit P-1.`,
+          examinerRole,
+          evidenceIds: ['EXHIBITP1'],
+        };
+      } else if (questionType === 'cross') {
+        return {
+          question: `Dr. ${pClean}, is it not true that ${defense} has superior specialized attributes?`,
+          answer: `While ${defense} excels in certain context conditions, the core advantages of ${plaintiff} in general usage remain unchallenged.`,
+          examinerRole,
+          evidenceIds: ['EXHIBITD1'],
+        };
+      } else {
+        return {
+          question: `Dr. ${pClean}, does any other system match these performance parameters?`,
+          answer: `No, Your Honor. Our analysis shows ${plaintiff} maintains a distinct technical advantage.`,
+          examinerRole,
+          evidenceIds: ['EXHIBITP1'],
+        };
+      }
+    } else {
+      if (questionType === 'direct') {
+        return {
+          question: `Dr. ${dClean}, what does your study reveal about the capabilities of ${defense}?`,
+          answer: `The study shows that ${defense} has exceptional context length and reasoning depth, establishing clear superiority as shown in Exhibit D-1.`,
+          examinerRole,
+          evidenceIds: ['EXHIBITD1'],
+        };
+      } else if (questionType === 'cross') {
+        return {
+          question: `Dr. ${dClean}, how do you address the high execution speeds of ${plaintiff}?`,
+          answer: `While ${plaintiff} is fast, the depth of analysis and contextual accuracy of ${defense} represent a more critical benchmark.`,
+          examinerRole,
+          evidenceIds: ['EXHIBITP1'],
+        };
+      } else {
+        return {
+          question: `Dr. ${dClean}, does the data show a clear boundary?`,
+          answer: `Yes, Your Honor. In complex evaluation tasks, the structural design of ${defense} consistently outperforms the alternative.`,
+          examinerRole,
+          evidenceIds: ['EXHIBITD1'],
+        };
+      }
+    }
+  }
+
   // Mock Q&A based on witness and question type
   const mockQA: Record<string, Record<string, { q: string; a: string; evidence?: string[] }>> = {
     'wit-001': { // Dr. Isha Sen (plaintiff)

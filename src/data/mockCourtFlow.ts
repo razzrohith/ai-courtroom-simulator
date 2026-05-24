@@ -319,6 +319,20 @@ export const MOCK_VERDICT: Verdict = {
     'Evidentiary: Admission of dinosaur fossil records as relevant to modern avian speciation.',
     'Procedural: Overruling of plaintiff\'s objection to genetic mutation data.',
   ],
+  winnerName: 'The Egg',
+  whyWinnerWon: 'Scientific genetics shows that speciation mutations occur at the zygote stage inside the egg first. Therefore, the first modern chicken had to hatch from the first modern chicken egg, which was laid by a closely related ancestral bird.',
+  whyLoserLost: 'Although shell synthesis requires the OC-17 protein found only in living hen ovaries, the species definition lies in the biological genome of the organism rather than its physical packaging shell.',
+  keyReasons: [
+    'Amniotic egg-laying organisms existed hundreds of millions of years before the modern hen (fossil records).',
+    'Speciation mutations occur in the zygote phase, meaning the first chicken emerged from a mutated egg.',
+    'The packaging shell does not define the species boundary, whereas the DNA profile inside does.'
+  ],
+  evidenceConsidered: [
+    'Exhibit P-1: Embryology Lab Report (OC-17 Synthesis)',
+    'Exhibit D-1: Evolutionary Timeline Chart (Pre-Avian Fossils)',
+    'Witness Testimony of Dr. Amit Patel (Evolutionary Record)',
+    'Witness Testimony of Dr. Isha Sen (Biochemical Requirements)'
+  ]
 };
 
 // Helper to generate transcript entries from mock messages

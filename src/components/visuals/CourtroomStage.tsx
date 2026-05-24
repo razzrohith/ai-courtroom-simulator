@@ -1,8 +1,4 @@
-/**
- * CourtroomStage — Full cinematic courtroom stage layout
- * Phase 16: Full courtroom stage integration
- */
-
+import { useState } from 'react';
 import type { AgentRole, AgentParticipant, CourtPhase, Evidence, Verdict, TranscriptEntry } from '../../types/courtroom';
 import { PHASE_LABELS } from '../../types/courtroom';
 import { 
@@ -22,9 +18,22 @@ import {
 } from './CourtroomVisuals';
 import StageEvidencePresenter from './StageEvidencePresenter';
 import CourtroomGallery from './CourtroomGallery';
+import Courtroom3DStage from './Courtroom3DStage';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { getRoleLabel } from '../../utils/languageMode';
 import { summarizeCourtroomUtterance } from '../../utils/sanitizeAgentResponse';
+
+function isWebGLAvailable() {
+  try {
+    const canvas = document.createElement('canvas');
+    return !!(
+      window.WebGLRenderingContext && 
+      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+    );
+  } catch (e) {
+    return false;
+  }
+}
 
 /**
  * Model info interface - duplicated from CourtroomLayout to avoid circular deps
@@ -136,6 +145,9 @@ export function CourtroomStage({
   isGenerating,
 }: CourtroomStageProps) {
 
+  const [webglAvailable] = useState(() => isWebGLAvailable());
+  const [show3D, setShow3D] = useState(() => webglAvailable);
+
   // Check if there's an active objection
   const { mode: languageMode } = useLanguage();
   const hasObjection = !!activeObjection;
@@ -210,30 +222,43 @@ export function CourtroomStage({
     );
   }
   
-  // Full cinematic stage
   return (
     <CourtroomBackdrop>
-      {/* Court backdrop pattern - wood floor effect */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none">
-        <div className="w-full h-full" style={{
-          backgroundImage: `
-            repeating-linear-gradient(
-              0deg,
-              transparent,
-              transparent 39px,
-              #8B7355 39px,
-              #8B7355 40px
-            ),
-            repeating-linear-gradient(
-              90deg,
-              transparent,
-              transparent 99px,
-              #D4AF37 99px,
-              #D4AF37 100px
-            )
-          `
-        }} />
-      </div>
+      {/* 3D / 2D View Mode Switcher */}
+      {webglAvailable && (
+        <div className="absolute top-12 right-4 z-30">
+          <button
+            onClick={() => setShow3D(!show3D)}
+            className="px-3 py-1.5 bg-gray-950/85 hover:bg-gray-900 border border-gray-800 rounded-lg text-[10px] font-bold text-gray-300 backdrop-blur-sm shadow-md active:scale-95 transition-all"
+          >
+            {show3D ? '🖥️ Switch to 2D' : '🖥️ Switch to 3D'}
+          </button>
+        </div>
+      )}
+
+      {/* Court backdrop pattern - wood floor effect (only for 2D) */}
+      {!show3D && (
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
+          <div className="w-full h-full" style={{
+            backgroundImage: `
+              repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 39px,
+                #8B7355 39px,
+                #8B7355 40px
+              ),
+              repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 99px,
+                #D4AF37 99px,
+                #D4AF37 100px
+              )
+            `
+          }} />
+        </div>
+      )}
       
       {/* Phase Banner - top of stage */}
       <PhaseBanner phase={currentPhase} />
@@ -252,19 +277,34 @@ export function CourtroomStage({
       
       {/* Main stage area */}
       <div className="relative p-4 md:p-6 min-h-[280px] flex flex-col">
-  <CourtroomGallery />
-        {/* Row 1: Judge Bench at top center */}
-        <div className="flex justify-center mb-4">
-          <JudgeStation 
-            judge={judge} 
-            currentSpeaker={currentSpeaker}
-            isSpeaking={isSpeaking} 
-            latestEntry={latestEntry}
-            isStageTyping={isStageTyping}
-            simulationSpeaker={simulationSpeaker}
-            isGenerating={isGenerating}
-          />
-        </div>
+        {show3D ? (
+          <div className="relative rounded-xl overflow-hidden border border-gray-800 shadow-inner mb-4">
+            <Courtroom3DStage
+              currentSpeaker={simulationSpeaker || null}
+              isSpeaking={isStageTyping || false}
+              isActive={isActive}
+              judgeName={judge?.name}
+              prosecutorName={prosecutor?.name}
+              defenseName={defense?.name}
+            />
+          </div>
+        ) : (
+          <>
+            <CourtroomGallery />
+            {/* Row 1: Judge Bench at top center */}
+            <div className="flex justify-center mb-4">
+              <JudgeStation 
+                judge={judge} 
+                currentSpeaker={currentSpeaker}
+                isSpeaking={isSpeaking} 
+                latestEntry={latestEntry}
+                isStageTyping={isStageTyping}
+                simulationSpeaker={simulationSpeaker}
+                isGenerating={isGenerating}
+              />
+            </div>
+          </>
+        )}
         
         {/* Live Discussion panel/bubble in the middle of the stage */}
         {isActive && latestEntry && (
@@ -313,42 +353,46 @@ export function CourtroomStage({
           </div>
         )}
         
-        {/* Row 2: Attorney stations - sides */}
-        <div className="flex justify-between items-start flex-1 -mt-2">
-          {/* Left side: Prosecutor */}
-          <AttorneyStation 
-            participant={prosecutor}
-            role="prosecutor"
-            currentSpeaker={currentSpeaker}
-            isSpeaking={isSpeaking}
-            position="left"
-            latestEntry={latestEntry}
-            isStageTyping={isStageTyping}
-            simulationSpeaker={simulationSpeaker}
-            isGenerating={isGenerating}
-          />
-          
-          {/* Right side: Defense */}
-          <AttorneyStation 
-            participant={defense}
-            role="defense"
-            currentSpeaker={currentSpeaker}
-            isSpeaking={isSpeaking}
-            position="right"
-            latestEntry={latestEntry}
-            isStageTyping={isStageTyping}
-            simulationSpeaker={simulationSpeaker}
-            isGenerating={isGenerating}
-          />
-        </div>
-        
-        {/* Row 3: Witness stand and evidence */}
-        <div className="flex justify-center mt-2">
-          <WitnessAndEvidenceArea 
-            evidence={evidence}
-            admittedCount={admittedEvidence.length}
-          />
-        </div>
+        {!show3D && (
+          <>
+            {/* Row 2: Attorney stations - sides */}
+            <div className="flex justify-between items-start flex-1 -mt-2">
+              {/* Left side: Prosecutor */}
+              <AttorneyStation 
+                participant={prosecutor}
+                role="prosecutor"
+                currentSpeaker={currentSpeaker}
+                isSpeaking={isSpeaking}
+                position="left"
+                latestEntry={latestEntry}
+                isStageTyping={isStageTyping}
+                simulationSpeaker={simulationSpeaker}
+                isGenerating={isGenerating}
+              />
+              
+              {/* Right side: Defense */}
+              <AttorneyStation 
+                participant={defense}
+                role="defense"
+                currentSpeaker={currentSpeaker}
+                isSpeaking={isSpeaking}
+                position="right"
+                latestEntry={latestEntry}
+                isStageTyping={isStageTyping}
+                simulationSpeaker={simulationSpeaker}
+                isGenerating={isGenerating}
+              />
+            </div>
+            
+            {/* Row 3: Witness stand and evidence */}
+            <div className="flex justify-center mt-2">
+              <WitnessAndEvidenceArea 
+                evidence={evidence}
+                admittedCount={admittedEvidence.length}
+              />
+            </div>
+          </>
+        )}
         
         {/* Stage Evidence Presenter */}
         <StageEvidencePresenter evidence={evidence[evidence.length - 1]} />

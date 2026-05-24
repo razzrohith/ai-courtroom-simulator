@@ -69,6 +69,9 @@ interface CourtroomLayoutProps {
   speech: ReturnType<typeof useSpeechSynthesis>;
   stageEntry: TranscriptEntry | null;
   isStageTyping: boolean;
+  onRestartThisCase?: () => void;
+  onStartNewCase?: () => void;
+  onBackToSetup?: () => void;
 }
 
 export function CourtroomLayout({
@@ -92,7 +95,10 @@ export function CourtroomLayout({
   onChangeAutoplaySpeed,
   speech,
   stageEntry,
-  isStageTyping
+  isStageTyping,
+  onRestartThisCase,
+  onStartNewCase,
+  onBackToSetup
 }: CourtroomLayoutProps) {
   const { currentPhase, currentSpeaker, participants, transcript, evidence, verdict, case: caseData, isActive, objectionHistory, witnesses, motionHistory } = state;
   const phaseLabel = PHASE_LABELS[currentPhase];
@@ -469,6 +475,111 @@ export function CourtroomLayout({
                   />
                 </div>
 
+                {isComplete && (
+                  <div className="bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900 border-2 border-yellow-500/40 rounded-xl p-5 md:p-6 shadow-2xl space-y-6 relative overflow-hidden">
+                    {/* Decorative background glow */}
+                    <div className="absolute -right-20 -top-20 w-48 h-48 rounded-full bg-yellow-500/10 blur-3xl pointer-events-none" />
+                    <div className="absolute -left-20 -bottom-20 w-48 h-48 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-850 pb-4 gap-3">
+                      <div>
+                        <span className="text-[10px] font-bold text-yellow-500 tracking-widest uppercase">Simulation Adjourned</span>
+                        <h3 className="text-xl md:text-2xl font-extrabold text-white tracking-tight mt-0.5">Final Case Disposition</h3>
+                      </div>
+                      <div className="px-3 py-1 bg-yellow-950/40 border border-yellow-800/30 rounded-full text-xs font-bold text-yellow-400">
+                        Trial Completed ✅
+                      </div>
+                    </div>
+
+                    {/* Winner & Loser Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Winner card */}
+                      <div className="bg-emerald-950/15 border border-emerald-500/30 rounded-xl p-4 shadow-sm relative overflow-hidden">
+                        <div className="absolute right-3 top-3 text-3xl opacity-20">🏆</div>
+                        <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">Prevailing Party</span>
+                        <h4 className="text-lg font-bold text-white mt-1">
+                          {verdict?.winnerName || (verdict?.decision === 'plaintiff_wins' ? caseData.plaintiffSide : caseData.defenseSide)}
+                        </h4>
+                        <p className="text-xs text-gray-300 mt-2 leading-relaxed">
+                          <span className="font-semibold text-emerald-300">Why Winner Won: </span>
+                          {verdict?.whyWinnerWon || verdict?.reasoningSummary}
+                        </p>
+                      </div>
+
+                      {/* Loser card */}
+                      <div className="bg-rose-950/15 border border-rose-500/20 rounded-xl p-4 shadow-sm relative overflow-hidden">
+                        <div className="absolute right-3 top-3 text-3xl opacity-15">⚖️</div>
+                        <span className="text-[9px] font-bold text-rose-400 uppercase tracking-wider">Opposing Party</span>
+                        <h4 className="text-lg font-bold text-gray-300 mt-1">
+                          {verdict?.decision === 'plaintiff_wins' ? caseData.defenseSide : caseData.plaintiffSide}
+                        </h4>
+                        <p className="text-xs text-gray-300 mt-2 leading-relaxed">
+                          <span className="font-semibold text-rose-300">Why Loser Did Not Win: </span>
+                          {verdict?.whyLoserLost || "The arguments and exhibits introduced by this party were insufficient to establish preponderance of evidence over the opposing side's priority assertions."}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Key Reasons Considered */}
+                    {((verdict?.keyReasons && verdict.keyReasons.length > 0) || (verdict?.plaintiffPoints && verdict.plaintiffPoints.length > 0)) && (
+                      <div className="space-y-2">
+                        <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Key Decisive Factors</h5>
+                        <ul className="space-y-2">
+                          {(verdict?.keyReasons || verdict?.plaintiffPoints || []).map((reason, idx) => (
+                            <li key={idx} className="text-xs text-gray-305 flex items-start gap-2.5 bg-gray-900/60 p-2.5 rounded-lg border border-gray-850">
+                              <span className="text-yellow-500 mt-0.5 select-none">🔨</span>
+                              <span className="leading-relaxed">{reason}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Evidence Considered */}
+                    {((verdict?.evidenceConsidered && verdict.evidenceConsidered.length > 0) || evidence.length > 0) && (
+                      <div className="space-y-2">
+                        <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Evidence / Facts Weighed</h5>
+                        <div className="flex flex-wrap gap-2">
+                          {(verdict?.evidenceConsidered || evidence.filter(e => e.status === 'admitted').map(e => `${e.exhibitNumber || e.id}: ${e.title}`)).map((ev, idx) => (
+                            <span key={idx} className="text-[11px] font-medium bg-gray-900 border border-gray-800 text-gray-400 px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
+                              <span className="text-emerald-500">📎</span>
+                              {ev}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action buttons inside the card */}
+                    <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2 border-t border-gray-850">
+                      {onRestartThisCase && (
+                        <button
+                          onClick={onRestartThisCase}
+                          className="w-full sm:w-auto px-5 py-2.5 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all duration-200 text-xs flex items-center justify-center gap-2"
+                        >
+                          🔄 Restart This Case
+                        </button>
+                      )}
+                      {onBackToSetup && (
+                        <button
+                          onClick={onBackToSetup}
+                          className="w-full sm:w-auto px-5 py-2.5 bg-gray-850 hover:bg-gray-800 text-gray-300 font-bold rounded-xl border border-gray-800 active:scale-[0.98] transition-all duration-200 text-xs flex items-center justify-center gap-2"
+                        >
+                          ⚙️ Back to Setup
+                        </button>
+                      )}
+                      {onStartNewCase && (
+                        <button
+                          onClick={onStartNewCase}
+                          className="w-full sm:w-auto px-5 py-2.5 bg-blue-950/30 hover:bg-blue-900/40 text-blue-400 font-bold rounded-xl border border-blue-900/30 active:scale-[0.98] transition-all duration-200 text-xs flex items-center justify-center gap-2"
+                        >
+                          📁 Start New Case
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {isActive && (
                   <CaseContextCard caseData={caseData} />
                 )}
@@ -661,73 +772,102 @@ export function CourtroomLayout({
               </button>
             ) : (
               <>
-                <button
-                  onClick={onNextTurn}
-                  disabled={!canAdvance || isGenerating || (isAutoplay && !isAutoplayPaused)}
-                  className={`w-full md:w-auto px-6 py-3 font-bold rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm active:scale-[0.98] ${
-                    canAdvance && !isGenerating && !(isAutoplay && !isAutoplayPaused)
-                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/20'
-                      : 'bg-gray-850 text-gray-500 cursor-not-allowed border border-gray-800'
-                  }`}
-                >
-                  {isGenerating 
-                    ? '⏳ Generating...' 
-                    : hasPendingObjection 
-                    ? 'Awaiting Ruling... ⚖️' 
-                    : isComplete 
-                    ? 'Simulation Complete ✅' 
-                    : (isAutoplay && !isAutoplayPaused) 
-                    ? '🤖 Autoplay...' 
-                    : 'Next Turn ➡️'}
-                </button>
-
-                {/* Autoplay Controls */}
-                <div className="flex items-center gap-2 bg-[#090d11] border border-gray-800 rounded-xl p-1 shadow-inner">
-                  <button
-                    onClick={onToggleAutoplay}
-                    className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all duration-200 ${
-                      isAutoplay
-                        ? 'bg-yellow-600 text-white hover:bg-yellow-500 shadow-sm'
-                        : 'bg-gray-800 text-gray-400 hover:bg-gray-750'
-                    }`}
-                  >
-                    {isAutoplay ? 'Auto ON' : 'Auto OFF'}
-                  </button>
-
-                  {isAutoplay && (
-                    <>
+                {isComplete ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {onRestartThisCase && (
                       <button
-                        onClick={onToggleAutoplayPause}
-                        className={`px-2.5 py-1.5 rounded-lg font-semibold text-xs transition-all duration-200 ${
-                          isAutoplayPaused
-                            ? 'bg-emerald-950/30 text-emerald-400 border border-emerald-800/30 hover:bg-emerald-950/50'
-                            : 'bg-amber-950/30 text-amber-400 border border-amber-800/30 hover:bg-amber-950/50'
+                        onClick={onRestartThisCase}
+                        className="px-5 py-2.5 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all duration-200 text-xs"
+                      >
+                        🔄 Restart This Case
+                      </button>
+                    )}
+                    {onBackToSetup && (
+                      <button
+                        onClick={onBackToSetup}
+                        className="px-5 py-2.5 bg-gray-850 hover:bg-gray-800 text-gray-300 font-bold rounded-xl border border-gray-800 active:scale-[0.98] transition-all duration-200 text-xs"
+                      >
+                        ⚙️ Back to Setup
+                      </button>
+                    )}
+                    {onStartNewCase && (
+                      <button
+                        onClick={onStartNewCase}
+                        className="px-5 py-2.5 bg-blue-950/30 hover:bg-blue-900/40 text-blue-400 font-bold rounded-xl border border-blue-900/30 active:scale-[0.98] transition-all duration-200 text-xs"
+                      >
+                        📁 Start New Case
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={onNextTurn}
+                      disabled={!canAdvance || isGenerating || (isAutoplay && !isAutoplayPaused)}
+                      className={`w-full md:w-auto px-6 py-3 font-bold rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm active:scale-[0.98] ${
+                        canAdvance && !isGenerating && !(isAutoplay && !isAutoplayPaused)
+                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/20'
+                          : 'bg-gray-850 text-gray-500 cursor-not-allowed border border-gray-800'
+                      }`}
+                    >
+                      {isGenerating 
+                        ? '⏳ Generating...' 
+                        : hasPendingObjection 
+                        ? 'Awaiting Ruling... ⚖️' 
+                        : (isAutoplay && !isAutoplayPaused) 
+                        ? '🤖 Autoplay...' 
+                        : 'Next Turn ➡️'}
+                    </button>
+
+                    {/* Autoplay Controls */}
+                    <div className="flex items-center gap-2 bg-[#090d11] border border-gray-800 rounded-xl p-1 shadow-inner">
+                      <button
+                        onClick={onToggleAutoplay}
+                        className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all duration-200 ${
+                          isAutoplay
+                            ? 'bg-yellow-600 text-white hover:bg-yellow-500 shadow-sm'
+                            : 'bg-gray-850 text-gray-400 hover:bg-gray-800'
                         }`}
                       >
-                        {isAutoplayPaused ? 'Resume' : 'Pause'}
+                        {isAutoplay ? 'Auto ON' : 'Auto OFF'}
                       </button>
 
-                      <select
-                        value={autoplaySpeed}
-                        onChange={(e) => onChangeAutoplaySpeed?.(e.target.value as 'slow' | 'normal' | 'fast')}
-                        className="bg-gray-900 border border-gray-800 text-gray-300 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-yellow-500 font-medium"
-                      >
-                        <option value="slow">Slow</option>
-                        <option value="normal">Normal</option>
-                        <option value="fast">Fast</option>
-                      </select>
-                    </>
-                  )}
-                </div>
+                      {isAutoplay && (
+                        <>
+                          <button
+                            onClick={onToggleAutoplayPause}
+                            className={`px-2.5 py-1.5 rounded-lg font-semibold text-xs transition-all duration-200 ${
+                              isAutoplayPaused
+                                ? 'bg-emerald-950/30 text-emerald-400 border border-emerald-800/30 hover:bg-emerald-950/50'
+                                : 'bg-amber-950/30 text-amber-400 border border-amber-800/30 hover:bg-amber-950/50'
+                            }`}
+                          >
+                            {isAutoplayPaused ? 'Resume' : 'Pause'}
+                          </button>
 
-                {onSkip && (
-                  <button
-                    onClick={onSkip}
-                    disabled={isGenerating}
-                    className="px-4 py-3 bg-[#131a24] hover:bg-[#1a2533] text-gray-300 font-semibold rounded-xl border border-gray-800 transition-all duration-200 text-sm active:scale-[0.98]"
-                  >
-                    Skip ⏭️
-                  </button>
+                          <select
+                            value={autoplaySpeed}
+                            onChange={(e) => onChangeAutoplaySpeed?.(e.target.value as 'slow' | 'normal' | 'fast')}
+                            className="bg-gray-900 border border-gray-800 text-gray-300 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-yellow-500 font-medium"
+                          >
+                            <option value="slow">Slow</option>
+                            <option value="normal">Normal</option>
+                            <option value="fast">Fast</option>
+                          </select>
+                        </>
+                      )}
+                    </div>
+
+                    {onSkip && (
+                      <button
+                        onClick={onSkip}
+                        disabled={isGenerating}
+                        className="px-4 py-3 bg-[#131a24] hover:bg-[#1a2533] text-gray-300 font-semibold rounded-xl border border-gray-800 transition-all duration-200 text-sm active:scale-[0.98]"
+                      >
+                        Skip ⏭️
+                      </button>
+                    )}
+                  </>
                 )}
               </>
             )}

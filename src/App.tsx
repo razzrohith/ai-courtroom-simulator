@@ -7,7 +7,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { CourtroomLayout } from './components/CourtroomLayout';
-import { createInitialState, startSimulation, processNextTurnAsync, resetSimulation, skipToNextPhase, ruleOnObjection, getNextSpeakerRole } from './orchestration/courtControllerAsync';
+import { createInitialState, startSimulation, processNextTurnAsync, resetSimulation, skipToNextPhase, ruleOnObjection, getNextSpeakerRole, restartSimulationWithCase } from './orchestration/courtControllerAsync';
 import { saveSession, loadSession, clearSession } from './data/sessionPersistence';
 import type { CourtState, TranscriptEntry, CaseData } from './types/courtroom';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
@@ -222,6 +222,40 @@ function App() {
     setHasSession(false);
   }, [speech]);
 
+  const handleRestartThisCase = useCallback(() => {
+    streamRef.current.abort = true;
+    isProcessingRef.current = false;
+    setIsGenerating(false);
+    setIsAutoplay(false);
+    setIsAutoplayPaused(false);
+    speech.stopSpeaking();
+    setStageEntry(null);
+    setIsStageTyping(false);
+    setState(prev => restartSimulationWithCase(prev));
+  }, [speech]);
+
+  const handleBackToSetup = useCallback(() => {
+    streamRef.current.abort = true;
+    isProcessingRef.current = false;
+    setIsGenerating(false);
+    setIsAutoplay(false);
+    setIsAutoplayPaused(false);
+    speech.stopSpeaking();
+    setStageEntry(null);
+    setIsStageTyping(false);
+    setState(prev => ({
+      ...prev,
+      isActive: false,
+      currentPhase: 'case_setup',
+      currentSpeaker: null,
+      transcript: [],
+      verdict: null,
+      objectionHistory: [],
+      witnesses: [],
+      motionHistory: [],
+    }));
+  }, [speech]);
+
   // Session controls
   const handleSave = useCallback(() => {
     saveSession(state);
@@ -289,6 +323,9 @@ function App() {
         speech={speech}
         stageEntry={stageEntry}
         isStageTyping={isStageTyping}
+        onRestartThisCase={handleRestartThisCase}
+        onStartNewCase={handleReset}
+        onBackToSetup={handleBackToSetup}
       />
     </>
   );

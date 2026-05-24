@@ -179,6 +179,15 @@ export function resetSimulation(): CourtState {
   return createInitialState();
 }
 
+export function restartSimulationWithCase(state: CourtState): CourtState {
+  const resetState: CourtState = {
+    ...createInitialState(),
+    case: state.case,
+    participants: state.participants
+  };
+  return startSimulation(resetState);
+}
+
 export function getParticipantName(state: CourtState, role: AgentRole): string {
   const participant = state.participants.find(p => p.role === role);
   return participant?.name || role.toUpperCase();
@@ -699,7 +708,7 @@ export function getJudgeTransition(phase: CourtPhase | undefined, state: CourtSt
 }
 
 function advanceToNextPhase(state: CourtState): CourtState {
-  if (state.currentPhase === 'case_summary' && state.transcript.some(t => t.id.startsWith('trans-summary-'))) {
+  if (state.transcript.some(t => t.id.startsWith('trans-summary-'))) {
     return state;
   }
   const currentIndex = COURT_PHASES.indexOf(state.currentPhase);

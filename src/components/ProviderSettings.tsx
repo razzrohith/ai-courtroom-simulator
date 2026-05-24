@@ -431,7 +431,14 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                   case 'failed': {
                     const mode = agentConfig?.openRouterMode || 'personal';
                     let label = '';
-                    if (agentConfig?.providerId === 'openrouter' && mode === 'demo' && errorMsg && (errorMsg.includes('rate-limited') || errorMsg.includes('429') || errorMsg.includes('rate_limited'))) {
+                    let bg = 'bg-red-900/50';
+                    let text = 'text-red-400';
+                    
+                    if (agentConfig?.providerId === 'openrouter' && mode === 'demo' && errorMsg && errorMsg.includes('trying another free model')) {
+                      label = 'Free Demo busy — trying another free model…';
+                      bg = 'bg-blue-900/50';
+                      text = 'text-blue-400';
+                    } else if (agentConfig?.providerId === 'openrouter' && mode === 'demo' && errorMsg && (errorMsg.includes('rate-limited') || errorMsg.includes('429') || errorMsg.includes('rate_limited'))) {
                       label = 'Free Demo rate-limited — try later or use your own OpenRouter key.';
                     } else {
                       const prefix = agentConfig?.providerId === 'openrouter'
@@ -439,11 +446,7 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                         : 'Failed';
                       label = `${prefix} — ${errorMsg ? errorMsg.replace(/^Failed\s*—\s*/, '') : 'Connection failed'}`;
                     }
-                    statusBadge = {
-                      bg: 'bg-red-900/50',
-                      text: 'text-red-400',
-                      label: label
-                    };
+                    statusBadge = { bg, text, label };
                     break;
                   }
                 }

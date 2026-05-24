@@ -5,7 +5,7 @@
  */
 
 import type { AgentRole, TranscriptEntry, Evidence, CourtPhase } from '../types/courtroom';
-import { loadApiKey, loadCourtroomConfig } from '../types/providers';
+import { loadApiKey, loadCourtroomConfig, setAgentConnectionStatus } from '../types/providers';
 
 // Base URL configuration
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -107,40 +107,94 @@ export async function generateWithOpenRouter(params: {
   });
 
   const systemPrompt = getSystemPromptForRole(params.role);
-  
-  try {
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        model: params.model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'system', content: context },
-          { role: 'user', content: params.prompt },
-        ],
-        temperature: 0.5,
-        max_tokens: 220,
-      }),
-    });
+  // Active free models to rotate through as fallbacks (total 3 attempts max)
+  const fallbackModelIds = [
+    'meta-llama/llama-3.3-70b-instruct:free',
+    'meta-llama/llama-3.2-3b-instruct:free',
+    'nousresearch/hermes-3-llama-3.1-405b:free',
+    'google/gemma-4-31b-it:free',
+    'deepseek/deepseek-v4-flash:free'
+  ];
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+  // Build the list of models to try
+  const modelsToAttempt = [params.model];
+  if (openRouterMode === 'demo') {
+    for (const mId of fallbackModelIds) {
+      if (mId !== params.model && modelsToAttempt.length < 3) {
+        modelsToAttempt.push(mId);
+      }
     }
-
-    const data = await response.json();
-    
-    if (!data.choices || !data.choices[0]) {
-      throw new Error('Invalid response from OpenRouter');
-    }
-
-    return data.choices[0].message.content;
-  } catch (error) {
-    console.error('OpenRouter request error:', error);
-    throw error;
   }
+
+  let lastError: any = null;
+
+  for (let attempt = 0; attempt < modelsToAttempt.length; attempt++) {
+    const currentModel = modelsToAttempt[attempt];
+    
+    // If this is a fallback attempt, update connection status to show "busy — trying another free model…"
+    if (attempt > 0 && openRouterMode === 'demo') {
+      setAgentConnectionStatus(
+        params.role, 
+        'openrouter', 
+        params.model, 
+        'failed:Free Demo busy — trying another free model…'
+      );
+      // Brief delay before the fallback attempt
+      await new Promise(resolve => setTimeout(resolve, 800));
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: currentModel,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'system', content: context },
+            { role: 'user', content: params.prompt },
+          ],
+          temperature: 0.5,
+          max_tokens: 220,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.choices || !data.choices[0]) {
+        throw new Error('Invalid response from OpenRouter');
+      }
+
+      // If a fallback model succeeded, update status back to connected
+      if (attempt > 0 && openRouterMode === 'demo') {
+        setAgentConnectionStatus(
+          params.role, 
+          'openrouter', 
+          params.model, 
+          'connected'
+        );
+      }
+
+      return data.choices[0].message.content;
+
+    } catch (error) {
+      console.warn(`Attempt ${attempt + 1} with model ${currentModel} failed:`, error);
+      lastError = error;
+      
+      // If we are not in demo mode, don't try other models
+      if (openRouterMode !== 'demo') {
+        break;
+      }
+    }
+  }
+
+  throw lastError || new Error('All model attempts failed');
 }
 
 // Get system prompt based on role

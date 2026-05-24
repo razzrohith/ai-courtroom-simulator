@@ -60,12 +60,25 @@ function StylizedAvatar({
       if (head) {
         head.position.y = 1.45 + Math.sin(time * 15) * 0.015;
       }
+
+      // Animate mouth opening (scaling Y)
+      const mouth = groupRef.current.getObjectByName('mouth-mesh');
+      if (mouth) {
+        const mouthScale = 1.0 + Math.abs(Math.sin(time * 20)) * 2.5;
+        mouth.scale.set(1.0, mouthScale, 1.0);
+        mouth.position.y = 1.38 - Math.abs(Math.sin(time * 20)) * 0.015;
+      }
     } else {
       groupRef.current.rotation.y = 0;
       groupRef.current.rotation.z = 0;
       const head = groupRef.current.getObjectByName('head-mesh');
       if (head) {
         head.position.y = 1.45;
+      }
+      const mouth = groupRef.current.getObjectByName('mouth-mesh');
+      if (mouth) {
+        mouth.scale.set(1.0, 1.0, 1.0);
+        mouth.position.y = 1.38;
       }
     }
 
@@ -176,6 +189,12 @@ function StylizedAvatar({
         <meshStandardMaterial color={headColor} roughness={0.5} />
       </mesh>
 
+      {/* Mouth */}
+      <mesh name="mouth-mesh" position={[0, 1.38, 0.21]}>
+        <boxGeometry args={[0.07, 0.02, 0.025]} />
+        <meshStandardMaterial color="#2d0505" roughness={0.95} />
+      </mesh>
+
       {/* 5. Hair */}
       <mesh position={[0, 1.55, -0.05]}>
         <sphereGeometry args={[0.23, 16, 16]} />
@@ -208,6 +227,44 @@ function StylizedAvatar({
           </mesh>
         ))}
       </group>
+    </group>
+  );
+}
+
+// -------------------------------------------------------------
+// Stylized Seated Audience Figure Component
+// -------------------------------------------------------------
+function SeatedAudienceFigure({ 
+  position, 
+  color 
+}: { 
+  position: [number, number, number]; 
+  color: string;
+}) {
+  const headColor = '#e8be91'; // Skin tone
+  
+  return (
+    <group position={position}>
+      {/* 1. Torso core */}
+      <mesh castShadow receiveShadow position={[0, -0.12, 0]}>
+        <cylinderGeometry args={[0.11, 0.14, 0.32, 8]} />
+        <meshStandardMaterial color={color} roughness={0.8} />
+      </mesh>
+      {/* 2. Shoulders */}
+      <mesh castShadow position={[0, 0.02, 0]}>
+        <boxGeometry args={[0.26, 0.08, 0.16]} />
+        <meshStandardMaterial color={color} roughness={0.8} />
+      </mesh>
+      {/* 3. Neck */}
+      <mesh castShadow position={[0, 0.08, 0]}>
+        <cylinderGeometry args={[0.045, 0.045, 0.06, 8]} />
+        <meshStandardMaterial color={headColor} roughness={0.6} />
+      </mesh>
+      {/* 4. Head */}
+      <mesh castShadow position={[0, 0.2, 0]}>
+        <sphereGeometry args={[0.11, 12, 12]} />
+        <meshStandardMaterial color={headColor} roughness={0.5} />
+      </mesh>
     </group>
   );
 }
@@ -482,12 +539,42 @@ function CourtroomScene({
         <planeGeometry args={[16, 7]} />
         <meshStandardMaterial color="#ccb596" roughness={0.8} />
       </mesh>
+      {/* Left Wall Moldings & Trim */}
+      <group position={[-8.95, 0, 0]}>
+        {/* Horizontal wood trim */}
+        <mesh position={[0, 2.2, 0]} castShadow>
+          <boxGeometry args={[0.08, 0.15, 16]} />
+          <meshStandardMaterial color="#22140b" roughness={0.5} />
+        </mesh>
+        {/* Vertical panel trims */}
+        {[-5, -2, 1, 4].map((z, idx) => (
+          <mesh key={idx} position={[0, 2.2, z]} castShadow>
+            <boxGeometry args={[0.06, 4.4, 0.22]} />
+            <meshStandardMaterial color="#301b0f" roughness={0.6} />
+          </mesh>
+        ))}
+      </group>
       
       {/* Side Wall Right */}
       <mesh position={[9, 3.5, 0]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
         <planeGeometry args={[16, 7]} />
         <meshStandardMaterial color="#ccb596" roughness={0.8} />
       </mesh>
+      {/* Right Wall Moldings & Trim */}
+      <group position={[8.95, 0, 0]}>
+        {/* Horizontal wood trim */}
+        <mesh position={[0, 2.2, 0]} castShadow>
+          <boxGeometry args={[0.08, 0.15, 16]} />
+          <meshStandardMaterial color="#22140b" roughness={0.5} />
+        </mesh>
+        {/* Vertical panel trims */}
+        {[-5, -2, 1, 4].map((z, idx) => (
+          <mesh key={idx} position={[0, 2.2, z]} castShadow>
+            <boxGeometry args={[0.06, 4.4, 0.22]} />
+            <meshStandardMaterial color="#301b0f" roughness={0.6} />
+          </mesh>
+        ))}
+      </group>
 
       {/* ========================================================= */}
       {/* 3D FURNITURE (Procedural meshes) */}
@@ -759,18 +846,12 @@ function CourtroomScene({
         </group>
       ))}
 
-      {/* Spectator/Audience capsules (Benches 2 and 3 populated) */}
+      {/* Spectator/Audience seated figures (Benches 2 and 3 populated) */}
       {[-3.0, -1.8, 1.8, 3.0].map((x, i) => (
-        <mesh key={i} position={[x, 0.72, 4.9]} castShadow>
-          <sphereGeometry args={[0.16, 16, 16]} />
-          <meshStandardMaterial color="#64748b" roughness={0.95} />
-        </mesh>
+        <SeatedAudienceFigure key={`row2-${i}`} position={[x, 0.55, 4.9]} color={i % 2 === 0 ? "#475569" : "#3f3f46"} />
       ))}
       {[-2.4, -3.4, 2.4, 3.4].map((x, i) => (
-        <mesh key={i} position={[x, 0.72, 6.8]} castShadow>
-          <sphereGeometry args={[0.16, 16, 16]} />
-          <meshStandardMaterial color="#475569" roughness={0.95} />
-        </mesh>
+        <SeatedAudienceFigure key={`row3-${i}`} position={[x, 0.55, 6.8]} color={i % 2 === 0 ? "#52525b" : "#27272a"} />
       ))}
     </>
   );

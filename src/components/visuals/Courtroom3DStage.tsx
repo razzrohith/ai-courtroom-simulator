@@ -3,7 +3,7 @@
  * Uses React Three Fiber and @react-three/drei
  */
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
@@ -16,6 +16,7 @@ interface Courtroom3DStageProps {
   judgeName?: string;
   prosecutorName?: string;
   defenseName?: string;
+  admittedEvidenceCount?: number;
 }
 
 // -------------------------------------------------------------
@@ -31,11 +32,13 @@ function StylizedAvatar({
   position: [number, number, number];
 }) {
   const groupRef = useRef<THREE.Group>(null);
+  const pulseRingRef = useRef<THREE.Mesh>(null);
+  const speechGroupRef = useRef<THREE.Group>(null);
   
   // Design colors
-  const bodyColor = role === 'judge' ? '#18181b' : role === 'prosecutor' ? '#0f172a' : '#27272a';
+  const bodyColor = role === 'judge' ? '#18181b' : role === 'prosecutor' ? '#1e293b' : '#3f3f46';
   const headColor = '#e8be91'; // Skin tone
-  const hairColor = role === 'judge' ? '#94a3b8' : role === 'prosecutor' ? '#020617' : '#3b2314';
+  const hairColor = role === 'judge' ? '#a1a1aa' : role === 'prosecutor' ? '#09090b' : '#543d2b';
   const highlightColor = role === 'judge' ? '#eab308' : role === 'prosecutor' ? '#3b82f6' : '#22c55e';
 
   useFrame((state) => {
@@ -43,37 +46,107 @@ function StylizedAvatar({
     const time = state.clock.getElapsedTime();
 
     // Subtle breathing animation
-    groupRef.current.position.y = position[1] + Math.sin(time * 2) * 0.015;
+    groupRef.current.position.y = position[1] + Math.sin(time * 2) * 0.012;
 
-    // Active speaking animation
+    // Active speaking animations
     if (isSpeaking) {
       // Bobbing, slight roll, and scaling pulse
-      groupRef.current.position.y = position[1] + Math.sin(time * 12) * 0.05;
-      groupRef.current.rotation.y = Math.sin(time * 8) * 0.08;
-      groupRef.current.rotation.z = Math.sin(time * 5) * 0.03;
+      groupRef.current.position.y = position[1] + Math.sin(time * 12) * 0.045;
+      groupRef.current.rotation.y = Math.sin(time * 8) * 0.06;
+      groupRef.current.rotation.z = Math.sin(time * 5) * 0.02;
       
-      // Make mouth/head bob
-      const head = groupRef.current.children[3]; // head is 4th child
+      // Make head bob
+      const head = groupRef.current.getObjectByName('head-mesh');
       if (head) {
-        head.position.y = 1.45 + Math.sin(time * 15) * 0.02;
+        head.position.y = 1.45 + Math.sin(time * 15) * 0.015;
       }
     } else {
       groupRef.current.rotation.y = 0;
       groupRef.current.rotation.z = 0;
-      const head = groupRef.current.children[3];
+      const head = groupRef.current.getObjectByName('head-mesh');
       if (head) {
         head.position.y = 1.45;
+      }
+    }
+
+    // Pulse Ring animation
+    if (pulseRingRef.current) {
+      if (isSpeaking) {
+        const pulseCycle = (time * 1.8) % 1.0;
+        const scale = 1.0 + pulseCycle * 0.8;
+        pulseRingRef.current.scale.set(scale, 1, scale);
+        // @ts-ignore
+        if (pulseRingRef.current.material) {
+          // @ts-ignore
+          pulseRingRef.current.material.opacity = (1.0 - pulseCycle) * 0.7;
+        }
+        pulseRingRef.current.visible = true;
+      } else {
+        pulseRingRef.current.visible = false;
+      }
+    }
+
+    // Speech Visualizer Waves above head
+    if (speechGroupRef.current) {
+      if (isSpeaking) {
+        speechGroupRef.current.visible = true;
+        speechGroupRef.current.children.forEach((child, idx) => {
+          const offset = idx * 1.5;
+          child.scale.setScalar(0.7 + Math.sin(time * 15 + offset) * 0.3);
+          child.position.y = 1.9 + Math.sin(time * 12 + offset) * 0.08;
+        });
+      } else {
+        speechGroupRef.current.visible = false;
       }
     }
   });
 
   return (
     <group ref={groupRef} position={position}>
-      {/* 1. Body/Torso (Stylized Coat/Robe Capsule) */}
-      <mesh castShadow receiveShadow position={[0, 0.6, 0]}>
-        <cylinderGeometry args={[0.22, 0.38, 1.2, 16]} />
-        <meshStandardMaterial color={bodyColor} roughness={0.8} />
-      </mesh>
+      {/* 1. Torso/Shoulders (Dignified Suit/Robe Outline) */}
+      <group>
+        {/* Torso core */}
+        <mesh castShadow receiveShadow position={[0, 0.6, 0]}>
+          <cylinderGeometry args={[0.22, 0.36, 1.1, 16]} />
+          <meshStandardMaterial color={bodyColor} roughness={0.85} />
+        </mesh>
+        {/* Shoulders plate */}
+        <mesh castShadow position={[0, 0.95, 0]}>
+          <boxGeometry args={role === 'judge' ? [0.65, 0.25, 0.36] : [0.54, 0.2, 0.32]} />
+          <meshStandardMaterial color={bodyColor} roughness={0.8} />
+        </mesh>
+        
+        {/* Sleeves */}
+        {/* Left Sleeve */}
+        <mesh castShadow position={[-0.26, 0.58, 0.02]} rotation={[0, 0, 0.12]}>
+          <cylinderGeometry args={[0.08, 0.05, 0.55, 12]} />
+          <meshStandardMaterial color={bodyColor} roughness={0.8} />
+        </mesh>
+        {/* Left Cuff & Hand */}
+        <mesh position={[-0.29, 0.28, 0.03]}>
+          <cylinderGeometry args={[0.055, 0.055, 0.04, 8]} />
+          <meshStandardMaterial color="#ffffff" />
+        </mesh>
+        <mesh castShadow position={[-0.29, 0.22, 0.03]}>
+          <sphereGeometry args={[0.05, 12, 12]} />
+          <meshStandardMaterial color={headColor} roughness={0.4} />
+        </mesh>
+
+        {/* Right Sleeve */}
+        <mesh castShadow position={[0.26, 0.58, 0.02]} rotation={[0, 0, -0.12]}>
+          <cylinderGeometry args={[0.08, 0.05, 0.55, 12]} />
+          <meshStandardMaterial color={bodyColor} roughness={0.8} />
+        </mesh>
+        {/* Right Cuff & Hand */}
+        <mesh position={[0.29, 0.28, 0.03]}>
+          <cylinderGeometry args={[0.055, 0.055, 0.04, 8]} />
+          <meshStandardMaterial color="#ffffff" />
+        </mesh>
+        <mesh castShadow position={[0.29, 0.22, 0.03]}>
+          <sphereGeometry args={[0.05, 12, 12]} />
+          <meshStandardMaterial color={headColor} roughness={0.4} />
+        </mesh>
+      </group>
 
       {/* 2. White Collar Neck bands */}
       <mesh position={[0, 1.15, 0.16]}>
@@ -81,24 +154,24 @@ function StylizedAvatar({
         <meshStandardMaterial color="#ffffff" roughness={0.5} />
       </mesh>
       
-      {/* Advocate Bands (Double strip) */}
+      {/* Advocate Bands (Double white strip) */}
       <mesh position={[-0.04, 0.98, 0.22]}>
-        <boxGeometry args={[0.03, 0.18, 0.02]} />
+        <boxGeometry args={[0.03, 0.18, 0.015]} />
         <meshStandardMaterial color="#ffffff" />
       </mesh>
       <mesh position={[0.04, 0.98, 0.22]}>
-        <boxGeometry args={[0.03, 0.18, 0.02]} />
+        <boxGeometry args={[0.03, 0.18, 0.015]} />
         <meshStandardMaterial color="#ffffff" />
       </mesh>
 
       {/* 3. Neck */}
       <mesh castShadow position={[0, 1.25, 0]}>
-        <cylinderGeometry args={[0.09, 0.09, 0.15, 12]} />
+        <cylinderGeometry args={[0.085, 0.085, 0.15, 12]} />
         <meshStandardMaterial color={headColor} roughness={0.6} />
       </mesh>
 
       {/* 4. Head */}
-      <mesh castShadow position={[0, 1.45, 0]}>
+      <mesh name="head-mesh" castShadow position={[0, 1.45, 0]}>
         <sphereGeometry args={[0.22, 24, 24]} />
         <meshStandardMaterial color={headColor} roughness={0.5} />
       </mesh>
@@ -109,11 +182,32 @@ function StylizedAvatar({
         <meshStandardMaterial color={hairColor} roughness={0.9} />
       </mesh>
 
-      {/* Role Color Badge (underneath pedestal) */}
+      {/* Role Color Badge Pedestal */}
       <mesh position={[0, 0.01, 0]}>
         <cylinderGeometry args={[0.4, 0.45, 0.03, 16]} />
-        <meshStandardMaterial color={highlightColor} emissive={highlightColor} emissiveIntensity={0.2} />
+        <meshStandardMaterial color={highlightColor} emissive={highlightColor} emissiveIntensity={0.25} />
       </mesh>
+
+      {/* Pulsing base highlight ring (Only active when speaking) */}
+      <mesh ref={pulseRingRef} position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
+        <ringGeometry args={[0.42, 0.58, 32]} />
+        <meshBasicMaterial color={highlightColor} transparent={true} opacity={0.6} side={THREE.DoubleSide} />
+      </mesh>
+
+      {/* Active speaker speech visualizer waves (floating above head) */}
+      <group ref={speechGroupRef} visible={false}>
+        {[-0.15, 0, 0.15].map((xOffset, idx) => (
+          <mesh key={idx} position={[xOffset, 1.9, 0]}>
+            <sphereGeometry args={[0.035, 12, 12]} />
+            <meshStandardMaterial 
+              color={highlightColor} 
+              emissive={highlightColor} 
+              emissiveIntensity={0.8} 
+              roughness={0.1} 
+            />
+          </mesh>
+        ))}
+      </group>
     </group>
   );
 }
@@ -129,38 +223,129 @@ function CameraController({
   freeLook: boolean;
 }) {
   const { camera } = useThree();
-  const currentSpeakerRef = useRef<AgentRole | null>(null);
 
   useFrame(() => {
     if (freeLook) return;
 
-    let targetPos = new THREE.Vector3(0, 3.8, 6.5);
-    let targetLook = new THREE.Vector3(0, 1.2, -1.5);
+    // Default broad view of deeper courtroom
+    let targetPos = new THREE.Vector3(0, 4.4, 8.5);
+    let targetLook = new THREE.Vector3(0, 1.3, -2.5);
 
     if (currentSpeaker === 'judge') {
-      targetPos.set(0, 2.2, 0.5); // Close-up on Judge Bench
-      targetLook.set(0, 1.4, -4.0);
+      targetPos.set(0, 2.3, -1.6); // Close-up on elevated Judge Bench
+      targetLook.set(0, 1.55, -5.5);
     } else if (currentSpeaker === 'prosecutor') {
-      targetPos.set(-1.8, 1.8, 1.2); // Focused left
-      targetLook.set(-3.0, 1.2, -1.0);
+      targetPos.set(-1.6, 1.9, 0.2); // Focused left desk
+      targetLook.set(-3.0, 1.25, -2.0);
     } else if (currentSpeaker === 'defense') {
-      targetPos.set(1.8, 1.8, 1.2); // Focused right
-      targetLook.set(3.0, 1.2, -1.0);
+      targetPos.set(1.6, 1.9, 0.2); // Focused right desk
+      targetLook.set(3.0, 1.25, -2.0);
     }
 
     // Smooth camera transition (lerp)
-    camera.position.lerp(targetPos, 0.04);
+    camera.position.lerp(targetPos, 0.045);
     
-    // Smoothly interpolate lookAt
-    // Calculate current look target by projection if needed, or simply apply
-    camera.lookAt(targetLook);
+    // Smoothly apply camera look target
+    const currentLook = new THREE.Vector3(0, 0, -1);
+    currentLook.applyQuaternion(camera.quaternion);
+    const lookSpeed = 0.05;
+    
+    const targetDirection = new THREE.Vector3().subVectors(targetLook, camera.position).normalize();
+    const resultDirection = currentLook.lerp(targetDirection, lookSpeed).normalize();
+    
+    const targetTarget = new THREE.Vector3().addVectors(camera.position, resultDirection);
+    camera.lookAt(targetTarget);
   });
 
-  useEffect(() => {
-    currentSpeakerRef.current = currentSpeaker;
-  }, [currentSpeaker]);
-
   return null;
+}
+
+// -------------------------------------------------------------
+// Reusable Procedural Props
+// -------------------------------------------------------------
+
+function LawBooks({ position, rotation = [0, 0, 0] }: { position: [number, number, number]; rotation?: [number, number, number] }) {
+  const bookColors = ['#7f1d1d', '#1e3a8a', '#14532d', '#451a03'];
+  return (
+    <group position={position} rotation={rotation}>
+      {/* Book 1 - Standing vertical */}
+      <mesh position={[-0.1, 0.1, 0]} castShadow>
+        <boxGeometry args={[0.04, 0.18, 0.14]} />
+        <meshStandardMaterial color={bookColors[0]} roughness={0.7} />
+      </mesh>
+      {/* Spine Accent */}
+      <mesh position={[-0.1, 0.1, 0.071]}>
+        <boxGeometry args={[0.042, 0.035, 0.004]} />
+        <meshStandardMaterial color="#fbbf24" metalness={0.8} roughness={0.2} />
+      </mesh>
+      
+      {/* Book 2 - Leaning slightly */}
+      <mesh position={[0, 0.095, 0.015]} rotation={[0, 0, -0.16]} castShadow>
+        <boxGeometry args={[0.04, 0.18, 0.14]} />
+        <meshStandardMaterial color={bookColors[1]} roughness={0.6} />
+      </mesh>
+      {/* Leaning spine Accent */}
+      <group position={[0, 0.095, 0.015]} rotation={[0, 0, -0.16]}>
+        <mesh position={[0, 0, 0.071]}>
+          <boxGeometry args={[0.042, 0.035, 0.004]} />
+          <meshStandardMaterial color="#fbbf24" metalness={0.8} />
+        </mesh>
+      </group>
+      
+      {/* Book 3 - Flat Stack of 2 books */}
+      <group position={[0.16, 0.02, -0.01]}>
+        {/* Bottom book */}
+        <mesh position={[0, 0.01, 0]} castShadow>
+          <boxGeometry args={[0.16, 0.025, 0.2]} />
+          <meshStandardMaterial color={bookColors[2]} roughness={0.7} />
+        </mesh>
+        {/* Top book */}
+        <mesh position={[0.01, 0.033, 0.005]} rotation={[0, 0.08, 0]} castShadow>
+          <boxGeometry args={[0.15, 0.025, 0.19]} />
+          <meshStandardMaterial color={bookColors[3]} roughness={0.7} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+function DocumentStack({ position, rotation = [0, 0, 0] }: { position: [number, number, number]; rotation?: [number, number, number] }) {
+  return (
+    <group position={position} rotation={rotation}>
+      {/* Stack of sheets */}
+      <mesh position={[0, 0.015, 0]} castShadow>
+        <boxGeometry args={[0.2, 0.03, 0.26]} />
+        <meshStandardMaterial color="#f8fafc" roughness={0.9} />
+      </mesh>
+      {/* Manila folder jacket on top */}
+      <mesh position={[0.01, 0.032, 0.005]} rotation={[0, -0.08, 0]} castShadow>
+        <boxGeometry args={[0.21, 0.006, 0.27]} />
+        <meshStandardMaterial color="#fbbf24" roughness={0.5} />
+      </mesh>
+    </group>
+  );
+}
+
+function TableMicrophone({ position, rotation = [0, 0, 0] }: { position: [number, number, number]; rotation?: [number, number, number] }) {
+  return (
+    <group position={position} rotation={rotation}>
+      {/* Base */}
+      <mesh castShadow>
+        <cylinderGeometry args={[0.035, 0.04, 0.012, 10]} />
+        <meshStandardMaterial color="#18181b" roughness={0.8} />
+      </mesh>
+      {/* Flex neck stem */}
+      <mesh position={[0, 0.1, -0.01]} rotation={[0.25, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.005, 0.005, 0.18, 6]} />
+        <meshStandardMaterial color="#27272a" metalness={0.7} roughness={0.3} />
+      </mesh>
+      {/* Foam Capsule */}
+      <mesh position={[0, 0.18, -0.03]}>
+        <sphereGeometry args={[0.016, 10, 10]} />
+        <meshStandardMaterial color="#0c0a09" roughness={0.9} />
+      </mesh>
+    </group>
+  );
 }
 
 // -------------------------------------------------------------
@@ -168,18 +353,20 @@ function CameraController({
 // -------------------------------------------------------------
 function CourtroomScene({ 
   currentSpeaker, 
-  isSpeaking 
+  isSpeaking,
+  admittedEvidenceCount = 0
 }: { 
   currentSpeaker: AgentRole | null; 
   isSpeaking: boolean;
+  admittedEvidenceCount: number;
 }) {
   const spotlightRef = useRef<THREE.SpotLight>(null);
 
   // Position targets for speaker spotlight
   const speakerPositions: Record<AgentRole, [number, number, number]> = {
-    judge: [0, 1.45, -4.0],
-    prosecutor: [-3.0, 1.1, -1.0],
-    defense: [3.0, 1.1, -1.0]
+    judge: [0, 1.55, -5.5],
+    prosecutor: [-3.0, 1.1, -2.0],
+    defense: [3.0, 1.1, -2.0]
   };
 
   useFrame(() => {
@@ -192,80 +379,87 @@ function CourtroomScene({
 
   return (
     <>
-      {/* Lights */}
-      <ambientLight intensity={0.4} />
+      {/* Ambient Lighting */}
+      <ambientLight intensity={0.42} />
+      {/* Directional Key Lighting */}
       <directionalLight 
-        position={[5, 10, 3]} 
-        intensity={0.6} 
+        position={[4, 9, 4]} 
+        intensity={0.65} 
         castShadow 
         shadow-mapSize={[1024, 1024]}
-        shadow-bias={-0.001}
+        shadow-bias={-0.0008}
       />
-      <pointLight position={[0, 4, -4]} intensity={0.5} color="#ffd700" />
-      <pointLight position={[-3, 3, 0]} intensity={0.3} color="#90caf9" />
-      <pointLight position={[3, 3, 0]} intensity={0.3} color="#a5d6a7" />
+      {/* Secondary Fill Lights */}
+      <pointLight position={[0, 4.5, -4.5]} intensity={0.45} color="#ffd700" />
+      <pointLight position={[-4, 3, 1]} intensity={0.25} color="#93c5fd" />
+      <pointLight position={[4, 3, 1]} intensity={0.25} color="#86efac" />
 
       {/* Active Speaker Spotlight */}
       {currentSpeaker && isSpeaking && (
         <spotLight
           ref={spotlightRef}
-          position={[0, 6, 1]}
-          angle={0.35}
-          penumbra={0.6}
-          intensity={9}
-          color={currentSpeaker === 'judge' ? '#ffd700' : currentSpeaker === 'prosecutor' ? '#60a5fa' : '#34d399'}
+          position={[0, 6.5, 0.5]}
+          angle={0.32}
+          penumbra={0.7}
+          intensity={9.5}
+          color={currentSpeaker === 'judge' ? '#fbbf24' : currentSpeaker === 'prosecutor' ? '#60a5fa' : '#4ade80'}
           castShadow
         />
       )}
 
-      {/* Floor - Teak Wood Look */}
+      {/* Deeper Floor (Teak Wood Planks) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <planeGeometry args={[16, 12]} />
-        <meshStandardMaterial color="#3e2723" roughness={0.4} metalness={0.1} />
+        <planeGeometry args={[18, 16]} />
+        <meshStandardMaterial color="#301b0f" roughness={0.35} metalness={0.15} />
       </mesh>
 
-      {/* Back Wall - Indian Sandstone Beige & Pillars */}
-      <mesh position={[0, 3.5, -6]} receiveShadow>
-        <boxGeometry args={[16, 7, 0.2]} />
-        <meshStandardMaterial color="#d7bf9d" roughness={0.8} />
+      {/* Back Wall - Deep sandstone beige with paneling texture */}
+      <mesh position={[0, 3.5, -7.5]} receiveShadow>
+        <boxGeometry args={[18, 7, 0.2]} />
+        <meshStandardMaterial color="#ccb596" roughness={0.8} />
       </mesh>
 
-      {/* Mahogany Paneling Lower Back Wall */}
-      <mesh position={[0, 1, -5.85]}>
-        <boxGeometry args={[16, 2, 0.1]} />
-        <meshStandardMaterial color="#2d1b10" roughness={0.5} />
+      {/* Dark Mahogany Wall Base Paneling */}
+      <mesh position={[0, 1.1, -7.38]} receiveShadow>
+        <boxGeometry args={[18, 2.2, 0.08]} />
+        <meshStandardMaterial color="#22140b" roughness={0.6} />
       </mesh>
 
-      {/* Columns / Pillars */}
-      {[-7, -4.5, 4.5, 7].map((x, idx) => (
-        <group key={idx} position={[x, 3.5, -5.8]}>
-          <mesh castShadow>
-            <cylinderGeometry args={[0.25, 0.25, 7, 16]} />
+      {/* Grand Columns / Pillars */}
+      {[-8.0, -5.2, 5.2, 8.0].map((x, idx) => (
+        <group key={idx} position={[x, 3.5, -7.3]}>
+          <mesh castShadow receiveShadow>
+            <cylinderGeometry args={[0.26, 0.26, 7, 18]} />
             <meshStandardMaterial color="#eed9be" roughness={0.7} />
           </mesh>
-          {/* Gold Capitals/Bases */}
+          {/* Golden column capitals */}
           <mesh position={[0, 3.4, 0]}>
-            <cylinderGeometry args={[0.3, 0.25, 0.2, 16]} />
-            <meshStandardMaterial color="#ffd700" metalness={0.8} roughness={0.2} />
+            <cylinderGeometry args={[0.32, 0.26, 0.22, 16]} />
+            <meshStandardMaterial color="#fbbf24" metalness={0.75} roughness={0.25} />
           </mesh>
           <mesh position={[0, -3.4, 0]}>
-            <cylinderGeometry args={[0.25, 0.3, 0.2, 16]} />
-            <meshStandardMaterial color="#3a2512" roughness={0.5} />
+            <cylinderGeometry args={[0.26, 0.32, 0.22, 16]} />
+            <meshStandardMaterial color="#22140b" roughness={0.5} />
           </mesh>
         </group>
       ))}
 
-      {/* Center Law Wheel Emblem - Dharma Chakra */}
-      <group position={[0, 4.5, -5.75]}>
-        {/* Emblem outer ring */}
-        <mesh castShadow rotation={[0, 0, 0]}>
-          <torusGeometry args={[0.9, 0.07, 12, 48]} />
-          <meshStandardMaterial color="#8d5b27" metalness={0.5} roughness={0.3} />
+      {/* Center Law Emblem - Dharma Chakra */}
+      <group position={[0, 4.4, -7.25]}>
+        {/* Circular wooden plaque backing */}
+        <mesh position={[0, 0, -0.05]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[1.05, 1.05, 0.04, 32]} />
+          <meshStandardMaterial color="#301b0f" roughness={0.6} />
         </mesh>
-        {/* Emblem inner circle */}
-        <mesh position={[0, 0, 0]}>
-          <torusGeometry args={[0.25, 0.04, 8, 24]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.8} />
+        {/* Emblem outer ring */}
+        <mesh castShadow>
+          <torusGeometry args={[0.85, 0.065, 12, 48]} />
+          <meshStandardMaterial color="#854d0e" metalness={0.6} roughness={0.3} />
+        </mesh>
+        {/* Inner circle hub */}
+        <mesh position={[0, 0, 0.02]}>
+          <torusGeometry args={[0.22, 0.038, 8, 24]} />
+          <meshStandardMaterial color="#fbbf24" metalness={0.8} />
         </mesh>
         {/* Spokes */}
         {Array.from({ length: 12 }).map((_, i) => {
@@ -273,180 +467,309 @@ function CourtroomScene({
           return (
             <mesh 
               key={i} 
-              position={[0.45 * Math.cos(angle), 0.45 * Math.sin(angle), 0]} 
+              position={[0.42 * Math.cos(angle), 0.42 * Math.sin(angle), 0.01]} 
               rotation={[0, 0, angle]}
             >
-              <boxGeometry args={[0.9, 0.03, 0.03]} />
-              <meshStandardMaterial color="#ffd700" metalness={0.8} />
+              <boxGeometry args={[0.8, 0.028, 0.028]} />
+              <meshStandardMaterial color="#fbbf24" metalness={0.8} />
             </mesh>
           );
         })}
       </group>
 
       {/* Side Wall Left */}
-      <mesh position={[-8, 3.5, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[12, 7]} />
-        <meshStandardMaterial color="#d7bf9d" roughness={0.8} />
+      <mesh position={[-9, 3.5, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
+        <planeGeometry args={[16, 7]} />
+        <meshStandardMaterial color="#ccb596" roughness={0.8} />
       </mesh>
       
       {/* Side Wall Right */}
-      <mesh position={[8, 3.5, 0]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[12, 7]} />
-        <meshStandardMaterial color="#d7bf9d" roughness={0.8} />
+      <mesh position={[9, 3.5, 0]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
+        <planeGeometry args={[16, 7]} />
+        <meshStandardMaterial color="#ccb596" roughness={0.8} />
       </mesh>
 
       {/* ========================================================= */}
       {/* 3D FURNITURE (Procedural meshes) */}
       {/* ========================================================= */}
       
-      {/* 1. Elevated Judge Bench platform */}
-      <mesh position={[0, 0.25, -4.5]} receiveShadow castShadow>
-        <boxGeometry args={[4.5, 0.5, 2.5]} />
-        <meshStandardMaterial color="#3a2512" roughness={0.7} />
+      {/* 1. Elevated Judge Bench platform (Higher & wider) */}
+      <mesh position={[0, 0.4, -5.5]} receiveShadow castShadow>
+        <boxGeometry args={[5.2, 0.8, 2.6]} />
+        <meshStandardMaterial color="#22140b" roughness={0.7} />
       </mesh>
       {/* Judge Bench front desk */}
-      <mesh position={[0, 1.0, -3.8]} receiveShadow castShadow>
-        <boxGeometry args={[4.0, 1.0, 0.6]} />
-        <meshStandardMaterial color="#5a3b1f" roughness={0.5} />
+      <mesh position={[0, 1.3, -4.5]} receiveShadow castShadow>
+        <boxGeometry args={[4.4, 1.0, 0.6]} />
+        <meshStandardMaterial color="#3f2314" roughness={0.5} />
       </mesh>
       {/* Judge Chair Back */}
-      <mesh position={[0, 1.5, -4.9]}>
-        <boxGeometry args={[0.7, 1.3, 0.15]} />
-        <meshStandardMaterial color="#1a1a1a" roughness={0.9} />
+      <mesh position={[0, 1.7, -6.1]}>
+        <boxGeometry args={[0.8, 1.4, 0.15]} />
+        <meshStandardMaterial color="#0f0f10" roughness={0.9} />
+      </mesh>
+
+      {/* Judge Bench Table Props */}
+      <DocumentStack position={[-1.2, 1.8, -4.4]} rotation={[0, 0.15, 0]} />
+      <TableMicrophone position={[0, 1.8, -4.3]} />
+      <mesh position={[0.8, 1.81, -4.4]} castShadow>
+        {/* Wooden Gavel block */}
+        <cylinderGeometry args={[0.08, 0.09, 0.02, 10]} />
+        <meshStandardMaterial color="#3f2314" roughness={0.4} />
       </mesh>
 
       {/* 2. Prosecution Counsel Station */}
-      <group position={[-3.0, 0, -1.0]}>
-        {/* Table */}
-        <mesh position={[0, 0.45, 0]} receiveShadow castShadow>
-          <boxGeometry args={[1.8, 0.1, 1.0]} />
-          <meshStandardMaterial color="#462d19" roughness={0.5} />
+      <group position={[-3.0, 0, -2.0]}>
+        {/* Table top */}
+        <mesh position={[0, 0.72, 0]} receiveShadow castShadow>
+          <boxGeometry args={[1.9, 0.08, 1.0]} />
+          <meshStandardMaterial color="#301b0f" roughness={0.55} />
         </mesh>
         {/* Table Legs */}
-        {[-0.8, 0.8].map((x, idx) => (
-          <mesh key={idx} position={[x, 0.22, 0]} castShadow>
-            <cylinderGeometry args={[0.06, 0.06, 0.45, 8]} />
-            <meshStandardMaterial color="#18181b" roughness={0.9} />
-          </mesh>
+        {[-0.85, 0.85].map((x, idx) => (
+          <group key={idx}>
+            <mesh position={[x, 0.36, -0.42]} castShadow>
+              <cylinderGeometry args={[0.05, 0.05, 0.72, 8]} />
+              <meshStandardMaterial color="#0f172a" roughness={0.8} />
+            </mesh>
+            <mesh position={[x, 0.36, 0.42]} castShadow>
+              <cylinderGeometry args={[0.05, 0.05, 0.72, 8]} />
+              <meshStandardMaterial color="#0f172a" roughness={0.8} />
+            </mesh>
+          </group>
         ))}
-        {/* Chair */}
-        <mesh position={[0, 0.7, 0.7]}>
-          <boxGeometry args={[0.5, 0.8, 0.1]} />
-          <meshStandardMaterial color="#2d2d30" />
-        </mesh>
+        {/* Detailed Chair */}
+        <group position={[0, 0, 0.75]}>
+          {/* Chair Base */}
+          <mesh position={[0, 0.15, 0]} castShadow>
+            <cylinderGeometry args={[0.03, 0.03, 0.3, 8]} />
+            <meshStandardMaterial color="#1e293b" />
+          </mesh>
+          {/* Seat Cushion */}
+          <mesh position={[0, 0.34, 0]} castShadow>
+            <boxGeometry args={[0.48, 0.08, 0.46]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.8} />
+          </mesh>
+          {/* Chair Back */}
+          <mesh position={[0, 0.72, 0.2]} castShadow>
+            <boxGeometry args={[0.46, 0.68, 0.07]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.8} />
+          </mesh>
+        </group>
+
+        {/* Props */}
+        <LawBooks position={[-0.4, 0.76, -0.15]} rotation={[0, -0.1, 0]} />
+        <DocumentStack position={[0.4, 0.76, 0.1]} rotation={[0, 0.2, 0]} />
+        <TableMicrophone position={[0, 0.76, -0.3]} />
       </group>
 
       {/* 3. Defense Counsel Station */}
-      <group position={[3.0, 0, -1.0]}>
-        {/* Table */}
-        <mesh position={[0, 0.45, 0]} receiveShadow castShadow>
-          <boxGeometry args={[1.8, 0.1, 1.0]} />
-          <meshStandardMaterial color="#462d19" roughness={0.5} />
+      <group position={[3.0, 0, -2.0]}>
+        {/* Table top */}
+        <mesh position={[0, 0.72, 0]} receiveShadow castShadow>
+          <boxGeometry args={[1.9, 0.08, 1.0]} />
+          <meshStandardMaterial color="#301b0f" roughness={0.55} />
         </mesh>
         {/* Table Legs */}
-        {[-0.8, 0.8].map((x, idx) => (
-          <mesh key={idx} position={[x, 0.22, 0]} castShadow>
-            <cylinderGeometry args={[0.06, 0.06, 0.45, 8]} />
-            <meshStandardMaterial color="#18181b" roughness={0.9} />
-          </mesh>
+        {[-0.85, 0.85].map((x, idx) => (
+          <group key={idx}>
+            <mesh position={[x, 0.36, -0.42]} castShadow>
+              <cylinderGeometry args={[0.05, 0.05, 0.72, 8]} />
+              <meshStandardMaterial color="#0f172a" roughness={0.8} />
+            </mesh>
+            <mesh position={[x, 0.36, 0.42]} castShadow>
+              <cylinderGeometry args={[0.05, 0.05, 0.72, 8]} />
+              <meshStandardMaterial color="#0f172a" roughness={0.8} />
+            </mesh>
+          </group>
         ))}
-        {/* Chair */}
-        <mesh position={[0, 0.7, 0.7]}>
-          <boxGeometry args={[0.5, 0.8, 0.1]} />
-          <meshStandardMaterial color="#2d2d30" />
-        </mesh>
+        {/* Detailed Chair */}
+        <group position={[0, 0, 0.75]}>
+          {/* Chair Base */}
+          <mesh position={[0, 0.15, 0]} castShadow>
+            <cylinderGeometry args={[0.03, 0.03, 0.3, 8]} />
+            <meshStandardMaterial color="#1e293b" />
+          </mesh>
+          {/* Seat Cushion */}
+          <mesh position={[0, 0.34, 0]} castShadow>
+            <boxGeometry args={[0.48, 0.08, 0.46]} />
+            <meshStandardMaterial color="#1e293b" roughness={0.8} />
+          </mesh>
+          {/* Chair Back */}
+          <mesh position={[0, 0.72, 0.2]} castShadow>
+            <boxGeometry args={[0.46, 0.68, 0.07]} />
+            <meshStandardMaterial color="#1e293b" roughness={0.8} />
+          </mesh>
+        </group>
+
+        {/* Props */}
+        <LawBooks position={[0.4, 0.76, -0.1]} rotation={[0, 0.15, 0]} />
+        <DocumentStack position={[-0.4, 0.76, 0.15]} rotation={[0, -0.05, 0]} />
+        <TableMicrophone position={[0, 0.76, -0.3]} />
       </group>
 
-      {/* 4. Witness Stand Podium */}
-      <group position={[-2.4, 0, -3.2]}>
-        <mesh position={[0, 0.5, 0]} receiveShadow castShadow>
-          <boxGeometry args={[0.8, 1.0, 0.8]} />
-          <meshStandardMaterial color="#5a3b1f" roughness={0.6} />
+      {/* 4. Witness Stand (Open Rails Box Design) */}
+      <group position={[-2.4, 0, -4.2]}>
+        {/* Floor panel base */}
+        <mesh position={[0, 0.1, 0]} receiveShadow castShadow>
+          <boxGeometry args={[0.9, 0.2, 0.9]} />
+          <meshStandardMaterial color="#22140b" roughness={0.8} />
         </mesh>
-        {/* Tiny Microphone stand */}
-        <mesh position={[0.1, 1.05, 0.1]}>
-          <cylinderGeometry args={[0.01, 0.01, 0.2, 8]} />
-          <meshStandardMaterial color="#222" metalness={0.9} />
+        {/* Front Wood Panel */}
+        <mesh position={[0, 0.65, 0.41]} castShadow>
+          <boxGeometry args={[0.82, 0.9, 0.06]} />
+          <meshStandardMaterial color="#3f2314" roughness={0.6} />
         </mesh>
-        <mesh position={[0.15, 1.15, 0.15]}>
-          <sphereGeometry args={[0.02, 8, 8]} />
-          <meshStandardMaterial color="#000" />
+        {/* Left Side wood rail */}
+        <mesh position={[-0.41, 0.65, 0]} castShadow>
+          <boxGeometry args={[0.06, 0.9, 0.88]} />
+          <meshStandardMaterial color="#3f2314" roughness={0.6} />
         </mesh>
+        {/* Right Side wood rail */}
+        <mesh position={[0.41, 0.65, 0]} castShadow>
+          <boxGeometry args={[0.06, 0.9, 0.88]} />
+          <meshStandardMaterial color="#3f2314" roughness={0.6} />
+        </mesh>
+        {/* Gooseneck Mic */}
+        <TableMicrophone position={[0, 1.1, 0.2]} />
       </group>
 
-      {/* 5. Evidence Board / Easel Display Stand */}
-      <group position={[2.6, 0, -3.4]}>
+      {/* 5. Evidence Board Display easel */}
+      <group position={[2.6, 0, -4.4]}>
         {/* Tripod frame */}
-        <mesh position={[-0.3, 0.75, 0]} rotation={[0, 0, -0.1]} castShadow>
-          <cylinderGeometry args={[0.02, 0.02, 1.5, 8]} />
-          <meshStandardMaterial color="#333" />
+        <mesh position={[-0.3, 0.75, 0]} rotation={[0, 0, -0.08]} castShadow>
+          <cylinderGeometry args={[0.018, 0.018, 1.5, 8]} />
+          <meshStandardMaterial color="#27272a" />
         </mesh>
-        <mesh position={[0.3, 0.75, 0]} rotation={[0, 0, 0.1]} castShadow>
-          <cylinderGeometry args={[0.02, 0.02, 1.5, 8]} />
-          <meshStandardMaterial color="#333" />
+        <mesh position={[0.3, 0.75, 0]} rotation={[0, 0, 0.08]} castShadow>
+          <cylinderGeometry args={[0.018, 0.018, 1.5, 8]} />
+          <meshStandardMaterial color="#27272a" />
         </mesh>
-        <mesh position={[0, 0.75, -0.3]} rotation={[0.15, 0, 0]} castShadow>
-          <cylinderGeometry args={[0.02, 0.02, 1.5, 8]} />
-          <meshStandardMaterial color="#333" />
+        <mesh position={[0, 0.75, -0.28]} rotation={[0.14, 0, 0]} castShadow>
+          <cylinderGeometry args={[0.018, 0.018, 1.5, 8]} />
+          <meshStandardMaterial color="#27272a" />
         </mesh>
         {/* Glow Display Screen */}
-        <mesh position={[0, 1.1, 0.05]} castShadow>
-          <boxGeometry args={[1.2, 0.8, 0.05]} />
-          <meshStandardMaterial color="#111827" roughness={0.2} />
+        <mesh position={[0, 1.1, 0.03]} castShadow>
+          <boxGeometry args={[1.2, 0.85, 0.04]} />
+          <meshStandardMaterial color="#0f172a" roughness={0.3} />
         </mesh>
-        {/* Glowing chart surface */}
-        <mesh position={[0, 1.1, 0.08]}>
-          <planeGeometry args={[1.1, 0.75]} />
-          <meshStandardMaterial color="#eab308" emissive="#eab308" emissiveIntensity={0.15} roughness={0.9} />
+        {/* Glowing presentation display */}
+        <mesh position={[0, 1.1, 0.052]}>
+          <planeGeometry args={[1.12, 0.78]} />
+          <meshStandardMaterial 
+            color="#fbbf24" 
+            emissive="#fbbf24" 
+            emissiveIntensity={admittedEvidenceCount > 0 ? 0.22 : 0.05} 
+            roughness={0.9} 
+          />
         </mesh>
       </group>
 
-      {/* 6. Audience Placeholder Benches (Wood planks in back) */}
-      {[-2, 0, 2].map((zOffset) => (
-        <group key={zOffset} position={[0, 0, 2.5 + zOffset]}>
+      {/* 6. Evidence Shelf Table */}
+      <group position={[2.6, 0, -3.2]}>
+        {/* Table surface */}
+        <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
+          <boxGeometry args={[1.1, 0.05, 0.7]} />
+          <meshStandardMaterial color="#3f2314" roughness={0.6} />
+        </mesh>
+        {/* Support Legs */}
+        {[-0.45, 0.45].map((x, i) => (
+          <group key={i}>
+            <mesh position={[x, 0.25, -0.28]} castShadow>
+              <cylinderGeometry args={[0.03, 0.03, 0.5, 8]} />
+              <meshStandardMaterial color="#1c1917" />
+            </mesh>
+            <mesh position={[x, 0.25, 0.28]} castShadow>
+              <cylinderGeometry args={[0.03, 0.03, 0.5, 8]} />
+              <meshStandardMaterial color="#1c1917" />
+            </mesh>
+          </group>
+        ))}
+
+        {/* Dynamic Admitted Evidence Folders stack */}
+        {Array.from({ length: Math.min(admittedEvidenceCount, 5) }).map((_, idx) => {
+          const folderY = 0.525 + idx * 0.022;
+          const rotY = (idx * 0.15) - 0.25;
+          const folderOffset = (idx * 0.02) - 0.04;
+          return (
+            <group key={idx} position={[folderOffset, folderY, 0.02]} rotation={[0, rotY, 0]}>
+              {/* Folder cardboard jacket */}
+              <mesh castShadow>
+                <boxGeometry args={[0.26, 0.015, 0.32]} />
+                <meshStandardMaterial color="#eab308" roughness={0.7} />
+              </mesh>
+              {/* Paper layers */}
+              <mesh position={[0.005, 0.009, 0]}>
+                <boxGeometry args={[0.24, 0.007, 0.3]} />
+                <meshStandardMaterial color="#f8fafc" roughness={0.9} />
+              </mesh>
+              {/* Exhibit tag strip */}
+              <mesh position={[-0.07, 0.01, 0.11]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[0.065, 0.04]} />
+                <meshStandardMaterial color="#dc2626" />
+              </mesh>
+            </group>
+          );
+        })}
+      </group>
+
+      {/* 7. Audience Spectator Benches (Wood planks in rear) */}
+      {[-0.5, 1.4, 3.3].map((zOffset, rIdx) => (
+        <group key={rIdx} position={[0, 0, 3.5 + zOffset]}>
           {/* Bench Row Left */}
-          <group position={[-3.5, 0, 0]}>
-            <mesh position={[0, 0.25, 0]} castShadow receiveShadow>
-              <boxGeometry args={[3.5, 0.08, 0.4]} />
-              <meshStandardMaterial color="#4a301a" roughness={0.6} />
+          <group position={[-3.6, 0, 0]}>
+            <mesh position={[0, 0.3, 0]} castShadow receiveShadow>
+              <boxGeometry args={[3.6, 0.08, 0.42]} />
+              <meshStandardMaterial color="#301b0f" roughness={0.7} />
+            </mesh>
+            {/* Backrest board */}
+            <mesh position={[0, 0.65, 0.18]} castShadow>
+              <boxGeometry args={[3.6, 0.3, 0.04]} />
+              <meshStandardMaterial color="#22140b" roughness={0.7} />
             </mesh>
             {/* Support legs */}
-            {[-1.5, 1.5].map((xOffset) => (
-              <mesh key={xOffset} position={[xOffset, 0.12, 0]} castShadow>
-                <boxGeometry args={[0.1, 0.24, 0.35]} />
-                <meshStandardMaterial color="#3a2512" />
+            {[-1.6, 1.6].map((xOffset) => (
+              <mesh key={xOffset} position={[xOffset, 0.15, 0]} castShadow>
+                <boxGeometry args={[0.08, 0.3, 0.38]} />
+                <meshStandardMaterial color="#22140b" />
               </mesh>
             ))}
           </group>
           
           {/* Bench Row Right */}
-          <group position={[3.5, 0, 0]}>
-            <mesh position={[0, 0.25, 0]} castShadow receiveShadow>
-              <boxGeometry args={[3.5, 0.08, 0.4]} />
-              <meshStandardMaterial color="#4a301a" roughness={0.6} />
+          <group position={[3.6, 0, 0]}>
+            <mesh position={[0, 0.3, 0]} castShadow receiveShadow>
+              <boxGeometry args={[3.6, 0.08, 0.42]} />
+              <meshStandardMaterial color="#301b0f" roughness={0.7} />
+            </mesh>
+            {/* Backrest board */}
+            <mesh position={[0, 0.65, 0.18]} castShadow>
+              <boxGeometry args={[3.6, 0.3, 0.04]} />
+              <meshStandardMaterial color="#22140b" roughness={0.7} />
             </mesh>
             {/* Support legs */}
-            {[-1.5, 1.5].map((xOffset) => (
-              <mesh key={xOffset} position={[xOffset, 0.12, 0]} castShadow>
-                <boxGeometry args={[0.1, 0.24, 0.35]} />
-                <meshStandardMaterial color="#3a2512" />
+            {[-1.6, 1.6].map((xOffset) => (
+              <mesh key={xOffset} position={[xOffset, 0.15, 0]} castShadow>
+                <boxGeometry args={[0.08, 0.3, 0.38]} />
+                <meshStandardMaterial color="#22140b" />
               </mesh>
             ))}
           </group>
         </group>
       ))}
 
-      {/* Spectator/Audience stylized placeholder spheres */}
+      {/* Spectator/Audience capsules (Benches 2 and 3 populated) */}
       {[-3.0, -1.8, 1.8, 3.0].map((x, i) => (
-        <mesh key={i} position={[x, 0.5, 2.5]} castShadow>
-          <sphereGeometry args={[0.15, 16, 16]} />
-          <meshStandardMaterial color="#64748b" roughness={0.9} />
+        <mesh key={i} position={[x, 0.72, 4.9]} castShadow>
+          <sphereGeometry args={[0.16, 16, 16]} />
+          <meshStandardMaterial color="#64748b" roughness={0.95} />
         </mesh>
       ))}
-      {[-2.5, 2.5].map((x, i) => (
-        <mesh key={i} position={[x, 0.5, 4.5]} castShadow>
-          <sphereGeometry args={[0.15, 16, 16]} />
-          <meshStandardMaterial color="#475569" roughness={0.9} />
+      {[-2.4, -3.4, 2.4, 3.4].map((x, i) => (
+        <mesh key={i} position={[x, 0.72, 6.8]} castShadow>
+          <sphereGeometry args={[0.16, 16, 16]} />
+          <meshStandardMaterial color="#475569" roughness={0.95} />
         </mesh>
       ))}
     </>
@@ -462,58 +785,63 @@ export default function Courtroom3DStage({
   isActive,
   judgeName = 'Judge',
   prosecutorName = 'Prosecutor',
-  defenseName = 'Defense'
+  defenseName = 'Defense',
+  admittedEvidenceCount = 0
 }: Courtroom3DStageProps) {
   const [freeLook, setFreeLook] = useState(false);
 
   return (
-    <div className="relative w-full h-[400px] bg-[#110803] select-none">
+    <div className="relative w-full h-[320px] sm:h-[400px] bg-[#0c0502] select-none">
       {/* 3D Canvas */}
       <Canvas shadows>
-        <PerspectiveCamera makeDefault fov={45} position={[0, 3.8, 6.5]} />
+        <PerspectiveCamera makeDefault fov={45} position={[0, 4.4, 8.5]} />
         
         {/* Procedural Scene Objects */}
-        <CourtroomScene currentSpeaker={currentSpeaker} isSpeaking={isSpeaking} />
+        <CourtroomScene 
+          currentSpeaker={currentSpeaker} 
+          isSpeaking={isSpeaking} 
+          admittedEvidenceCount={admittedEvidenceCount}
+        />
 
         {/* 3D Stylized Avatars */}
-        {/* Judge - Elevated, sitting behind bench */}
+        {/* Judge - Elevated platform, behind bench */}
         <StylizedAvatar 
           role="judge" 
           isSpeaking={currentSpeaker === 'judge' && isSpeaking} 
-          position={[0, 0.75, -4.5]} 
+          position={[0, 1.15, -5.5]} 
         />
         
-        {/* Prosecutor - Left Station */}
+        {/* Prosecutor - Left Desk */}
         <StylizedAvatar 
           role="prosecutor" 
           isSpeaking={currentSpeaker === 'prosecutor' && isSpeaking} 
-          position={[-3.0, 0.45, -1.0]} 
+          position={[-3.0, 0.72, -2.0]} 
         />
         
-        {/* Defense - Right Station */}
+        {/* Defense - Right Desk */}
         <StylizedAvatar 
           role="defense" 
           isSpeaking={currentSpeaker === 'defense' && isSpeaking} 
-          position={[3.0, 0.45, -1.0]} 
+          position={[3.0, 0.72, -2.0]} 
         />
 
         {/* Camera Tracking Controls */}
         <CameraController currentSpeaker={currentSpeaker} freeLook={freeLook} />
         
-        {/* Orbit Controls (Only effective if freeLook is enabled) */}
+        {/* Orbit Controls (Only responsive if freeLook is active) */}
         {freeLook && (
           <OrbitControls 
             enableDamping 
             dampingFactor={0.05} 
-            maxPolarAngle={Math.PI / 2 - 0.05}
+            maxPolarAngle={Math.PI / 2 - 0.08}
             minDistance={2}
-            maxDistance={9}
-            target={[0, 1.2, -1.5]}
+            maxDistance={11}
+            target={[0, 1.3, -2.5]}
           />
         )}
       </Canvas>
 
-      {/* Floating Labels overlay for 3D speakers */}
+      {/* Camera View Selector Control */}
       <div className="absolute top-4 left-4 z-10 flex gap-2">
         <button
           onClick={() => setFreeLook(!freeLook)}
@@ -528,7 +856,7 @@ export default function Courtroom3DStage({
         </button>
       </div>
 
-      {/* Small floating HUD showing the active speaker name */}
+      {/* Floating Speaking HUD overlay */}
       {isActive && currentSpeaker && (
         <div className="absolute bottom-4 right-4 bg-gray-950/90 border border-gray-800 backdrop-blur-md px-3 py-2 rounded-xl flex items-center gap-2.5 shadow-2xl animate-scale-in text-left">
           <span className={`w-2.5 h-2.5 rounded-full animate-ping ${

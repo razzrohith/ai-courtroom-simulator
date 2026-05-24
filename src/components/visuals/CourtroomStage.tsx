@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense, Component } from 'react';
 import type { AgentRole, AgentParticipant, CourtPhase, Evidence, Verdict, TranscriptEntry } from '../../types/courtroom';
 import { PHASE_LABELS } from '../../types/courtroom';
 import { 
@@ -18,10 +18,43 @@ import {
 } from './CourtroomVisuals';
 import StageEvidencePresenter from './StageEvidencePresenter';
 import CourtroomGallery from './CourtroomGallery';
-import Courtroom3DStage from './Courtroom3DStage';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { getRoleLabel } from '../../utils/languageMode';
 import { summarizeCourtroomUtterance } from '../../utils/sanitizeAgentResponse';
+
+// Lazy load the 3D stage component to split the large Three.js bundles
+const Courtroom3DStage = lazy(() => import('./Courtroom3DStage'));
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+  fallback: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class Courtroom3DErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("3D Courtroom failed to load or render:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
 
 function isWebGLAvailable() {
   try {
@@ -278,15 +311,46 @@ export function CourtroomStage({
       {/* Main stage area */}
       <div className="relative p-4 md:p-6 min-h-[280px] flex flex-col">
         {show3D ? (
-          <div className="relative rounded-xl overflow-hidden border border-gray-800 shadow-inner mb-4">
-            <Courtroom3DStage
-              currentSpeaker={simulationSpeaker || null}
-              isSpeaking={isStageTyping || false}
-              isActive={isActive}
-              judgeName={judge?.name}
-              prosecutorName={prosecutor?.name}
-              defenseName={defense?.name}
-            />
+          <div className="relative rounded-xl overflow-hidden border border-gray-850 shadow-inner mb-4 bg-gray-950 min-h-[320px] sm:min-h-[400px]">
+            <Courtroom3DErrorBoundary
+              fallback={
+                <div className="w-full h-[320px] sm:h-[400px] flex flex-col items-center justify-center bg-gray-950 border border-red-950/20 rounded-xl p-6 text-center">
+                  <span className="text-3xl mb-2 text-red-500">⚠️</span>
+                  <div className="text-xs font-bold text-red-400">3D Graphics Failure</div>
+                  <p className="text-[10px] text-gray-500 max-w-xs mt-1 leading-relaxed">
+                    Your browser or system failed to initialize the 3D WebGL engine. Toggling back to 2D view.
+                  </p>
+                  <button
+                    onClick={() => setShow3D(false)}
+                    className="mt-3 px-3 py-1.5 bg-red-950/30 hover:bg-red-900/20 text-red-300 border border-red-900/50 rounded-lg text-[10px] font-semibold active:scale-95 transition-all"
+                  >
+                    Use 2D Courtroom
+                  </button>
+                </div>
+              }
+            >
+              <Suspense
+                fallback={
+                  <div className="w-full h-[320px] sm:h-[400px] flex flex-col items-center justify-center bg-gradient-to-b from-gray-950 to-gray-900 border border-gray-900/55 rounded-xl relative overflow-hidden">
+                    <div className="w-8 h-8 border-2 border-yellow-500/20 border-t-yellow-500 rounded-full animate-spin mb-3"></div>
+                    <div className="text-[10px] font-bold text-yellow-500 uppercase tracking-widest animate-pulse">
+                      Entering Courtroom...
+                    </div>
+                    <div className="text-[9px] text-gray-500 mt-1">Initializing 3D Graphics Engine</div>
+                  </div>
+                }
+              >
+                <Courtroom3DStage
+                  currentSpeaker={simulationSpeaker || null}
+                  isSpeaking={isStageTyping || false}
+                  isActive={isActive}
+                  judgeName={judge?.name}
+                  prosecutorName={prosecutor?.name}
+                  defenseName={defense?.name}
+                  admittedEvidenceCount={admittedEvidence.length}
+                />
+              </Suspense>
+            </Courtroom3DErrorBoundary>
           </div>
         ) : (
           <>

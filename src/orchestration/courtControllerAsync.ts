@@ -311,6 +311,34 @@ function processWitnessTestimony(state: CourtState, speakerRole: AgentRole): Cou
   return { ...state, witnesses: updatedWitnesses };
 }
 
+function getObjectionText(type: ObjectionType): string {
+  const texts: Record<ObjectionType, string> = {
+    relevance: "Objection, Your Honor! Relevance. This line of questioning has no bearing on the claims of this case.",
+    lack_of_foundation: "Objection, Your Honor! Lack of foundation. There is no established basis for this evidence.",
+    hearsay: "Objection, Your Honor! Hearsay. The witness is repeating statements made by out-of-court declarants.",
+    argumentative: "Objection, Your Honor! Argumentative. Opposing counsel is badgering the witness or arguing prematurely.",
+    speculation: "Objection, Your Honor! Speculation. This asks the witness to guess or assume facts not in evidence.",
+    leading_question: "Objection, Your Honor! Leading question. Counsel is putting words in the witness's mouth.",
+    misleading_evidence: "Objection, Your Honor! Misleading evidence. This mischaracterizes the actual record.",
+    improper_conclusion: "Objection, Your Honor! Improper conclusion. Counsel is asking for a legal determination rather than factual testimony.",
+    assumes_facts_not_shown: "Objection, Your Honor! Assumes facts not shown. The question presumes facts that have not been established in evidence.",
+    compound_question: "Objection, Your Honor! Compound question. Counsel is combining multiple queries into a single question.",
+  };
+  return texts[type] || "Objection, Your Honor!";
+}
+
+function determineObjectionRuling(type: ObjectionType, phase: CourtPhase): boolean {
+  if (['relevance', 'lack_of_foundation', 'misleading_evidence'].includes(type)) {
+    if (phase.includes('opening')) return true;
+    return Math.random() < 0.6; // 60% sustained
+  }
+  if (['argumentative', 'speculation', 'improper_conclusion'].includes(type)) {
+    if (phase === 'closing_arguments' || phase.includes('opening')) return false;
+    return Math.random() < 0.4; // 40% sustained
+  }
+  return Math.random() < 0.5;
+}
+
 async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole): Promise<CourtState> {
   const speakerName = getParticipantName(state, speakerRole);
   const config = getParticipantConfig(speakerRole);
@@ -422,21 +450,9 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
   // Check for objection trigger (context-aware)
   const speakerTurn = state.transcript.filter(t => t.phase === state.currentPhase && t.speakerRole === speakerRole).length;
   const objectionType = shouldTriggerObjection(state.currentPhase, speakerTurn, state.objectionHistory, evidenceRefs);
-  let updatedObjections = state.objectionHistory;
   
-  if (objectionType) {
-    // Add objection record
-    const raisedBy = speakerRole === 'prosecutor' ? 'defense' : 'prosecutor';
-    const objection: ObjectionEvent = {
-      id: `obj-${Date.now()}`,
-      raisedBy,
-      type: objectionType,
-      targetEvidence: evidenceRefs[0],
-      status: 'pending',
-      timestamp: new Date().toISOString(),
-    };
-    updatedObjections = [...state.objectionHistory, objection];
-  }
+  let updatedObjections = [...state.objectionHistory];
+  let finalTranscript = [...state.transcript];
 
   const newEntry: TranscriptEntry = { 
     id: `trans-${Date.now()}-${speakerRole}`, 
@@ -444,7 +460,7 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
     speakerName, 
     message: result.message, 
     phase: state.currentPhase, 
-    sequenceNumber: state.transcript.length + 1, 
+    sequenceNumber: finalTranscript.length + 1, 
     timestamp: new Date().toISOString(),
     evidenceRef: evidenceRefs.length > 0 ? evidenceRefs.join(',') : undefined,
     providerUsed: result.providerUsed, 
@@ -452,6 +468,79 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
     responseSource: result.responseSource,
     isComplete: true 
   };
+  finalTranscript.push(newEntry);
+
+  if (objectionType) {
+    const raisedBy = speakerRole === 'prosecutor' ? 'defense' : 'prosecutor';
+    const sustained = determineObjectionRuling(objectionType, state.currentPhase);
+    
+    // Create resolved objection
+    const objectionReason = sustained 
+      ? 'Objection deemed relevant and impacts evidence admissibility.' 
+      : 'Objection not pertinent; evidence remains admissible.';
+    const objectionImpact = sustained ? 'Evidence excluded or limited.' : 'Evidence admitted.';
+    
+    const objection: ObjectionEvent = {
+      id: `obj-${Date.now()}`,
+      raisedBy,
+      type: objectionType,
+      targetEvidence: evidenceRefs[0],
+      status: sustained ? 'sustained' : 'overruled',
+      reason: objectionReason,
+      impact: objectionImpact,
+      timestamp: new Date().toISOString(),
+    };
+    updatedObjections.push(objection);
+
+    // Create opposing counsel objection statement
+    const objectionEntry: TranscriptEntry = {
+      id: `trans-objection-${Date.now()}`,
+      speakerRole: raisedBy,
+      speakerName: getParticipantName(state, raisedBy),
+      message: getObjectionText(objectionType),
+      phase: state.currentPhase,
+      sequenceNumber: finalTranscript.length + 1,
+      timestamp: new Date().toISOString(),
+      providerUsed: 'mock',
+      modelUsed: 'objection-engine-v1',
+      responseSource: 'mock',
+      isComplete: true,
+    };
+    finalTranscript.push(objectionEntry);
+
+    // Create judge ruling transcript entry
+    const rulingMessage = sustained
+      ? `The objection is SUSTAINED. ${objectionReason} ${objectionImpact}`
+      : `The objection is OVERRULED. ${objectionReason} ${objectionImpact}`;
+    
+    const rulingEntry: TranscriptEntry = {
+      id: `trans-ruling-${Date.now()}`,
+      speakerRole: 'judge',
+      speakerName: getParticipantName(state, 'judge'),
+      message: rulingMessage,
+      phase: state.currentPhase,
+      sequenceNumber: finalTranscript.length + 1,
+      timestamp: new Date().toISOString(),
+      providerUsed: 'mock',
+      modelUsed: 'judge-reasoner-v1',
+      responseSource: 'mock',
+      isComplete: true,
+    };
+    finalTranscript.push(rulingEntry);
+
+    // Update target evidence status based on ruling
+    if (evidenceRefs.length > 0) {
+      const targetEvidence = evidenceRefs[0];
+      const evidenceRef = targetEvidence.toUpperCase().replace(/[-\s]/g, '');
+      const idx = updatedEvidence.findIndex(e => e.id.toUpperCase() === evidenceRef);
+      if (idx >= 0) {
+        updatedEvidence[idx] = { 
+          ...updatedEvidence[idx], 
+          status: sustained ? 'disputed' : 'admitted' 
+        };
+      }
+    }
+  }
 
   // Dynamically accumulate key facts from agent messages during relevant phases
   const factPhases: CourtPhase[] = [
@@ -499,7 +588,7 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
   return { 
     ...state, 
     currentSpeaker: speakerRole, 
-    transcript: [...state.transcript, newEntry],
+    transcript: finalTranscript,
     evidence: updatedEvidence,
     objectionHistory: updatedObjections,
     case: updatedCase

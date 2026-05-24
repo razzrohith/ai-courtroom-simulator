@@ -102,6 +102,33 @@ export function CourtroomLayout({
   const [modelConfig, setModelConfig] = useState<CourtroomModelConfig | null>(null);
   const [statusTick, setStatusTick] = useState(0);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [rightTab, setRightTab] = useState<'transcript' | 'objections'>('transcript');
+  
+  const [leftCollapsed, setLeftCollapsed] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem('judgebench.layoutPrefs.v1');
+      if (stored) {
+        return !!JSON.parse(stored).leftCollapsed;
+      }
+    } catch {}
+    return false;
+  });
+
+  const [rightCollapsed, setRightCollapsed] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem('judgebench.layoutPrefs.v1');
+      if (stored) {
+        return !!JSON.parse(stored).rightCollapsed;
+      }
+    } catch {}
+    return false;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('judgebench.layoutPrefs.v1', JSON.stringify({ leftCollapsed, rightCollapsed }));
+    } catch {}
+  }, [leftCollapsed, rightCollapsed]);
 
   useEffect(() => {
     const config = loadCourtroomConfig();
@@ -136,6 +163,10 @@ export function CourtroomLayout({
       openRouterMode: config.openRouterMode,
     };
   };
+
+  const leftSpan = leftCollapsed ? 1 : 3;
+  const rightSpan = rightCollapsed ? 1 : 4;
+  const centerSpan = 12 - leftSpan - rightSpan;
 
   return (
     <div className="min-h-screen bg-[#090d11] text-gray-100 flex flex-col lg:flex-row font-sans">
@@ -349,45 +380,41 @@ export function CourtroomLayout({
             </div>
           ) : (
             /* Simulation State Layout: Cinematic Stage + Grid of Panels */
-            <div className="space-y-6">
-              {/* Row 1: Courtroom Stage Visualizer */}
-              <div className="bg-[#0d131a] rounded-xl border border-gray-800 overflow-hidden shadow-lg">
-                <CourtroomStage
-                  judge={{
-                    ...participants.find(p => p.role === 'judge')!,
-                    modelInfo: getAgentModelInfo('judge')
-                  }}
-                  prosecutor={{
-                    ...participants.find(p => p.role === 'prosecutor')!,
-                    modelInfo: getAgentModelInfo('prosecutor')
-                  }}
-                  defense={{
-                    ...participants.find(p => p.role === 'defense')!,
-                    modelInfo: getAgentModelInfo('defense')
-                  }}
-                  currentSpeaker={stageEntry?.speakerRole || null}
-                  isSpeaking={isStageTyping}
-                  currentPhase={currentPhase}
-                  isActive={isActive}
-                  evidence={evidence}
-                  activeObjection={objectionHistory.find(o => o.status === 'pending')}
-                  showVerdict={currentPhase === 'verdict' && !!verdict}
-                  verdict={verdict}
-                  compact={false}
-                  latestEntry={stageEntry}
-                  isStageTyping={isStageTyping}
-                  simulationSpeaker={currentSpeaker}
-                  isGenerating={isGenerating}
-                />
-              </div>
-
-              {/* Row 2: Runtime 3-Column Panel Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                {/* Column 1: Agent Profiles (lg:col-span-3) */}
-                <div className="lg:col-span-3 space-y-4">
-                  <span className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest px-1">
-                    Courtroom Counsel & Judge
-                  </span>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Left Column (Profiles) */}
+              <div className={`col-span-12 lg:col-span-${leftSpan} transition-all duration-300`}>
+                {/* Collapsed Rail (Desktop only) */}
+                {leftCollapsed && (
+                  <div className="hidden lg:flex flex-col items-center py-4 bg-[#0d131a] border border-gray-850 rounded-xl h-[600px]">
+                    <button 
+                      onClick={() => setLeftCollapsed(false)}
+                      className="w-10 h-10 rounded-xl bg-gray-850 hover:bg-gray-800 text-yellow-500 border border-gray-800 hover:border-gray-700 flex items-center justify-center transition-all duration-200 shadow-md mb-6 active:scale-95"
+                      title="Expand Left Panel"
+                    >
+                      ➡️
+                    </button>
+                    <div className="flex flex-col gap-6 text-xl">
+                      <span title="Presiding Judge">👨‍⚖️</span>
+                      <span title="Plaintiff Counsel">💼</span>
+                      <span title="Defense Counsel">🛡️</span>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Full Content (Desktop when expanded, and Mobile always) */}
+                <div className={`${leftCollapsed ? 'lg:hidden' : 'block'} space-y-4`}>
+                  <div className="flex items-center justify-between px-1">
+                    <span className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest font-sans">
+                      Profiles
+                    </span>
+                    <button 
+                      onClick={() => setLeftCollapsed(true)}
+                      className="hidden lg:block text-[10px] font-bold text-gray-400 hover:text-white px-2 py-1 rounded bg-gray-850 hover:bg-gray-800 border border-gray-800 transition-all duration-150"
+                      title="Collapse Panel"
+                    >
+                      ⬅️ Collapse
+                    </button>
+                  </div>
                   <AgentPanel
                     participant={participants.find(p => p.role === 'judge')!}
                     isCurrentSpeaker={currentSpeaker === 'judge'}
@@ -407,43 +434,71 @@ export function CourtroomLayout({
                     modelInfo={getAgentModelInfo('defense')}
                   />
                 </div>
+              </div>
 
-                {/* Column 2: Main Proceeding Feed (lg:col-span-6) */}
-                <div className="lg:col-span-6 space-y-4">
-                  <span className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest px-1">
-                    Court Transcript
-                  </span>
-                  {isActive && (
-                    <CaseContextCard caseData={caseData} />
-                  )}
-                  <PhaseTimeline currentPhase={currentPhase} />
-                  <div className="h-[600px] md:h-[650px] flex flex-col bg-[#0d131a] rounded-xl border border-gray-800 overflow-hidden shadow-lg">
-                    {verdict && currentPhase === 'verdict' ? (
-                      <VerdictPanel verdict={verdict} evidence={evidence} objections={objectionHistory} />
-                    ) : (
-                      <TranscriptPanel transcript={transcript} currentPhase={phaseLabel} speech={speech} />
-                    )}
-                  </div>
+              {/* Center Column */}
+              <div className={`col-span-12 lg:col-span-${centerSpan} space-y-6 transition-all duration-300`}>
+                {/* Courtroom Stage Visualizer */}
+                <div className="bg-[#0d131a] rounded-xl border border-gray-800 overflow-hidden shadow-lg">
+                  <CourtroomStage
+                    judge={{
+                      ...participants.find(p => p.role === 'judge')!,
+                      modelInfo: getAgentModelInfo('judge')
+                    }}
+                    prosecutor={{
+                      ...participants.find(p => p.role === 'prosecutor')!,
+                      modelInfo: getAgentModelInfo('prosecutor')
+                    }}
+                    defense={{
+                      ...participants.find(p => p.role === 'defense')!,
+                      modelInfo: getAgentModelInfo('defense')
+                    }}
+                    currentSpeaker={stageEntry?.speakerRole || null}
+                    isSpeaking={isStageTyping}
+                    currentPhase={currentPhase}
+                    isActive={isActive}
+                    evidence={evidence}
+                    activeObjection={objectionHistory.find(o => o.status === 'pending')}
+                    showVerdict={currentPhase === 'verdict' && !!verdict}
+                    verdict={verdict}
+                    compact={false}
+                    latestEntry={stageEntry}
+                    isStageTyping={isStageTyping}
+                    simulationSpeaker={currentSpeaker}
+                    isGenerating={isGenerating}
+                  />
                 </div>
 
-                {/* Column 3: Evidence, Objections & Logs (lg:col-span-3) */}
-                <div className="lg:col-span-3 space-y-4">
-                  <span className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest px-1">
-                    Registry & Records
-                  </span>
-                  <div className="flex gap-2">
+                {isActive && (
+                  <CaseContextCard caseData={caseData} />
+                )}
+                <PhaseTimeline currentPhase={currentPhase} />
+                
+                {/* Evidence Board / Timeline / Exhibits in Center Column */}
+                <div className="bg-[#0d131a] rounded-xl border border-gray-850 p-4 space-y-4">
+                  <div className="flex gap-2 border-b border-gray-800 pb-3">
                     <button
-                      onClick={() => setShowTimeline(!showTimeline)}
+                      onClick={() => { setShowTimeline(false); setShowExhibitView(false); }}
+                      className={`text-xs px-2.5 py-1.5 rounded-lg font-bold border transition-all duration-200 ${
+                        !showTimeline && !showExhibitView
+                          ? 'bg-yellow-950/40 text-yellow-500 border-yellow-750/30' 
+                          : 'bg-gray-800/40 text-gray-400 border-gray-700/50 hover:bg-gray-800/60'
+                      }`}
+                    >
+                      Evidence Board
+                    </button>
+                    <button
+                      onClick={() => { setShowTimeline(true); setShowExhibitView(false); }}
                       className={`text-xs px-2.5 py-1.5 rounded-lg font-bold border transition-all duration-200 ${
                         showTimeline 
                           ? 'bg-yellow-950/40 text-yellow-500 border-yellow-750/30' 
                           : 'bg-gray-800/40 text-gray-400 border-gray-700/50 hover:bg-gray-800/60'
                       }`}
                     >
-                      {showTimeline ? 'Timeline View' : 'Evidence List'}
+                      Evidence Timeline
                     </button>
                     <button
-                      onClick={() => setShowExhibitView(!showExhibitView)}
+                      onClick={() => { setShowExhibitView(true); setShowTimeline(false); }}
                       className={`text-xs px-2.5 py-1.5 rounded-lg font-bold border transition-all duration-200 ${
                         showExhibitView 
                           ? 'bg-yellow-950/40 text-yellow-500 border-yellow-750/30' 
@@ -461,45 +516,122 @@ export function CourtroomLayout({
                   ) : (
                     <EvidenceBoard evidence={evidence} />
                   )}
-                  
-                  <ObjectionHistoryPanel objections={objectionHistory} onRuling={onObjectionRuling} />
+                </div>
+              </div>
 
-                  {(currentPhase === 'witness_testimony' || currentPhase === 'motion_hearing' || currentPhase === 'cross_examination') && (
-                    <>
-                      <WitnessPanel witnesses={witnesses} />
-                      <MotionPanel 
-                        motions={motionHistory} 
-                        onRuling={(mid, granted) => { 
-                          console.log('Motion ruling:', mid, granted); 
-                        }} 
-                      />
-                    </>
+              {/* Right Column (Transcript & Records) */}
+              <div className={`col-span-12 lg:col-span-${rightSpan} transition-all duration-300`}>
+                {/* Collapsed Rail (Desktop only) */}
+                {rightCollapsed && (
+                  <div className="hidden lg:flex flex-col items-center py-4 bg-[#0d131a] border border-gray-850 rounded-xl h-[600px]">
+                    <button 
+                      onClick={() => setRightCollapsed(false)}
+                      className="w-10 h-10 rounded-xl bg-gray-850 hover:bg-gray-800 text-yellow-500 border border-gray-800 hover:border-gray-700 flex items-center justify-center transition-all duration-200 shadow-md mb-6 active:scale-95"
+                      title="Expand Right Panel"
+                    >
+                      ⬅️
+                    </button>
+                    <button
+                      onClick={() => { setRightCollapsed(false); setRightTab('transcript'); }}
+                      className="p-3 hover:bg-gray-800 rounded-xl text-lg text-gray-400 hover:text-white transition-all mb-4"
+                      title="Transcript Feed"
+                    >
+                      📜
+                    </button>
+                    <button
+                      onClick={() => { setRightCollapsed(false); setRightTab('objections'); }}
+                      className="p-3 hover:bg-gray-800 rounded-xl text-lg text-gray-400 hover:text-white transition-all"
+                      title="Objections & Records"
+                    >
+                      ⚖️
+                    </button>
+                  </div>
+                )}
+
+                {/* Full Content (Desktop when expanded, and Mobile always) */}
+                <div className={`${rightCollapsed ? 'lg:hidden' : 'block'} flex flex-col bg-[#0d131a]/95 border border-gray-850 rounded-xl overflow-hidden shadow-2xl h-full`}>
+                  <div className="flex items-center justify-between border-b border-gray-800 p-3 bg-gray-950/40">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setRightTab('transcript')}
+                        className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all duration-200 ${
+                          rightTab === 'transcript'
+                            ? 'bg-yellow-950/40 text-yellow-500 border border-yellow-750/30'
+                            : 'text-gray-400 hover:text-gray-250 hover:bg-gray-800/40 border border-transparent'
+                        }`}
+                      >
+                        📜 Transcript
+                      </button>
+                      <button
+                        onClick={() => setRightTab('objections')}
+                        className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all duration-200 ${
+                          rightTab === 'objections'
+                            ? 'bg-yellow-950/40 text-yellow-500 border border-yellow-750/30'
+                            : 'text-gray-400 hover:text-gray-250 hover:bg-gray-800/40 border border-transparent'
+                        }`}
+                      >
+                        ⚖️ Records
+                      </button>
+                    </div>
+                    <button 
+                      onClick={() => setRightCollapsed(true)}
+                      className="hidden lg:block text-[10px] font-bold text-gray-400 hover:text-white px-2 py-1.5 rounded bg-gray-850 hover:bg-gray-800 border border-gray-800 transition-all duration-150"
+                      title="Collapse Panel"
+                    >
+                      Collapse ➡️
+                    </button>
+                  </div>
+
+                  {rightTab === 'transcript' ? (
+                    <div className="h-[600px] md:h-[650px] flex flex-col bg-[#0d131a] overflow-y-auto">
+                      {verdict && currentPhase === 'verdict' ? (
+                        <VerdictPanel verdict={verdict} evidence={evidence} objections={objectionHistory} />
+                      ) : (
+                        <TranscriptPanel transcript={transcript} currentPhase={phaseLabel} speech={speech} />
+                      )}
+                    </div>
+                  ) : (
+                    <div className="h-[600px] md:h-[650px] overflow-y-auto p-4 space-y-4">
+                      <ObjectionHistoryPanel objections={objectionHistory} onRuling={onObjectionRuling} />
+
+                      {(currentPhase === 'witness_testimony' || currentPhase === 'motion_hearing' || currentPhase === 'cross_examination') && (
+                        <>
+                          <WitnessPanel witnesses={witnesses} />
+                          <MotionPanel 
+                            motions={motionHistory} 
+                            onRuling={(mid, granted) => { 
+                              console.log('Motion ruling:', mid, granted); 
+                            }} 
+                          />
+                        </>
+                      )}
+
+                      {currentPhase === 'jury_instructions' && (
+                        <JuryInstructionPanel instructions={
+                          transcript.find(t => t.speakerRole === 'judge' && t.phase === 'jury_instructions')?.message
+                        } />
+                      )}
+
+                      {currentPhase === 'judge_deliberation' && (
+                        <DeliberationPanel 
+                          summary={verdict?.deliberationSummary}
+                          evidenceImpact="Exhibits E01-E04 reviewed. Speciation genetics validated."
+                          witnessImpact={verdict?.witnessImpact}
+                          motionImpact={verdict?.motionImpact}
+                          objectionImpact="Objection to hearsay ruled upon by the court."
+                        />
+                      )}
+
+                      {(currentPhase === 'verdict' || currentPhase === 'case_summary') && (
+                        <AppealPanel 
+                          grounds={verdict?.appealGrounds}
+                          decision={verdict?.decision}
+                        />
+                      )}
+
+                      <CaseSummaryReport state={state} />
+                    </div>
                   )}
-
-                  {currentPhase === 'jury_instructions' && (
-                    <JuryInstructionPanel instructions={
-                      transcript.find(t => t.speakerRole === 'judge' && t.phase === 'jury_instructions')?.message
-                    } />
-                  )}
-
-                  {currentPhase === 'judge_deliberation' && (
-                    <DeliberationPanel 
-                      summary={verdict?.deliberationSummary}
-                      evidenceImpact="Exhibits E01-E04 reviewed. Speciation genetics validated."
-                      witnessImpact={verdict?.witnessImpact}
-                      motionImpact={verdict?.motionImpact}
-                      objectionImpact="Objection to hearsay ruled upon by the court."
-                    />
-                  )}
-
-                  {(currentPhase === 'verdict' || currentPhase === 'case_summary') && (
-                    <AppealPanel 
-                      grounds={verdict?.appealGrounds}
-                      decision={verdict?.decision}
-                    />
-                  )}
-
-                  <CaseSummaryReport state={state} />
                 </div>
               </div>
             </div>

@@ -13,8 +13,6 @@ import type { CourtState, TranscriptEntry, CaseData } from './types/courtroom';
 import { useSpeechSynthesis } from './hooks/useSpeechSynthesis';
 import { LanguageProvider } from './contexts/LanguageContext';
 
-import LanguageSelector from './components/LanguageSelector';
-
 function App() {
   const [state, setState] = useState<CourtState>(() => createInitialState());
   const [isGenerating, setIsGenerating] = useState(false);
@@ -269,7 +267,6 @@ function App() {
 
   return (
     <>
-      <LanguageSelector />
       <CourtroomLayout
         state={state}
         onStart={handleStart}

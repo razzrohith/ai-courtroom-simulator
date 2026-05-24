@@ -7,9 +7,6 @@ export enum LanguageMode {
 export const LANGUAGE_STORAGE_KEY = 'judgebench.languageMode.v1';
 
 export const getStoredLanguageMode = (): LanguageMode => {
-  const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-  if (stored === LanguageMode.TELUGU) return LanguageMode.TELUGU;
-  if (stored === LanguageMode.HINDI) return LanguageMode.HINDI;
   return LanguageMode.EN_IN;
 };
 

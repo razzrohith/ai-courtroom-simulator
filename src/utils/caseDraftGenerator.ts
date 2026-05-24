@@ -33,10 +33,10 @@ You MUST respond with a single JSON object. Do not wrap it in markdown code bloc
 The JSON object must follow this exact schema:
 {
   "title": "A compelling courtroom case title, e.g. 'ChatGPT v. Claude: AI Assistant Superiority Dispute'",
-  "caseType": "The type of case, e.g. 'Intellectual Property Dispute', 'Civil Liability', or 'Philosophical Debate'",
+  "caseType": "The type of case, e.g. 'Academic Grievance', 'Transaction Dispute', or 'Technical Debate'",
   "plaintiffSide": "Name of the Plaintiff side, e.g. 'ChatGPT'",
   "defenseSide": "Name of the Defense side, e.g. 'Claude'",
-  "claimSummary": "A concise summary of the dispute, claims, and counterclaims. Keep it under 3 sentences.",
+  "claimSummary": "A concise summary of the dispute, claims, and counterclaims. Describe specific arguments of both sides naturally. Keep it under 3 sentences.",
   "keyFacts": [
     "Fact 1: A clear, objective key fact of the case",
     "Fact 2: Another clear, objective key fact of the case",
@@ -67,7 +67,8 @@ The JSON object must follow this exact schema:
 }
 
 Ensure the title, plaintiffSide, and defenseSide directly reflect the entities mentioned.
-Keep all text short, simple, and courtroom-ready. No long legal jargon. No real legal advice.
+Make all text simple, natural, and highly specific to the user's prompt. Avoid generic boilerplate phrasing like "alternative evolutionary, architectural, or design parameters" or "the parties are locked in a dispute regarding..." unless the prompt is explicitly scientific.
+Keep evidence titles simple and believable (e.g., 'Grade Rubric', 'Email Thread', 'System Performance Logs', 'Receipt').
 Ensure there are exactly 3 key facts, and exactly 2 evidence items (one for prosecutor with ID EXHIBITP1 and one for defense with ID EXHIBITD1).`;
 
   const userPrompt = `Dispute description: "${sanitizedDescription}"`;
@@ -337,40 +338,152 @@ export function generateFallbackCase(description: string): CaseData {
     defense = 'Defense Team';
   }
 
-  const title = `${plaintiff} v. ${defense}: Dispute of Priority & Capability`;
-  const caseType = 'Civil Arbitration / Technical Dispute';
-  const claimSummary = `The parties are locked in a dispute regarding "${cleanDesc}". Plaintiff ${plaintiff} asserts priority, higher performance, and superior utility. Defendant ${defense} disputes these claims, arguing its own architecture provides superior value.`;
-  
-  const keyFacts = [
-    `The dispute arose from assertions relating to: "${cleanDesc}".`,
-    `Plaintiff ${plaintiff} relies on performance metrics and user efficiency data to claim priority.`,
-    `Defendant ${defense} contends that alternative evolutionary, architectural, or design parameters favor its position.`
-  ];
-  
-  const evidenceItems = [
-    {
-      id: 'EXHIBITP1',
-      exhibitNumber: 'Exhibit P-1',
-      title: `${plaintiff} Benchmark Report`,
-      type: 'report' as const,
-      confidentiality: 'public' as const,
-      summary: `Document showing the capabilities and arguments for ${plaintiff}.`,
-      content: `Detailed capability report for ${plaintiff}.`,
-      introducedBy: 'prosecutor' as const,
-      status: 'pending' as const
-    },
-    {
-      id: 'EXHIBITD1',
-      exhibitNumber: 'Exhibit D-1',
-      title: `${defense} Capability Study`,
-      type: 'report' as const,
-      confidentiality: 'public' as const,
-      summary: `Research findings showing the defense side arguments and data for ${defense}.`,
-      content: `Detailed capability log for ${defense}.`,
-      introducedBy: 'defense' as const,
-      status: 'pending' as const
-    }
-  ];
+  // Detect context keywords to construct specific, human-like summaries, facts, and evidence
+  const textLower = cleanDesc.toLowerCase();
+  const isTech = textLower.includes('ai') || textLower.includes('software') || textLower.includes('chatgpt') || textLower.includes('claude') || textLower.includes('code') || textLower.includes('system') || textLower.includes('technology');
+  const isEdu = textLower.includes('student') || textLower.includes('university') || textLower.includes('school') || textLower.includes('grade') || textLower.includes('exam') || textLower.includes('course') || textLower.includes('professor');
+  const isComm = textLower.includes('buyer') || textLower.includes('seller') || textLower.includes('purchase') || textLower.includes('money') || textLower.includes('refund') || textLower.includes('contract') || textLower.includes('car') || textLower.includes('rent') || textLower.includes('price');
+
+  let title = '';
+  let caseType = '';
+  let claimSummary = '';
+  let keyFacts: string[] = [];
+  let evidenceItems: any[] = [];
+
+  if (isEdu) {
+    title = `${plaintiff} v. ${defense}: Grading Grievance`;
+    caseType = 'Academic Grievance';
+    claimSummary = `Plaintiff ${plaintiff} claims they were graded unfairly or that institutional policy was violated during their academic evaluation. Defendant ${defense} maintains the grading was conducted objectively under standard university guidelines.`;
+    keyFacts = [
+      `The dispute relates to coursework or exams described in: "${cleanDesc}".`,
+      `${plaintiff} submitted the required work according to the syllabus guidelines.`,
+      `${defense} applied official university criteria to determine the final mark.`
+    ];
+    evidenceItems = [
+      {
+        id: 'EXHIBITP1',
+        exhibitNumber: 'Exhibit P-1',
+        title: `${plaintiff} Graded Coursework`,
+        type: 'document' as const,
+        confidentiality: 'public' as const,
+        summary: `The submitted coursework with written feedback or a copy of the syllabus.`,
+        content: `Syllabus policies and student submission files.`,
+        introducedBy: 'prosecutor' as const,
+        status: 'pending' as const
+      },
+      {
+        id: 'EXHIBITD1',
+        exhibitNumber: 'Exhibit D-1',
+        title: `${defense} Grading Rubric`,
+        type: 'report' as const,
+        confidentiality: 'public' as const,
+        summary: `The official department grading guidelines and scoring sheet.`,
+        content: `Grading key and evaluator comments.`,
+        introducedBy: 'defense' as const,
+        status: 'pending' as const
+      }
+    ];
+  } else if (isComm) {
+    title = `${plaintiff} v. ${defense}: Transaction Dispute`;
+    caseType = 'Commercial Arbitration';
+    claimSummary = `Plaintiff ${plaintiff} claims that ${defense} failed to deliver goods or services matching their description or payment. Defendant ${defense} denies the claim, asserting they completed their end of the agreement.`;
+    keyFacts = [
+      `The parties engaged in a purchase or contract: "${cleanDesc}".`,
+      `Plaintiff ${plaintiff} processed the payment and expected delivery.`,
+      `Defendant ${defense} claims the transaction was finalized according to terms.`
+    ];
+    evidenceItems = [
+      {
+        id: 'EXHIBITP1',
+        exhibitNumber: 'Exhibit P-1',
+        title: `${plaintiff} Purchase Receipt`,
+        type: 'document' as const,
+        confidentiality: 'public' as const,
+        summary: `Receipt or transaction details demonstrating payment.`,
+        content: `Receipt and order confirmation.`,
+        introducedBy: 'prosecutor' as const,
+        status: 'pending' as const
+      },
+      {
+        id: 'EXHIBITD1',
+        exhibitNumber: 'Exhibit D-1',
+        title: `${defense} Delivery Receipt`,
+        type: 'document' as const,
+        confidentiality: 'public' as const,
+        summary: `Shipment log or confirmation showing delivery.`,
+        content: `Delivery record and logistics timestamp.`,
+        introducedBy: 'defense' as const,
+        status: 'pending' as const
+      }
+    ];
+  } else if (isTech) {
+    title = `${plaintiff} v. ${defense}: Capability Debate`;
+    caseType = 'Technical Arbitration';
+    claimSummary = `Plaintiff ${plaintiff} claims superior speed, efficiency, and intelligence for specific tasks. Defendant ${defense} argues its system output is more thorough and provides better overall results.`;
+    keyFacts = [
+      `The dispute involves comparing capabilities under the description: "${cleanDesc}".`,
+      `Plaintiff ${plaintiff} presents benchmark metrics claiming a speed or accuracy edge.`,
+      `Defendant ${defense} highlights test cases showing high contextual understanding.`
+    ];
+    evidenceItems = [
+      {
+        id: 'EXHIBITP1',
+        exhibitNumber: 'Exhibit P-1',
+        title: `${plaintiff} Benchmark Report`,
+        type: 'report' as const,
+        confidentiality: 'public' as const,
+        summary: `Benchmark scores and execution log.`,
+        content: `System test logs.`,
+        introducedBy: 'prosecutor' as const,
+        status: 'pending' as const
+      },
+      {
+        id: 'EXHIBITD1',
+        exhibitNumber: 'Exhibit D-1',
+        title: `${defense} Output Evaluation`,
+        type: 'report' as const,
+        confidentiality: 'public' as const,
+        summary: `Detailed response evaluations showing correct formatting and accuracy.`,
+        content: `Evaluation logs.`,
+        introducedBy: 'defense' as const,
+        status: 'pending' as const
+      }
+    ];
+  } else {
+    // General civil dispute
+    title = `${plaintiff} v. ${defense}: Civil Dispute`;
+    caseType = 'Civil Dispute';
+    claimSummary = `Plaintiff ${plaintiff} claims that ${defense} did not meet expectations or caused an issue regarding "${cleanDesc}". Defendant ${defense} disputes this, claiming they acted properly and are not at fault.`;
+    keyFacts = [
+      `A dispute arose regarding: "${cleanDesc}".`,
+      `Plaintiff ${plaintiff} states they suffered a loss or inconvenience.`,
+      `Defendant ${defense} contends they met all reasonable standards.`
+    ];
+    evidenceItems = [
+      {
+        id: 'EXHIBITP1',
+        exhibitNumber: 'Exhibit P-1',
+        title: `${plaintiff} Chat Log`,
+        type: 'document' as const,
+        confidentiality: 'public' as const,
+        summary: `Communications showing the initial request and grievance.`,
+        content: `Chat and email logs from Plaintiff.`,
+        introducedBy: 'prosecutor' as const,
+        status: 'pending' as const
+      },
+      {
+        id: 'EXHIBITD1',
+        exhibitNumber: 'Exhibit D-1',
+        title: `${defense} Email Correspondence`,
+        type: 'document' as const,
+        confidentiality: 'public' as const,
+        summary: `Record of responses illustrating the defense's position.`,
+        content: `Communications and answers from Defendant.`,
+        introducedBy: 'defense' as const,
+        status: 'pending' as const
+      }
+    ];
+  }
 
   return {
     id: `case-fallback-${Date.now()}`,

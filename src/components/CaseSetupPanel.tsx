@@ -211,6 +211,31 @@ export function CaseSetupPanel({ caseData, onUpdateCase }: CaseSetupPanelProps) 
               placeholder="Example: ChatGPT and Claude are debating which AI assistant is better for students."
               className="w-full text-xs bg-gray-800/80 border border-gray-700 rounded-lg p-2 text-gray-200 focus:border-yellow-600 focus:outline-none min-h-[50px] max-h-[80px] resize-none transition-colors duration-200"
             />
+            {/* Clickable example chips */}
+            <div className="flex flex-wrap gap-1 mt-0.5 mb-2">
+              <span className="text-[9px] text-gray-500 self-center mr-1">Try:</span>
+              <button
+                type="button"
+                onClick={() => setPrompt("ChatGPT and Claude are debating which AI assistant is better.")}
+                className="text-[9px] bg-gray-800/60 hover:bg-gray-700/80 text-yellow-500/80 hover:text-yellow-500 border border-gray-750/70 rounded-full px-2 py-0.5 transition-all duration-200"
+              >
+                ChatGPT vs Claude
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrompt("A student claims a university grader failed them unfairly on their final thesis.")}
+                className="text-[9px] bg-gray-800/60 hover:bg-gray-700/80 text-yellow-500/80 hover:text-yellow-500 border border-gray-750/70 rounded-full px-2 py-0.5 transition-all duration-200"
+              >
+                Student vs University
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrompt("A buyer claims the merchant sent a counterfeit watch and refused a refund.")}
+                className="text-[9px] bg-gray-800/60 hover:bg-gray-700/80 text-yellow-500/80 hover:text-yellow-500 border border-gray-750/70 rounded-full px-2 py-0.5 transition-all duration-200"
+              >
+                Buyer vs Seller
+              </button>
+            </div>
             <button
               onClick={handleGenerateDraft}
               disabled={isGenerating || !prompt.trim()}
@@ -513,12 +538,17 @@ export function CaseSetupPanel({ caseData, onUpdateCase }: CaseSetupPanelProps) 
       {/* Case Draft Preview Modal */}
       {showPreview && generatedDraft && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl max-w-lg w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
             {/* Header */}
             <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-950/40">
-              <h3 className="text-sm font-bold text-yellow-500 flex items-center gap-1.5">
-                ⚖️ Review Generated Case Draft
-              </h3>
+              <div>
+                <h3 className="text-sm font-bold text-yellow-500 flex items-center gap-1.5">
+                  ⚖️ Review Generated Case Draft
+                </h3>
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  📝 You can edit everything before starting the trial.
+                </p>
+              </div>
               <button 
                 onClick={() => setShowPreview(false)} 
                 className="text-gray-400 hover:text-white font-bold text-lg leading-none"
@@ -528,44 +558,46 @@ export function CaseSetupPanel({ caseData, onUpdateCase }: CaseSetupPanelProps) 
             </div>
 
             {/* Content */}
-            <div className="p-4 overflow-y-auto space-y-4 text-xs sm:text-sm">
-              <div>
-                <span className="block text-[9px] text-gray-500 font-bold uppercase mb-0.5">Case Title</span>
-                <h4 className="text-base font-bold text-yellow-500 leading-tight">{generatedDraft.title}</h4>
+            <div className="p-4 overflow-y-auto space-y-4 text-xs">
+              {/* Case header card */}
+              <div className="bg-gray-950/35 p-3 rounded-lg border border-gray-800 space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Case Title</span>
+                  <span className="text-[9px] font-bold text-gray-400 bg-gray-800 px-2 py-0.5 rounded font-mono uppercase tracking-wider">{generatedDraft.caseType}</span>
+                </div>
+                <h4 className="text-sm font-extrabold text-yellow-500 leading-snug">{generatedDraft.title}</h4>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <span className="block text-[9px] text-gray-500 font-bold uppercase mb-0.5">Plaintiff</span>
-                  <div className="p-2 bg-emerald-950/15 border border-emerald-800/30 rounded text-emerald-400 font-semibold truncate">
-                    {generatedDraft.plaintiffSide}
+              {/* Opposing Parties */}
+              <div className="bg-gray-950/35 p-3 rounded-lg border border-gray-800 space-y-2">
+                <span className="block text-[9px] text-gray-500 font-bold uppercase tracking-wider">Opposing Parties</span>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1 p-2 bg-emerald-950/20 border border-emerald-800/20 rounded text-center truncate">
+                    <span className="block text-[8px] text-emerald-450 uppercase tracking-widest font-bold mb-0.5">Plaintiff</span>
+                    <span className="text-xs font-bold text-gray-200">{generatedDraft.plaintiffSide}</span>
+                  </div>
+                  <span className="text-[10px] text-gray-600 font-bold px-1.5 font-mono">VS</span>
+                  <div className="flex-1 p-2 bg-rose-950/20 border border-rose-800/20 rounded text-center truncate">
+                    <span className="block text-[8px] text-rose-450 uppercase tracking-widest font-bold mb-0.5">Defendant</span>
+                    <span className="text-xs font-bold text-gray-200">{generatedDraft.defenseSide}</span>
                   </div>
                 </div>
-                <div>
-                  <span className="block text-[9px] text-gray-500 font-bold uppercase mb-0.5">Defendant</span>
-                  <div className="p-2 bg-rose-950/15 border border-rose-800/30 rounded text-rose-400 font-semibold truncate">
-                    {generatedDraft.defenseSide}
-                  </div>
-                </div>
               </div>
 
-              <div>
-                <span className="block text-[9px] text-gray-500 font-bold uppercase mb-0.5">Case Type</span>
-                <p className="text-gray-300 font-semibold">{generatedDraft.caseType}</p>
-              </div>
-
-              <div>
-                <span className="block text-[9px] text-gray-500 font-bold uppercase mb-0.5">Claim Summary</span>
-                <p className="text-gray-300 leading-relaxed bg-gray-950/30 p-2.5 border border-gray-800 rounded">
-                  {generatedDraft.claimSummary}
+              {/* Claim Summary */}
+              <div className="bg-gray-950/35 p-3 rounded-lg border border-gray-800 space-y-1">
+                <span className="block text-[9px] text-gray-500 font-bold uppercase tracking-wider">Claim Summary</span>
+                <p className="text-xs text-gray-300 leading-relaxed italic">
+                  "{generatedDraft.claimSummary}"
                 </p>
               </div>
 
-              <div>
-                <span className="block text-[9px] text-gray-500 font-bold uppercase mb-1">Key Facts</span>
+              {/* Key Facts */}
+              <div className="bg-gray-950/35 p-3 rounded-lg border border-gray-800 space-y-2">
+                <span className="block text-[9px] text-gray-500 font-bold uppercase tracking-wider">Key Facts</span>
                 <ul className="space-y-1.5">
                   {generatedDraft.keyFacts.map((fact, idx) => (
-                    <li key={idx} className="flex gap-2 text-gray-300 items-start text-xs">
+                    <li key={idx} className="flex gap-2 text-gray-300 items-start">
                       <span className="text-yellow-600 font-bold">{idx + 1}.</span>
                       <span className="leading-normal">{fact}</span>
                     </li>
@@ -573,16 +605,17 @@ export function CaseSetupPanel({ caseData, onUpdateCase }: CaseSetupPanelProps) 
                 </ul>
               </div>
 
-              <div>
-                <span className="block text-[9px] text-gray-500 font-bold uppercase mb-1.5">Exhibits / Evidence</span>
-                <div className="space-y-2">
+              {/* Evidence Exhibits */}
+              <div className="bg-gray-950/35 p-3 rounded-lg border border-gray-800 space-y-2">
+                <span className="block text-[9px] text-gray-500 font-bold uppercase tracking-wider">Exhibit Dossiers</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {generatedDraft.evidenceItems.map(ev => (
-                    <div key={ev.id} className="p-2.5 bg-gray-800/40 border border-gray-750 rounded space-y-1 text-xs">
-                      <div className="flex justify-between items-center gap-2">
-                        <span className="font-bold text-yellow-500 truncate">{ev.exhibitNumber || ev.id}: {ev.title}</span>
-                        <span className="text-[9px] uppercase text-gray-500 bg-gray-950 px-1 py-0.5 rounded font-mono font-semibold">{ev.type}</span>
+                    <div key={ev.id} className="p-2.5 bg-gray-800/40 border border-gray-750 rounded space-y-1">
+                      <div className="flex justify-between items-start gap-1">
+                        <span className="font-bold text-yellow-500 truncate text-[11px]">{ev.exhibitNumber || ev.id}: {ev.title}</span>
+                        <span className="text-[8px] uppercase text-gray-450 bg-gray-900 px-1 py-0.5 rounded font-mono font-bold tracking-wider">{ev.type}</span>
                       </div>
-                      <p className="text-gray-400 leading-normal text-xs">{ev.summary}</p>
+                      <p className="text-gray-400 text-[11px] leading-relaxed line-clamp-2" title={ev.summary}>{ev.summary}</p>
                     </div>
                   ))}
                 </div>
@@ -593,7 +626,7 @@ export function CaseSetupPanel({ caseData, onUpdateCase }: CaseSetupPanelProps) 
             <div className="p-4 border-t border-gray-800 bg-gray-950/20 flex flex-wrap gap-2 justify-end">
               <button
                 onClick={() => setShowPreview(false)}
-                className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded font-semibold text-xs transition-colors duration-200"
+                className="px-3.5 py-1.5 bg-gray-850 hover:bg-gray-800 text-gray-300 rounded font-semibold text-xs transition-colors duration-200 border border-gray-750"
               >
                 Cancel
               </button>
@@ -605,13 +638,13 @@ export function CaseSetupPanel({ caseData, onUpdateCase }: CaseSetupPanelProps) 
                     if (ta) (ta as HTMLTextAreaElement).focus();
                   }, 100);
                 }}
-                className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded font-semibold text-xs transition-colors duration-200"
+                className="px-3.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded font-semibold text-xs transition-colors duration-200 border border-gray-700"
               >
                 Edit Prompt ✏️
               </button>
               <button
                 onClick={handleGenerateDraft}
-                className="px-3 py-1.5 bg-blue-900/50 hover:bg-blue-850 text-blue-300 rounded font-semibold text-xs border border-blue-800/45 transition-colors duration-200"
+                className="px-3.5 py-1.5 bg-blue-900/40 hover:bg-blue-850/50 text-blue-300 rounded font-semibold text-xs border border-blue-800/40 transition-colors duration-200"
               >
                 Regenerate 🔄
               </button>
@@ -622,7 +655,7 @@ export function CaseSetupPanel({ caseData, onUpdateCase }: CaseSetupPanelProps) 
                   setIsEditing(true);
                   setShowPreview(false);
                 }}
-                className="px-3 py-1.5 bg-purple-700 hover:bg-purple-650 text-white rounded font-semibold text-xs transition-colors duration-200"
+                className="px-3.5 py-1.5 bg-purple-700 hover:bg-purple-650 text-white rounded font-semibold text-xs transition-colors duration-200"
               >
                 Edit Manually 🛠️
               </button>
@@ -633,7 +666,7 @@ export function CaseSetupPanel({ caseData, onUpdateCase }: CaseSetupPanelProps) 
                   setIsEditing(false);
                   setShowPreview(false);
                 }}
-                className="px-4 py-1.5 bg-emerald-650 hover:bg-emerald-550 text-white font-bold rounded text-xs shadow transition-colors duration-200"
+                className="px-4.5 py-1.5 bg-emerald-650 hover:bg-emerald-555 text-white font-bold rounded text-xs shadow transition-colors duration-200"
               >
                 Use This Case 👍
               </button>

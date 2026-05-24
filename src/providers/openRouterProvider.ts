@@ -72,10 +72,9 @@ export async function generateWithOpenRouter(params: {
 }): Promise<string> {
   const config = loadCourtroomConfig();
   const agentConfig = config[params.role];
-  const openRouterMode = agentConfig?.openRouterMode || 'personal';
-
   const apiKey = loadApiKey('openrouter');
   const proxyUrl = import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL;
+  const openRouterMode = agentConfig?.openRouterMode || (proxyUrl ? 'demo' : 'personal');
   
   let url = '';
   const headers: Record<string, string> = {

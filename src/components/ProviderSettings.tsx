@@ -37,6 +37,8 @@ import { LoadingSpinner } from './visuals/CourtroomVisuals';
 import { testProviderAndModel } from '../providers/runtime';
 import { useSpeechSynthesis, filterIndianVoices } from '../hooks/useSpeechSynthesis';
 
+const hasProxy = !!import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL;
+
 interface ProviderSettingsProps {
   isOpen: boolean;
   onClose: () => void;
@@ -417,7 +419,7 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                     statusBadge = { bg: 'bg-red-900/50', text: 'text-red-400', label: 'Free Demo Unavailable — proxy not configured' };
                     break;
                   case 'personal-api-ready':
-                    statusBadge = { bg: 'bg-emerald-900/50', text: 'text-emerald-400', label: 'Personal API Active' };
+                    statusBadge = { bg: 'bg-emerald-900/50', text: 'text-emerald-400', label: 'Personal API Ready' };
                     break;
                   case 'missing-key':
                     statusBadge = { bg: 'bg-red-900/50', text: 'text-red-400', label: 'Personal API Missing' };
@@ -429,7 +431,7 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                     statusBadge = { bg: 'bg-blue-900/50', text: 'text-blue-405', label: 'Not Tested' };
                     break;
                   case 'failed': {
-                    const mode = agentConfig?.openRouterMode || 'personal';
+                    const mode = agentConfig?.openRouterMode || (hasProxy ? 'demo' : 'personal');
                     let label = '';
                     let bg = 'bg-red-900/50';
                     let text = 'text-red-400';
@@ -440,6 +442,10 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                       text = 'text-blue-400';
                     } else if (agentConfig?.providerId === 'openrouter' && mode === 'demo' && errorMsg && (errorMsg.includes('rate-limited') || errorMsg.includes('429') || errorMsg.includes('rate_limited'))) {
                       label = 'Free Demo rate-limited — try later or use your own OpenRouter key.';
+                    } else if (agentConfig?.providerId === 'openrouter' && mode === 'demo' && errorMsg && errorMsg.includes('invalid proxy key')) {
+                      label = 'Free Demo Failed — invalid proxy key';
+                    } else if (agentConfig?.providerId === 'openrouter' && mode === 'demo' && errorMsg && errorMsg.includes('missing proxy secret')) {
+                      label = 'Free Demo Failed — missing proxy secret';
                     } else {
                       const prefix = agentConfig?.providerId === 'openrouter'
                         ? (mode === 'demo' ? 'Free Demo Failed' : 'Personal API Failed')
@@ -537,7 +543,7 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                             <input
                               type="radio"
                               name={`or-mode-${role}`}
-                              checked={agentConfig.openRouterMode === 'demo'}
+                              checked={agentConfig.openRouterMode === 'demo' || (!agentConfig.openRouterMode && hasProxy)}
                               onChange={() => {
                                 const defaultFreeModel = 'meta-llama/llama-3.3-70b-instruct:free';
                                 updateAgentConfig(role, { 
@@ -553,7 +559,7 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                             <input
                               type="radio"
                               name={`or-mode-${role}`}
-                              checked={agentConfig.openRouterMode === 'personal' || !agentConfig.openRouterMode}
+                              checked={agentConfig.openRouterMode === 'personal' || (!agentConfig.openRouterMode && !hasProxy)}
                               onChange={() => {
                                 updateAgentConfig(role, { openRouterMode: 'personal' });
                               }}

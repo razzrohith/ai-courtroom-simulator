@@ -202,6 +202,7 @@ export const DEFAULT_MODEL_CONFIG: CourtroomModelConfig = {
     providerId: 'openrouter',
     model: 'meta-llama/llama-3.3-70b-instruct:free',
     mode: 'api',
+    openRouterMode: 'demo',
   } : {
     providerId: 'mock',
     model: 'judge-reasoner-v1',
@@ -211,6 +212,7 @@ export const DEFAULT_MODEL_CONFIG: CourtroomModelConfig = {
     providerId: 'openrouter',
     model: 'meta-llama/llama-3.3-70b-instruct:free',
     mode: 'api',
+    openRouterMode: 'demo',
   } : {
     providerId: 'mock',
     model: 'prosecutor-advocate-v1',
@@ -220,6 +222,7 @@ export const DEFAULT_MODEL_CONFIG: CourtroomModelConfig = {
     providerId: 'openrouter',
     model: 'meta-llama/llama-3.3-70b-instruct:free',
     mode: 'api',
+    openRouterMode: 'demo',
   } : {
     providerId: 'mock',
     model: 'defense-strategist-v1',

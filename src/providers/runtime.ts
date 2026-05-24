@@ -84,8 +84,14 @@ export async function testProviderAndModel(
     const sanitizedMsg = errorMsg.replace(/(?:sk-|AIzaSy)[a-zA-Z0-9_\-]+/g, '***REDACTED***');
     
     let failedReason = `Failed — ${sanitizedMsg}`;
-    if (sanitizedMsg.toLowerCase().includes('api key') || sanitizedMsg.includes('401') || sanitizedMsg.toLowerCase().includes('unauthorized')) {
-      failedReason = 'Failed — invalid API key';
+    if (sanitizedMsg.toLowerCase().includes('shared key not set') || sanitizedMsg.toLowerCase().includes('proxy configuration error')) {
+      failedReason = 'Failed — missing proxy secret';
+    } else if (sanitizedMsg.toLowerCase().includes('api key') || sanitizedMsg.includes('401') || sanitizedMsg.includes('403') || sanitizedMsg.toLowerCase().includes('unauthorized') || sanitizedMsg.toLowerCase().includes('invalid_key')) {
+      if (config.providerId === 'openrouter' && config.openRouterMode === 'demo') {
+        failedReason = 'Failed — invalid proxy key';
+      } else {
+        failedReason = 'Failed — invalid API key';
+      }
     } else if (sanitizedMsg.includes('429') || sanitizedMsg.toLowerCase().includes('rate_limited') || sanitizedMsg.toLowerCase().includes('rate-limit') || sanitizedMsg.toLowerCase().includes('too many requests')) {
       if (config.providerId === 'openrouter' && config.openRouterMode === 'demo') {
         failedReason = 'Failed — Free Demo rate-limited — try later or use your own OpenRouter key.';

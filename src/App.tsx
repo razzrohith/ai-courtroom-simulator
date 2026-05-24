@@ -93,6 +93,10 @@ function App() {
 
   const handleNextTurn = useCallback(async () => {
     if (isGenerating || isProcessingRef.current) return;
+    const hasPendingObjection = state.objectionHistory.some(o => o.status === 'pending');
+    const isComplete = state.transcript.some(t => t.id.startsWith('trans-summary-'));
+    if (hasPendingObjection || isComplete) return;
+
     isProcessingRef.current = true;
     streamRef.current.abort = false;
     setIsGenerating(true);
@@ -149,6 +153,17 @@ function App() {
 
   // Autoplay progression effect
   useEffect(() => {
+    const isComplete = state.transcript.some(t => t.id.startsWith('trans-summary-'));
+    if (isComplete) {
+      setIsAutoplay(false);
+      return;
+    }
+
+    const hasPendingObjection = state.objectionHistory.some(o => o.status === 'pending');
+    if (hasPendingObjection) {
+      return; // Awaiting ruling
+    }
+
     if (!isAutoplay || isAutoplayPaused || isGenerating || !state.isActive || isStageTyping) {
       return;
     }

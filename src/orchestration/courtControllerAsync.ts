@@ -610,6 +610,9 @@ export function getJudgeTransition(phase: CourtPhase | undefined, state: CourtSt
 }
 
 function advanceToNextPhase(state: CourtState): CourtState {
+  if (state.currentPhase === 'case_summary' && state.transcript.some(t => t.id.startsWith('trans-summary-'))) {
+    return state;
+  }
   const currentIndex = COURT_PHASES.indexOf(state.currentPhase);
   const nextPhase = COURT_PHASES[currentIndex + 1];
   

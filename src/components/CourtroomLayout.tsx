@@ -116,7 +116,9 @@ export function CourtroomLayout({
     };
   }, []);
 
-  const canAdvance = isActive && currentSpeaker !== null;
+  const hasPendingObjection = state.objectionHistory.some(o => o.status === 'pending');
+  const isComplete = state.transcript.some(t => t.id.startsWith('trans-summary-'));
+  const canAdvance = isActive && currentSpeaker !== null && !hasPendingObjection && !isComplete;
 
   const getAgentModelInfo = (role: AgentRole): AgentModelInfo | null => {
     if (!modelConfig) return null;
@@ -390,7 +392,15 @@ export function CourtroomLayout({
                       : 'bg-gray-700 text-gray-500 cursor-not-allowed shadow-none'
                   }`}
                 >
-                  {isGenerating ? '⏳ Generating...' : (isAutoplay && !isAutoplayPaused) ? '🤖 Autoplay...' : 'Next Turn ➡️'}
+                  {isGenerating 
+                    ? '⏳ Generating...' 
+                    : hasPendingObjection 
+                    ? 'Awaiting Ruling... ⚖️' 
+                    : isComplete 
+                    ? 'Simulation Complete ✅' 
+                    : (isAutoplay && !isAutoplayPaused) 
+                    ? '🤖 Autoplay...' 
+                    : 'Next Turn ➡️'}
                 </button>
 
                 {/* Autoplay Controls */}

@@ -434,6 +434,9 @@ export function getAgentConnectionStatus(
           if (stored === 'connected') {
             return 'free-demo-ready';
           }
+          if (stored === 'fallback') {
+            return 'fallback';
+          }
           if (stored.startsWith('failed:')) {
             return 'failed';
           }
@@ -456,6 +459,9 @@ export function getAgentConnectionStatus(
         if (stored) {
           if (stored === 'connected') {
             return 'personal-api-ready';
+          }
+          if (stored === 'fallback') {
+            return 'fallback';
           }
           if (stored.startsWith('failed:')) {
             return 'failed';

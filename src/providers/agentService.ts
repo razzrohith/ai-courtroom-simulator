@@ -243,7 +243,7 @@ export async function generateAgentResponse(params: {
     const ready = await isProviderReady(providerId);
 
     if (ready) {
-      const { message } = await generateResponseWithMetadata({
+      const { message, metadata } = await generateResponseWithMetadata({
         role,
         config,
         phase,
@@ -255,12 +255,12 @@ export async function generateAgentResponse(params: {
 
       return {
         message: sanitizeAgentResponse(message) || getFallbackMessage(role),
-        providerUsed: providerId,
-        modelUsed: config.model,
-        responseSource: 'real',
+        providerUsed: metadata.providerUsed,
+        modelUsed: metadata.modelUsed,
+        responseSource: metadata.fallbackUsed ? 'fallback' : 'real',
       };
     } else {
-      const { message } = await generateResponseWithMetadata({
+      const { message, metadata } = await generateResponseWithMetadata({
         role,
         config,
         phase,
@@ -272,14 +272,14 @@ export async function generateAgentResponse(params: {
 
       return {
         message: sanitizeAgentResponse(message) || getFallbackMessage(role),
-        providerUsed: 'mock',
-        modelUsed: config.model,
+        providerUsed: metadata.providerUsed,
+        modelUsed: metadata.modelUsed,
         responseSource: 'fallback',
       };
     }
   } catch (error) {
     console.error(`Provider error: ${providerId}`, error);
-    const { message } = await generateResponseWithMetadata({
+    const { message, metadata } = await generateResponseWithMetadata({
       role,
       config,
       phase,
@@ -291,8 +291,8 @@ export async function generateAgentResponse(params: {
 
     return {
       message: sanitizeAgentResponse(message) || getFallbackMessage(role),
-      providerUsed: 'mock',
-      modelUsed: config.model,
+      providerUsed: metadata.providerUsed,
+      modelUsed: metadata.modelUsed,
       responseSource: 'fallback',
     };
   }

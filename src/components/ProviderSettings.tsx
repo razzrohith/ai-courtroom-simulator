@@ -306,7 +306,7 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
         case 'lmstudio':
         case 'custom-openai': {
           const baseUrl = loadApiKey(providerId);
-          const apiKey = providerId === 'custom-openai' ? loadApiKey('anthropic') : null; // Reuse key storage
+          const apiKey = providerId === 'custom-openai' ? loadApiKey('custom-openai') : null;
           if (baseUrl) {
             models = await fetchCustomModels(baseUrl, apiKey);
           }
@@ -463,7 +463,7 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" data-status-trigger={statusTrigger}>
-      <div className="bg-courtroom-card border border-gray-700 rounded-lg w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+      <div className="bg-courtroom-card border border-gray-700 rounded-lg w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <div className="p-4 border-b border-gray-700 flex items-center justify-between">
           <h2 className="text-lg font-bold text-yellow-500">Provider Configuration</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-xl">x</button>
@@ -544,6 +544,9 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                 switch (agentStatus) {
                   case 'mock':
                     statusBadge = { bg: 'bg-green-900/50', text: 'text-green-400', label: 'Mock Mode' };
+                    break;
+                  case 'fallback':
+                    statusBadge = { bg: 'bg-amber-900/50', text: 'text-amber-400', label: 'Fallback Active — Mock Mode' };
                     break;
                   case 'free-demo-ready':
                     statusBadge = { bg: 'bg-emerald-900/50', text: 'text-emerald-400', label: 'Free Demo Ready' };
@@ -922,17 +925,17 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
         </div>
 
         {/* Sticky/Fixed Footer */}
-        <div className="p-4 border-t border-gray-700 bg-gray-900 flex justify-end gap-3">
+        <div className="p-4 border-t border-gray-700 bg-gray-900 flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3">
           <button
             onClick={handleReset}
-            className="px-4 py-2 rounded text-sm bg-gray-850 hover:bg-gray-750 text-gray-355 transition-colors duration-200"
+            className="w-full sm:w-auto px-4 py-2 rounded text-sm bg-gray-850 hover:bg-gray-750 text-gray-355 transition-colors duration-200"
           >
             Reset to Defaults
           </button>
           <button
             onClick={handleSave}
             disabled={!isDirty}
-            className={`px-4 py-2 rounded text-sm transition-colors duration-200 ${
+            className={`w-full sm:w-auto px-4 py-2 rounded text-sm transition-colors duration-200 ${
               isDirty 
                 ? 'bg-yellow-600 hover:bg-yellow-555 text-white font-bold' 
                 : 'bg-gray-800 text-gray-500 cursor-not-allowed shadow-none'
@@ -942,7 +945,7 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded text-sm bg-gray-700 hover:bg-gray-650 text-white transition-colors duration-200"
+            className="w-full sm:w-auto px-4 py-2 rounded text-sm bg-gray-700 hover:bg-gray-650 text-white transition-colors duration-200"
           >
             Close
           </button>

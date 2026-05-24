@@ -33,6 +33,8 @@ import { DeliberationPanel } from './DeliberationPanel';
 import { AppealPanel } from './AppealPanel';
 import { ExhibitPanel } from './ExhibitPanel';
 import { CourtroomStage } from './visuals/CourtroomStage';
+import { WelcomePanel } from './WelcomePanel';
+import { isOpenRouterConfigured } from '../providers/openRouterProvider';
 import { getParticipantName } from '../orchestration/courtControllerAsync';
 import { useSpeechSynthesis } from '../hooks/useSpeechSynthesis';
 
@@ -248,7 +250,14 @@ export function CourtroomLayout({
             )}
             <PhaseTimeline currentPhase={currentPhase} />
             <div className="h-[600px] md:h-[650px] flex flex-col">
-              {verdict && currentPhase === 'verdict' ? (
+              {!isActive ? (
+                <WelcomePanel
+                  caseData={caseData}
+                  onStart={onStart}
+                  onOpenSettings={() => setShowSettings(true)}
+                  isOpenRouterConfigured={isOpenRouterConfigured()}
+                />
+              ) : verdict && currentPhase === 'verdict' ? (
                 <VerdictPanel verdict={verdict} evidence={evidence} objections={objectionHistory} />
               ) : (
                 <TranscriptPanel transcript={transcript} currentPhase={phaseLabel} speech={speech} />

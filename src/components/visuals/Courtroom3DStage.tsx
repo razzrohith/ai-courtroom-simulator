@@ -17,6 +17,10 @@ interface Courtroom3DStageProps {
   prosecutorName?: string;
   defenseName?: string;
   admittedEvidenceCount?: number;
+  evidenceRef?: string | null;
+  isRuling?: boolean;
+  isVerdictActive?: boolean;
+  verdictDecision?: string | null;
 }
 
 // -------------------------------------------------------------
@@ -274,21 +278,37 @@ function SeatedAudienceFigure({
 // -------------------------------------------------------------
 function CameraController({ 
   currentSpeaker, 
-  freeLook 
+  freeLook,
+  isRuling,
+  isVerdictActive
 }: { 
   currentSpeaker: AgentRole | null;
   freeLook: boolean;
+  isRuling?: boolean;
+  isVerdictActive?: boolean;
 }) {
   const { camera } = useThree();
 
-  useFrame(() => {
+  useFrame((state) => {
     if (freeLook) return;
+
+    const time = state.clock.getElapsedTime();
 
     // Default broad view of deeper courtroom
     let targetPos = new THREE.Vector3(0, 4.4, 8.5);
     let targetLook = new THREE.Vector3(0, 1.3, -2.5);
 
-    if (currentSpeaker === 'judge') {
+    if (isVerdictActive) {
+      // Slow majestic panning orbit view for verdict ceremony
+      const x = Math.sin(time * 0.12) * 4.0;
+      const z = 7.8 + Math.cos(time * 0.12) * 1.4;
+      targetPos.set(x, 4.4 + Math.sin(time * 0.25) * 0.3, z);
+      targetLook.set(0, 1.35, -2.5);
+    } else if (isRuling) {
+      // Focus intensely on Judge Bench during ruling
+      targetPos.set(0, 2.3, -1.8);
+      targetLook.set(0, 1.55, -5.5);
+    } else if (currentSpeaker === 'judge') {
       targetPos.set(0, 2.3, -1.6); // Close-up on elevated Judge Bench
       targetLook.set(0, 1.55, -5.5);
     } else if (currentSpeaker === 'prosecutor') {
@@ -411,13 +431,25 @@ function TableMicrophone({ position, rotation = [0, 0, 0] }: { position: [number
 function CourtroomScene({ 
   currentSpeaker, 
   isSpeaking,
-  admittedEvidenceCount = 0
+  admittedEvidenceCount = 0,
+  evidenceRef = null,
+  isRuling = false,
+  isVerdictActive = false,
+  verdictDecision = null
 }: { 
   currentSpeaker: AgentRole | null; 
   isSpeaking: boolean;
   admittedEvidenceCount: number;
+  evidenceRef?: string | null;
+  isRuling?: boolean;
+  isVerdictActive?: boolean;
+  verdictDecision?: string | null;
 }) {
   const spotlightRef = useRef<THREE.SpotLight>(null);
+  const rulingSpotlightRef = useRef<THREE.SpotLight>(null);
+  const verdictSpotlightRef = useRef<THREE.SpotLight>(null);
+  const winnerSpotlightRef = useRef<THREE.SpotLight>(null);
+  const evidenceSpotlightRef = useRef<THREE.SpotLight>(null);
 
   // Position targets for speaker spotlight
   const speakerPositions: Record<AgentRole, [number, number, number]> = {
@@ -427,21 +459,47 @@ function CourtroomScene({
   };
 
   useFrame(() => {
+    // Speaker spotlight
     if (spotlightRef.current && currentSpeaker) {
       const pos = speakerPositions[currentSpeaker];
       spotlightRef.current.target.position.set(pos[0], pos[1], pos[2]);
       spotlightRef.current.target.updateMatrixWorld();
     }
+    // Ruling spotlight
+    if (rulingSpotlightRef.current) {
+      rulingSpotlightRef.current.target.position.set(0, 1.15, -5.5);
+      rulingSpotlightRef.current.target.updateMatrixWorld();
+    }
+    // Verdict spotlight
+    if (verdictSpotlightRef.current) {
+      verdictSpotlightRef.current.target.position.set(0, 1.15, -5.5);
+      verdictSpotlightRef.current.target.updateMatrixWorld();
+    }
+    // Winner spotlight
+    if (winnerSpotlightRef.current && verdictDecision) {
+      const pos = verdictDecision === 'plaintiff_wins' ? speakerPositions.prosecutor : speakerPositions.defense;
+      winnerSpotlightRef.current.target.position.set(pos[0], pos[1], pos[2]);
+      winnerSpotlightRef.current.target.updateMatrixWorld();
+    }
+    // Evidence spotlight
+    if (evidenceSpotlightRef.current) {
+      evidenceSpotlightRef.current.target.position.set(2.6, 1.1, -4.4);
+      evidenceSpotlightRef.current.target.updateMatrixWorld();
+    }
   });
+
+  // Dynamic light values
+  const ambientIntensity = isVerdictActive ? 0.2 : (isRuling ? 0.28 : 0.42);
+  const dirIntensity = isVerdictActive ? 0.3 : (isRuling ? 0.45 : 0.65);
 
   return (
     <>
       {/* Ambient Lighting */}
-      <ambientLight intensity={0.42} />
+      <ambientLight intensity={ambientIntensity} />
       {/* Directional Key Lighting */}
       <directionalLight 
         position={[4, 9, 4]} 
-        intensity={0.65} 
+        intensity={dirIntensity} 
         castShadow 
         shadow-mapSize={[1024, 1024]}
         shadow-bias={-0.0008}
@@ -460,6 +518,69 @@ function CourtroomScene({
           penumbra={0.7}
           intensity={9.5}
           color={currentSpeaker === 'judge' ? '#fbbf24' : currentSpeaker === 'prosecutor' ? '#60a5fa' : '#4ade80'}
+          castShadow
+        />
+      )}
+
+      {/* Ruling Spotlight (Gold on Judge Bench) */}
+      {isRuling && (
+        <spotLight
+          ref={rulingSpotlightRef}
+          position={[0, 6.5, -0.5]}
+          angle={0.32}
+          penumbra={0.6}
+          intensity={16}
+          color="#fbbf24"
+          castShadow
+        />
+      )}
+
+      {/* Verdict Spotlights */}
+      {isVerdictActive && (
+        <>
+          <spotLight
+            ref={verdictSpotlightRef}
+            position={[0, 6.5, -0.5]}
+            angle={0.35}
+            penumbra={0.5}
+            intensity={18}
+            color="#fbbf24"
+            castShadow
+          />
+          {(verdictDecision === 'plaintiff_wins' || verdictDecision === 'prosecutor_wins') && (
+            <spotLight
+              ref={winnerSpotlightRef}
+              position={[0, 6.5, 0.5]}
+              angle={0.3}
+              penumbra={0.6}
+              intensity={12}
+              color="#60a5fa"
+              castShadow
+            />
+          )}
+          {verdictDecision === 'defense_wins' && (
+            <spotLight
+              ref={winnerSpotlightRef}
+              position={[0, 6.5, 0.5]}
+              angle={0.3}
+              penumbra={0.6}
+              intensity={12}
+              color="#4ade80"
+              castShadow
+            />
+          )}
+        </>
+      )}
+
+      {/* Active Exhibit Spotlight (pointing to evidence easel stand) */}
+      {evidenceRef && (
+        <spotLight
+          ref={evidenceSpotlightRef}
+          position={[0, 6.5, 1]}
+          angle={0.25}
+          penumbra={0.5}
+          intensity={11}
+          color="#38bdf8"
           castShadow
         />
       )}
@@ -745,12 +866,33 @@ function CourtroomScene({
         <mesh position={[0, 1.1, 0.052]}>
           <planeGeometry args={[1.12, 0.78]} />
           <meshStandardMaterial 
-            color="#fbbf24" 
-            emissive="#fbbf24" 
-            emissiveIntensity={admittedEvidenceCount > 0 ? 0.22 : 0.05} 
+            color={evidenceRef ? "#38bdf8" : "#fbbf24"} 
+            emissive={evidenceRef ? "#38bdf8" : "#fbbf24"} 
+            emissiveIntensity={evidenceRef ? 0.65 : (admittedEvidenceCount > 0 ? 0.22 : 0.05)} 
             roughness={0.9} 
           />
         </mesh>
+        
+        {/* Procedural sheet of paper and red exhibit stamp on the screen (only when evidence is active/cited) */}
+        {evidenceRef && (
+          <group position={[0, 1.1, 0.06]}>
+            {/* White paper background */}
+            <mesh position={[0, 0, 0.002]} castShadow>
+              <planeGeometry args={[0.7, 0.55]} />
+              <meshStandardMaterial color="#f8fafc" roughness={0.9} />
+            </mesh>
+            {/* Exhibit red stamp */}
+            <mesh position={[0.2, -0.15, 0.005]}>
+              <planeGeometry args={[0.22, 0.08]} />
+              <meshStandardMaterial color="#ef4444" roughness={0.6} />
+            </mesh>
+            {/* Gold emblem check/logo inside exhibit label */}
+            <mesh position={[0.2, -0.15, 0.006]}>
+              <planeGeometry args={[0.18, 0.05]} />
+              <meshStandardMaterial color="#ffffff" roughness={0.4} />
+            </mesh>
+          </group>
+        )}
       </group>
 
       {/* 6. Evidence Shelf Table */}
@@ -867,7 +1009,11 @@ export default function Courtroom3DStage({
   judgeName = 'Judge',
   prosecutorName = 'Prosecutor',
   defenseName = 'Defense',
-  admittedEvidenceCount = 0
+  admittedEvidenceCount = 0,
+  evidenceRef = null,
+  isRuling = false,
+  isVerdictActive = false,
+  verdictDecision = null
 }: Courtroom3DStageProps) {
   const [freeLook, setFreeLook] = useState(false);
 
@@ -882,6 +1028,10 @@ export default function Courtroom3DStage({
           currentSpeaker={currentSpeaker} 
           isSpeaking={isSpeaking} 
           admittedEvidenceCount={admittedEvidenceCount}
+          evidenceRef={evidenceRef}
+          isRuling={isRuling}
+          isVerdictActive={isVerdictActive}
+          verdictDecision={verdictDecision}
         />
 
         {/* 3D Stylized Avatars */}
@@ -907,7 +1057,12 @@ export default function Courtroom3DStage({
         />
 
         {/* Camera Tracking Controls */}
-        <CameraController currentSpeaker={currentSpeaker} freeLook={freeLook} />
+        <CameraController 
+          currentSpeaker={currentSpeaker} 
+          freeLook={freeLook} 
+          isRuling={isRuling}
+          isVerdictActive={isVerdictActive}
+        />
         
         {/* Orbit Controls (Only responsive if freeLook is active) */}
         {freeLook && (

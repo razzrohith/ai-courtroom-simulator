@@ -570,9 +570,9 @@ export function CourtroomEmblem({ className }: { className?: string }) {
 /**
  * CourtroomBackdrop — Layered Indian courtroom background effect
  */
-export function CourtroomBackdrop({ children }: { children: React.ReactNode }) {
+export function CourtroomBackdrop({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="relative overflow-hidden bg-[#1a0e08] border border-amber-950 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_1px_2px_rgba(255,255,255,0.1)] min-h-[420px] transition-all duration-300">
+    <div className={`relative overflow-hidden bg-[#1a0e08] border border-amber-950 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_1px_2px_rgba(255,255,255,0.1)] min-h-[420px] transition-all duration-300 ${className}`}>
       {/* Indian Courtroom Wall Background */}
       <div className="absolute inset-0 pointer-events-none flex flex-col">
         {/* Top wall: Elegant Sandstone / Beige finish */}

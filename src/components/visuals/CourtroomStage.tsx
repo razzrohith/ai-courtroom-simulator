@@ -187,6 +187,43 @@ export function CourtroomStage({
   
   // Count admitted evidence
   const admittedEvidence = evidence.filter(e => e.status === 'admitted');
+
+  // Dynamic objection, ruling, and verdict states
+  const isObjectionActive = !!activeObjection || (latestEntry?.id?.startsWith('trans-objection-') ?? false);
+  const isRulingActive = (currentPhase === 'objection_ruling') || (latestEntry?.id?.startsWith('trans-ruling-') ?? false);
+  const isSustained = latestEntry?.message?.toLowerCase().includes('sustained') ?? false;
+  const isOverruled = latestEntry?.message?.toLowerCase().includes('overruled') ?? false;
+  const isVerdictActive = showVerdict || (currentPhase === 'verdict') || !!verdict;
+
+  let hudEvent = 'Idle 💤';
+  if (isGenerating) {
+    hudEvent = 'Thinking... ⏳';
+  } else if (isObjectionActive) {
+    hudEvent = 'Objection Raised ⚠️';
+  } else if (isRulingActive) {
+    hudEvent = 'Ruling Phase ⚖️';
+  } else if (latestEntry?.evidenceRef) {
+    hudEvent = 'Evidence Cited 📄';
+  } else if (isSpeaking || isStageTyping) {
+    hudEvent = 'Speaking 🎙️';
+  }
+
+  const getSpeakerHUDLabel = (role: AgentRole | null): string => {
+    if (!role) return 'None';
+    switch (role) {
+      case 'judge': return 'Judge ⚖️';
+      case 'prosecutor': return 'Prosecutor ⚔️';
+      case 'defense': return 'Defense 🛡️';
+      default: return role;
+    }
+  };
+
+  let backdropFlashClass = '';
+  if (isObjectionActive) {
+    backdropFlashClass = 'red-border-flash';
+  } else if (isRulingActive && isSustained) {
+    backdropFlashClass = 'gold-border-flash';
+  }
   
   if (compact) {
     return (
@@ -256,7 +293,47 @@ export function CourtroomStage({
   }
   
   return (
-    <CourtroomBackdrop>
+    <CourtroomBackdrop className={backdropFlashClass}>
+      {/* Dynamic keyframe animations stylesheet */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes objectionStampIn {
+          0% { transform: scale(3.5) rotate(-25deg); opacity: 0; filter: blur(4px); }
+          60% { transform: scale(0.9) rotate(-10deg); opacity: 1; filter: blur(0); }
+          80% { transform: scale(1.05) rotate(-13deg); }
+          100% { transform: scale(1) rotate(-12deg); opacity: 1; }
+        }
+        @keyframes rulingStampIn {
+          0% { transform: scale(3) rotate(15deg); opacity: 0; filter: blur(3px); }
+          60% { transform: scale(0.95) rotate(-3deg); opacity: 1; filter: blur(0); }
+          85% { transform: scale(1.03) rotate(2deg); }
+          100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        @keyframes redBorderFlash {
+          0%, 100% { border-color: rgba(239, 68, 68, 0.2); box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
+          50% { border-color: rgba(239, 68, 68, 0.85); box-shadow: 0 0 16px rgba(239, 68, 68, 0.45); }
+        }
+        @keyframes goldBorderFlash {
+          0%, 100% { border-color: rgba(234, 179, 8, 0.2); box-shadow: 0 0 0 rgba(234, 179, 8, 0); }
+          50% { border-color: rgba(234, 179, 8, 0.85); box-shadow: 0 0 16px rgba(234, 179, 8, 0.45); }
+        }
+        @keyframes verdictStampIn {
+          0% { transform: scale(4) rotate(0deg); opacity: 0; }
+          60% { transform: scale(0.9) rotate(0deg); opacity: 1; }
+          100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        @keyframes goldParticleFloat {
+          0% { transform: translateY(0px) scale(0.5); opacity: 0; }
+          50% { opacity: 0.8; }
+          100% { transform: translateY(-120px) scale(1.2); opacity: 0; }
+        }
+        .red-border-flash {
+          animation: redBorderFlash 1.5s ease-in-out infinite !important;
+        }
+        .gold-border-flash {
+          animation: goldBorderFlash 1.5s ease-in-out infinite !important;
+        }
+      `}} />
+
       {/* 3D / 2D View Mode Switcher */}
       {webglAvailable && (
         <div className="absolute top-12 right-4 z-30">
@@ -266,6 +343,114 @@ export function CourtroomStage({
           >
             {show3D ? '🖥️ Switch to 2D' : '🖥️ Switch to 3D'}
           </button>
+        </div>
+      )}
+
+      {/* Live Director HUD - Top-Left */}
+      <div className="absolute top-12 left-4 z-20 bg-gray-950/90 border border-gray-800 backdrop-blur-md px-3 py-2 rounded-xl text-left text-[9px] text-gray-400 font-mono shadow-md w-40 pointer-events-none select-none">
+        <div className="text-[8px] font-extrabold text-gray-500 uppercase tracking-widest border-b border-gray-900 pb-1 mb-1 flex items-center justify-between">
+          <span>Director HUD</span>
+          <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping" />
+        </div>
+        <div className="space-y-0.5">
+          <div className="truncate"><span className="text-gray-600 font-bold">PHASE:</span> {PHASE_LABELS[currentPhase] || currentPhase}</div>
+          <div className="truncate"><span className="text-gray-600 font-bold">SPEAK:</span> {getSpeakerHUDLabel(simulationSpeaker || currentSpeaker)}</div>
+          <div className="truncate"><span className="text-gray-600 font-bold">EVENT:</span> {hudEvent}</div>
+        </div>
+      </div>
+
+      {/* Cited Exhibit Stage Badge - Top-Center */}
+      {isActive && latestEntry?.evidenceRef && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-cyan-950/90 border border-cyan-800 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg animate-scale-in pointer-events-none max-w-[90%] md:max-w-md">
+          <span className="text-cyan-400 text-xs">📖</span>
+          <span className="text-[10px] font-extrabold text-cyan-200 tracking-wider uppercase font-mono truncate">
+            Active Exhibit: {latestEntry.evidenceRef}
+          </span>
+        </div>
+      )}
+
+      {/* Objection Stamp Overlay */}
+      {isObjectionActive && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 overflow-hidden bg-red-950/10">
+          <div 
+            className="px-8 py-4 border-8 border-red-500 text-red-500 font-black text-4xl md:text-5xl uppercase tracking-widest bg-gray-950/95 rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.5)] flex flex-col items-center justify-center animate-scale-in"
+            style={{
+              fontFamily: 'Impact, sans-serif',
+              animation: 'objectionStampIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+              transform: 'rotate(-12deg)',
+            }}
+          >
+            <span>OBJECTION!</span>
+            <span className="text-[10px] tracking-normal font-sans font-extrabold text-red-400 mt-1 opacity-80">
+              Objection raised by counsel
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Ruling Stamp Overlay */}
+      {isRulingActive && (isSustained || isOverruled) && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 overflow-hidden bg-amber-950/5">
+          <div 
+            className={`px-8 py-4 border-8 font-black text-3xl md:text-4xl uppercase tracking-widest bg-gray-950/95 rounded-2xl flex flex-col items-center justify-center animate-scale-in ${
+              isSustained 
+                ? 'border-yellow-500 text-yellow-500 shadow-[0_0_50px_rgba(234,179,8,0.5)]' 
+                : 'border-blue-500 text-blue-500 shadow-[0_0_50px_rgba(59,130,246,0.5)]'
+            }`}
+            style={{
+              fontFamily: 'Impact, sans-serif',
+              animation: 'rulingStampIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+            }}
+          >
+            <span>{isSustained ? 'SUSTAINED' : 'OVERRULED'}</span>
+            <span className={`text-[9px] tracking-normal font-sans font-extrabold mt-1 opacity-80 ${isSustained ? 'text-yellow-400' : 'text-blue-400'}`}>
+              {isSustained ? 'The objection is accepted by the Court' : 'The objection is dismissed by the Court'}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Verdict Ceremony Overlay */}
+      {showVerdict && verdict && (
+        <div className="absolute inset-0 z-35 flex flex-col items-center justify-center bg-gray-950/90 backdrop-blur-md pointer-events-none p-4 text-center">
+          {/* Floating gold particles */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {Array.from({ length: 15 }).map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-1.5 h-1.5 rounded-full bg-yellow-500/60 animate-pulse"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  bottom: `0%`,
+                  animation: `goldParticleFloat ${2 + Math.random() * 3}s linear infinite`,
+                  animationDelay: `${Math.random() * 3}s`
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Golden Seal Stamp */}
+          <div 
+            className="w-24 h-24 md:w-28 md:h-28 text-yellow-500 bg-yellow-950/20 border-4 border-yellow-500 rounded-full flex items-center justify-center p-3 shadow-[0_0_40px_rgba(234,179,8,0.4)] mb-4"
+            style={{
+              animation: 'verdictStampIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards'
+            }}
+          >
+            <CourtroomEmblem className="w-full h-full text-yellow-500" />
+          </div>
+
+          {/* Prevailing Side Banner */}
+          <div className="animate-scale-in max-w-lg">
+            <h2 className="text-xl md:text-2xl font-black text-yellow-450 tracking-wider uppercase font-serif">
+              {verdict.decision === 'plaintiff_wins' ? 'PROSECUTION PREVAILS' : 
+               verdict.decision === 'defense_wins' ? 'DEFENSE PREVAILS' : 
+               verdict.decision === 'partial_verdict' ? 'PARTIAL VERDICT RENDERED' : 'CASE DISMISSED'}
+            </h2>
+            <div className="h-0.5 w-32 bg-yellow-500 mx-auto my-2" />
+            <p className="text-xs text-gray-300 leading-relaxed font-sans max-w-sm mx-auto">
+              {verdict.ruling || verdict.reasoningSummary}
+            </p>
+          </div>
         </div>
       )}
 
@@ -348,6 +533,10 @@ export function CourtroomStage({
                   prosecutorName={prosecutor?.name}
                   defenseName={defense?.name}
                   admittedEvidenceCount={admittedEvidence.length}
+                  evidenceRef={latestEntry?.evidenceRef}
+                  isRuling={isRulingActive}
+                  isVerdictActive={isVerdictActive}
+                  verdictDecision={verdict?.decision}
                 />
               </Suspense>
             </Courtroom3DErrorBoundary>

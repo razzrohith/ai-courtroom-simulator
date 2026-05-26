@@ -13,6 +13,7 @@ import { generateWitnessQAndA, calculateCredibilityScore } from '../providers/mo
 import { JUDGE_TRANSITIONS, shouldTriggerObjection, MOCK_VERDICT } from '../data/mockCourtFlow';
 import { loadCourtroomConfig, setAgentConnectionStatus } from '../types/providers';
 import type { CaseData } from '../types/courtroom';
+export const preventDuplicateFinalSummary = true;
 
 export const EMPTY_CASE: CaseData = {
   id: '',

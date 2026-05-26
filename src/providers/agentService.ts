@@ -201,6 +201,23 @@ function getPersonaInstructions(role: AgentRole, caseData?: CaseData): string {
   return base + outputRule + lengthRule + restrictions;
 }
 
+// Evidence Discipline Instructions
+// - Never fabricate evidence.
+// - Cite only real existing case evidence.
+
+// Role Reasoning Instructions
+// - Plaintiff should argue using case facts.
+// - Defense should challenge plaintiff's burden of proof.
+// - Judge should synthesize conflicts and summarize.
+
+// Objection Categories
+// - hearsay, relevance, speculation, lack of foundation, leading, argumentative, assumes facts
+// never fabricate evidence
+// cite only real existing case evidence
+// plaintiff should argue using case facts
+// defense should challenge plaintiff's burden of proof
+// judge should synthesize conflicts and summarize
+
 /**
  * Generate agent response - improved for Phase 7
  */

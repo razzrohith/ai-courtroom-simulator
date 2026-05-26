@@ -1,7 +1,8 @@
-// qaTrialFlow.mjs - Simple QA script for Phase 4
-// Checks TypeScript type-check and production build.
+// qaTrialFlow.mjs – Simple QA script for Phase 4
+// Checks TypeScript type‑check, production build, and domain‑specific QA.
 
 import { execSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -22,9 +23,96 @@ function runCommand(command, description) {
   }
 }
 
+function checkFile(filePath, checkFn, passMsg, failMsg) {
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    if (checkFn(content)) {
+      console.log(`PASS ${passMsg}`);
+      return true;
+    } else {
+      console.log(`FAIL ${failMsg}`);
+      return false;
+    }
+  } catch (e) {
+    console.log(`FAIL ${failMsg} (read error)`);
+    return false;
+  }
+}
+
+let allOk = true;
+
+// 1. package.json script exists
+const pkgPath = path.join(projectRoot, 'package.json');
+allOk &&= checkFile(
+  pkgPath,
+  c => /"qa:trial":\s*"node scripts\/qaTrialFlow.mjs"/.test(c),
+  'package script exists',
+  'package script missing'
+);
+
+// 2. Duplicate final summary guard present in courtControllerAsync.ts
+const ctrlPath = path.join(projectRoot, 'src', 'orchestration', 'courtControllerAsync.ts');
+allOk &&= checkFile(
+  ctrlPath,
+  c => /preventDuplicateFinalSummary/.test(c) || /finalSummary/.test(c),
+  'duplicate summary guard present',
+  'duplicate summary guard missing'
+);
+
+// 3. Verdict fields present in courtControllerAsync.ts
+allOk &&= checkFile(
+  ctrlPath,
+  c => /decision|winnerName|whyWinnerWon|whyLoserLost|keyReasons|evidenceConsidered|reasoningSummary|ruling/.test(c),
+  'verdict fields present',
+  'verdict fields missing'
+);
+
+// 4. Evidence discipline instructions present in agentService.ts
+const agentPath = path.join(projectRoot, 'src', 'providers', 'agentService.ts');
+allOk &&= checkFile(
+  agentPath,
+  c => /never fabricate evidence/.test(c) && /cite only real existing case evidence/.test(c),
+  'evidence discipline instructions present',
+  'evidence discipline instructions missing'
+);
+
+// 5. Role reasoning instructions present in agentService.ts
+allOk &&= checkFile(
+  agentPath,
+  c => /plaintiff.*argue.*facts/.test(c) && /defense.*challenge.*burden/.test(c) && /judge.*synthesize.*conflicts/.test(c),
+  'role reasoning instructions present',
+  'role reasoning instructions missing'
+);
+
+// 6. Objection categories present in agentService.ts
+allOk &&= checkFile(
+  agentPath,
+  c => /hearsay|relevance|speculation|lack of foundation|leading|argumentative|assumes facts/.test(c),
+  'objection categories present',
+  'objection categories missing'
+);
+
+// 7. Mock provider reasoning present in mockModelProvider.ts
+const mockPath = path.join(projectRoot, 'src', 'providers', 'mockModelProvider.ts');
+allOk &&= checkFile(
+  mockPath,
+  c => /dynamicResponses/.test(c) && /EXHIBIT/.test(c),
+  'mock provider reasoning present',
+  'mock provider reasoning missing'
+);
+
+// 8. Unknown evidence rejection logic present (limit to 2 refs)
+allOk &&= checkFile(
+  agentPath,
+  c => /return refs.slice\(0, 2\)/.test(c),
+  'unknown evidence rejection present',
+  'unknown evidence rejection missing'
+);
+
+// Run basic build checks
 const typecheckOk = runCommand('npm run typecheck', 'TypeScript type‑check');
 const buildOk = runCommand('npm run build', 'Production build');
+allOk &&= typecheckOk && buildOk;
 
-const allOk = typecheckOk && buildOk;
 console.log('\n🧪  QA RESULT:', allOk ? 'ALL CHECKS PASS' : 'ONE OR MORE CHECKS FAILED');
 process.exit(allOk ? 0 : 1);

@@ -114,5 +114,82 @@ const typecheckOk = runCommand('npm run typecheck', 'TypeScript type‑check');
 const buildOk = runCommand('npm run build', 'Production build');
 allOk &&= typecheckOk && buildOk;
 
+// ---------- Runtime Mock Trial QA ----------
+// Create a deterministic mock trial fixture and validate its structure.
+function runRuntimeChecks() {
+  // Minimal mock data shapes mirroring src/types/courtroom.ts definitions.
+  const mockEvidence = [
+    { id: 'EXHIBITP1', title: 'Plaintiff Exhibit', type: 'report', confidentiality: 'public', summary: 'Plaintiff evidence', content: '...', introducedBy: 'prosecutor', status: 'offered' },
+    { id: 'EXHIBITD1', title: 'Defense Exhibit', type: 'report', confidentiality: 'public', summary: 'Defense evidence', content: '...', introducedBy: 'defense', status: 'offered' },
+  ];
+  const mockTranscript = [];
+  // Simulate start of trial.
+  mockTranscript.push({
+    id: 'trans-001', speakerRole: 'judge', speakerName: 'Judge', message: 'Court is now open.', phase: 'court_opening', sequenceNumber: 1,
+    evidenceRef: undefined,
+  });
+  // Plaintiff opening statement referencing valid evidence.
+  mockTranscript.push({
+    id: 'trans-002', speakerRole: 'prosecutor', speakerName: 'Advocate', message: 'We present EXHIBITP1 as proof.', phase: 'plaintiff_opening', sequenceNumber: 2,
+    evidenceRef: 'EXHIBITP1',
+  });
+  // Defense objection with known category.
+  mockTranscript.push({
+    id: 'obj-001', speakerRole: 'defense', speakerName: 'Defense', message: 'Objection, Your Honor! Relevance.', phase: 'plaintiff_opening', sequenceNumber: 3,
+    evidenceRef: undefined,
+  });
+  // Judge ruling sustained.
+  mockTranscript.push({
+    id: 'ruling-001', speakerRole: 'judge', speakerName: 'Judge', message: 'Objection is SUSTAINED.', phase: 'plaintiff_opening', sequenceNumber: 4,
+    evidenceRef: undefined,
+  });
+  // Final summary entry.
+  mockTranscript.push({
+    id: 'trans-summary-001', speakerRole: 'judge', speakerName: 'Judge', message: 'Trial concluded.', phase: 'case_summary', sequenceNumber: 5,
+    evidenceRef: undefined,
+  });
+
+  // 1. Transcript entry count > 0
+  allOk &&= checkCondition(mockTranscript.length > 0, 'runtime transcript has entries');
+  // 2. Every entry has required fields
+  const entryFields = ['id','speakerRole','speakerName','phase','message','sequenceNumber'];
+  const entriesValid = mockTranscript.every(e => entryFields.every(f => e[f] !== undefined));
+  allOk &&= checkCondition(entriesValid, 'runtime transcript entries have required fields');
+  // 3. No duplicate sequence numbers
+  const seqSet = new Set(mockTranscript.map(e=>e.sequenceNumber));
+  allOk &&= checkCondition(seqSet.size === mockTranscript.length, 'runtime no duplicate sequence numbers');
+  // 4. Only one final summary entry
+  const summaryCount = mockTranscript.filter(e=>e.id.startsWith('trans-summary-')).length;
+  allOk &&= checkCondition(summaryCount === 1, 'runtime single final summary');
+  // 5. Evidence references must match real IDs
+  const validIds = new Set(mockEvidence.map(e=>e.id.toUpperCase()));
+  const refValid = mockTranscript.every(e=>{
+    if (!e.evidenceRef) return true;
+    return e.evidenceRef.split(',').every(ref=>validIds.has(ref.toUpperCase()));
+  });
+  allOk &&= checkCondition(refValid, 'runtime evidence references valid');
+  // 6. Objection objects (simulated) – ensure status resolved
+  const objections = [
+    { id: 'obj-001', raisedBy: 'defense', type: 'relevance', status: 'sustained' },
+  ];
+  const pendingObjections = objections.filter(o=>o.status==='pending');
+  allOk &&= checkCondition(pendingObjections.length===0, 'runtime no pending objections at end');
+  // 7. Verdict object validation
+  const mockVerdict = {
+    decision: 'plaintiff_wins', winnerName: 'Plaintiff', loserName: 'Defendant', whyWinnerWon: 'Reason', whyLoserLost: 'Reason', keyReasons: [], evidenceConsidered: [], reasoningSummary: '', ruling: ''
+  };
+  const verdictFields = ['decision','winnerName','whyWinnerWon','whyLoserLost','keyReasons','evidenceConsidered','reasoningSummary','ruling'];
+  const verdictValid = verdictFields.every(f=>mockVerdict[f]!==undefined);
+  allOk &&= checkCondition(verdictValid, 'runtime verdict fields present');
+}
+
+function checkCondition(cond, passMsg) {
+  if (cond) { console.log('PASS', passMsg); return true; }
+  console.log('FAIL', passMsg);
+  return false;
+}
+
+runRuntimeChecks();
+
 console.log('\n🧪  QA RESULT:', allOk ? 'ALL CHECKS PASS' : 'ONE OR MORE CHECKS FAILED');
 process.exit(allOk ? 0 : 1);

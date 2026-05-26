@@ -391,68 +391,7 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
         lastReferencedBy: speakerRole,
       };
     } else {
-      // Create dynamic evidence placeholder
-      let title = ref;
-      let summary = `Evidence introduced by counsel regarding ${ref}.`;
-      let type: Evidence['type'] = 'document';
-      let confidentiality: Evidence['confidentiality'] = 'public';
-
-      if (ref === 'EVOLUTIONARY_RECORD') {
-        title = 'Evolutionary Record Analysis';
-        summary = 'Scientific compilation of genomic divergence rates and ancestral bird fossils.';
-        type = 'report';
-      } else if (ref === 'EGG_FOSSIL_RECORD') {
-        title = 'Pre-Avian Egg Fossils';
-        summary = 'Fossilized egg shells pre-dating the evolutionary emergence of the modern hen.';
-        type = 'physical';
-      } else if (ref === 'LIVING_BIRD_REQUIREMENT') {
-        title = 'Avian Protein Synthesizer Study';
-        summary = 'Research paper demonstrating that shell formation requires the OC-17 protein found only in living hen ovaries.';
-        type = 'report';
-      } else if (ref === 'GENETIC_MUTATION_EVIDENCE') {
-        title = 'Zygotic Mutation Data';
-        summary = 'Genetic sequencing proof showing the transition mutation occurred during the zygote phase of the ancestor.';
-        type = 'report';
-      } else if (ref === 'EXHIBITP1') {
-        title = 'Exhibit P-1: Embryology Lab Report';
-        summary = "Plaintiff's report detailing egg shell protein formation process.";
-        type = 'report';
-      } else if (ref === 'EXHIBITD1') {
-        title = 'Exhibit D-1: Evolutionary Timeline Chart';
-        summary = "Defendant's visual representation of non-hen egg-laying ancestors.";
-        type = 'document';
-      } else if (ref.startsWith('EXHIBIT')) {
-        const suffix = ref.substring(7);
-        if (suffix.startsWith('P')) {
-          title = `Exhibit P-${suffix.substring(1)}`;
-        } else if (suffix.startsWith('D')) {
-          title = `Exhibit D-${suffix.substring(1)}`;
-        } else {
-          title = `Exhibit ${suffix}`;
-        }
-        summary = `Dynamic exhibit ${title} introduced during the trial.`;
-      } else {
-        if (/^E\d+$/.test(ref)) {
-          title = `Exhibit ${ref}`;
-        } else {
-          title = ref.toLowerCase().split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-        }
-      }
-
-      const newEvidence: Evidence = {
-        id: ref,
-        title,
-        type,
-        confidentiality,
-        summary,
-        introducedBy: speakerRole,
-        status: 'offered',
-        content: `Details regarding ${title}. Introduced by ${speakerName} during the ${state.currentPhase} phase.`,
-        referenceCount: 1,
-        firstReferencedPhase: state.currentPhase,
-        lastReferencedBy: speakerRole,
-      };
-      updatedEvidence.push(newEvidence);
+      // Unknown evidence reference – ignore
     }
   });
 

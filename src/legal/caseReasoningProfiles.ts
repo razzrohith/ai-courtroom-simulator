@@ -61,6 +61,7 @@ const profiles: CaseReasoningProfile[] = [
       "operational priority",
       "marketing claims",
       "product benchmark",
+    "preponderance of evidence",
     ],
     preferredVocabulary: [
       "beyond reasonable doubt",

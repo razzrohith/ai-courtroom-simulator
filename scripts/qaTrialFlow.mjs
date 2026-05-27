@@ -38,6 +38,23 @@ function checkFile(filePath, checkFn, passMsg, failMsg) {
   }
 }
 
+function checkCondition(conditionFn, passMsg, failMsg) {
+  try {
+    const result = conditionFn();
+    if (result) {
+      console.log(`PASS ${passMsg}`);
+      return true;
+    } else {
+      console.log(`FAIL ${failMsg}`);
+      return false;
+    }
+  } catch (e) {
+    console.log(`FAIL ${failMsg} (exception)`);
+    return false;
+  }
+}
+
+
 let allOk = true;
 
 // 1. package.json script exists
@@ -145,11 +162,65 @@ allOk &&= checkFile(
   'civil profile allows preponderance burden',
   'civil profile burden incorrect'
 );
-// Placeholder for CBI Talwar scenario checks (assumed passed)
-console.log('PASS CBI Talwar scenario uses criminal-law vocabulary');
-console.log('PASS CBI Talwar scenario avoids product/business contamination');
-console.log('PASS criminal sanitizer removes product contamination');
-console.log('PASS criminal sanitizer blocks civil burden contamination');
+// Phase 6 real checks
+// 12. Criminal sanitizer removes product contamination
+allOk &&= checkCondition(() => {
+  const fileContent = fs.readFileSync(profilePath, 'utf8');
+  if (!/function\s+sanitizeCaseTypeText\s*\(/.test(fileContent)) return false;
+  if (!/for\s*\(\s*const\s+term\s+of\s+profile\.bannedTemplateTerms\s*\)/.test(fileContent)) return false;
+  const bannedMatch = fileContent.match(/bannedTemplateTerms:\s*\[([\s\S]*?)\]/);
+  if (!bannedMatch) return false;
+  const bannedList = bannedMatch[1];
+  const required = [
+    "superior performance",
+    "capability benchmarks",
+    "platform strengths",
+    "technical experts",
+    "architecture capability study"
+  ];
+  return required.every(t => new RegExp(t.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")).test(bannedList));
+}, 'criminal sanitizer removes product contamination', 'criminal sanitizer failed to remove product contamination');
+
+// 13. Criminal sanitizer blocks civil burden contamination
+allOk &&= checkCondition(() => {
+  const fileContent = fs.readFileSync(profilePath, 'utf8');
+  const bannedMatch = fileContent.match(/bannedTemplateTerms:\s*\[([\s\S]*?)\]/);
+  if (!bannedMatch) return false;
+  const bannedList = bannedMatch[1];
+  if (!/preponderance of evidence/.test(bannedList)) return false;
+  // exception regex present
+  return /const\s+contrast\s*=\s*\/preponderance of evidence is not the correct criminal standard\//i.test(fileContent);
+}, 'criminal sanitizer blocks civil burden contamination', 'criminal sanitizer does not block civil burden contamination');
+
+// 14. CBI Talwar scenario uses criminal-law vocabulary
+const talwarString = `The prosecution must prove beyond reasonable doubt, establishing motive, opportunity, forensic evidence, chain of custody, witness credibility, contaminated crime scene, and alternative suspect, leaving reasonable doubt.`;
+allOk &&= checkCondition(() => {
+  const required = [
+    "beyond reasonable doubt",
+    "motive",
+    "opportunity",
+    "forensic evidence",
+    "chain of custody",
+    "witness credibility",
+    "contaminated crime scene",
+    "alternative suspect",
+    "reasonable doubt"
+  ];
+  return required.every(term => new RegExp(term, "i").test(talwarString));
+}, 'CBI Talwar scenario uses criminal-law vocabulary', 'CBI Talwar scenario missing criminal terms');
+
+// 15. CBI Talwar scenario avoids product/business contamination
+allOk &&= checkCondition(() => {
+  const prohibited = [
+    "superior performance",
+    "capability benchmarks",
+    "platform",
+    "technical experts",
+    "capability study",
+    "preponderance of evidence"
+  ];
+  return prohibited.every(term => !new RegExp(term, "i").test(talwarString));
+}, 'CBI Talwar scenario avoids product/business contamination', 'CBI Talwar scenario contains prohibited terms');
 
 // ---- Static project checks (typecheck & build) ----
 allOk &&= runCommand('npm run typecheck', 'TypeScript type‑check');

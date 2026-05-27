@@ -5,9 +5,10 @@
 
 import type { AgentRole, TranscriptEntry, Evidence, CourtPhase, CourtroomContext, ObjectionEvent, CaseData } from '../types/courtroom';
 import type { AgentModelConfig } from '../types/providers';
-import { generateResponseWithMetadata, isProviderReady } from './runtime';
+import { generateResponseWithMetadata } from './runtime';
 import { sanitizeAgentResponse } from '../utils/sanitizeAgentResponse';
 import { PHASE_INSTRUCTIONS, getJuryInstruction } from '../data/mockCourtFlow';
+import { sanitizeCaseTypeText, assertCaseTypeReasoningSafe } from '../legal/caseReasoningProfiles';
 
 /**
  * Build a trimmed context window for the agent
@@ -257,45 +258,7 @@ export async function generateAgentResponse(params: {
   const prompt = `${persona}\n\n${contextStr}\n\nTask: ${phaseInstruction}\n\nREMINDER: You must output ONLY the direct courtroom speech of your character. Do NOT include planning notes, meta-commentary, or instructions.`;
 
   try {
-    const ready = await isProviderReady(providerId);
-
-    if (ready) {
-      const { message, metadata } = await generateResponseWithMetadata({
-        role,
-        config,
-        phase,
-        transcript,
-        evidence,
-        prompt,
-        caseData,
-      });
-
-      return {
-        message: sanitizeAgentResponse(message) || getFallbackMessage(role),
-        providerUsed: metadata.providerUsed,
-        modelUsed: metadata.modelUsed,
-        responseSource: metadata.fallbackUsed ? 'fallback' : 'real',
-      };
-    } else {
-      const { message, metadata } = await generateResponseWithMetadata({
-        role,
-        config,
-        phase,
-        transcript,
-        evidence,
-        prompt,
-        caseData,
-      });
-
-      return {
-        message: sanitizeAgentResponse(message) || getFallbackMessage(role),
-        providerUsed: metadata.providerUsed,
-        modelUsed: metadata.modelUsed,
-        responseSource: 'fallback',
-      };
-    }
-  } catch (error) {
-    console.error(`Provider error: ${providerId}`, error);
+    // Generate response (real or fallback) then apply case‑type sanitization uniformly
     const { message, metadata } = await generateResponseWithMetadata({
       role,
       config,
@@ -306,8 +269,37 @@ export async function generateAgentResponse(params: {
       caseData,
     });
 
+    // Apply case‑type specific sanitization to prevent prohibited terminology
+    const caseType = caseData?.caseType ?? '';
+    const sanitized = caseType ? sanitizeCaseTypeText(message, caseType) : message;
+    // Ensure no banned terms remain; will throw if violation detected
+    assertCaseTypeReasoningSafe(sanitized, caseType);
+    const finalMessage = sanitized.trim();
+
     return {
-      message: sanitizeAgentResponse(message) || getFallbackMessage(role),
+      message: sanitizeAgentResponse(finalMessage) || getFallbackMessage(role),
+      providerUsed: metadata.providerUsed,
+      modelUsed: metadata.modelUsed,
+      responseSource: metadata.fallbackUsed ? 'fallback' : 'real',
+    };
+  } catch (error) {
+    console.error(`Provider error: ${providerId}`, error);
+    // Attempt fallback generation if primary fails
+    const { message, metadata } = await generateResponseWithMetadata({
+      role,
+      config,
+      phase,
+      transcript,
+      evidence,
+      prompt,
+      caseData,
+    });
+    const caseType = caseData?.caseType ?? '';
+    const sanitized = caseType ? sanitizeCaseTypeText(message, caseType) : message;
+    assertCaseTypeReasoningSafe(sanitized, caseType);
+    const finalMessage = sanitized.trim();
+    return {
+      message: sanitizeAgentResponse(finalMessage) || getFallbackMessage(role),
       providerUsed: metadata.providerUsed,
       modelUsed: metadata.modelUsed,
       responseSource: 'fallback',

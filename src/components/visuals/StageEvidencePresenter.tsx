@@ -1,7 +1,8 @@
 import React from 'react';
 import { Evidence } from '../../types/courtroom';
+import { cleanEvidenceTitle } from '../../utils/cleanEvidenceTitle';
 import styles from './StageEvidencePresenter.module.css';
-const malformedTitleRegex = /\b(who|whose|by|from|regarding)\b/gi;
+
 export interface StageEvidencePresenterProps {
   evidence?: Evidence;
 }
@@ -32,14 +33,7 @@ export const StageEvidencePresenter: React.FC<StageEvidencePresenterProps> = ({ 
           )}
           <div>
             <div className="text-sm font-medium text-white">{evidence.id}</div>
-            <div className="text-xs text-gray-300 truncate max-w-xs">{evidence.title
-              .replace(/[\u201c\u201d]/g, '"')
-              .replace(/[\u2018\u2019]/g, "'")
-              // Remove leading party name and connector words (e.g., "Samsung who ")
-// Regex pattern for malformed title cleanup: /\b(who|whose|by|from|regarding)\b/gi
-              .replace(malformedTitleRegex, '')
-              .replace(/\s{2,}/g, ' ')
-              .trim()}</div>
+            <div className="text-xs text-gray-300 truncate max-w-xs">{cleanEvidenceTitle(evidence.title)}</div>
           </div>
         </div>
         <div className={`mt-1 px-2 py-0.5 rounded ${badgeClass} text-xs`}> {evidence.status.toUpperCase()} </div>

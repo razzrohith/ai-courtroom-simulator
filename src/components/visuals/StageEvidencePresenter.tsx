@@ -1,7 +1,7 @@
 import React from 'react';
 import { Evidence } from '../../types/courtroom';
 import styles from './StageEvidencePresenter.module.css';
-const malformedTitleRegex = /\b(who|whose|by|from|regarding)\b/gi; // used for evidence title cleanup
+const malformedTitleRegex = /\b(who|whose|by|from|regarding)\b/gi;
 export interface StageEvidencePresenterProps {
   evidence?: Evidence;
 }

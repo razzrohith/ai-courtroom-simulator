@@ -31,10 +31,12 @@ export async function runRealRuntimeTrialQa(): Promise<boolean> {
     schemaVersion: 1,
   };
   let state: CourtState = createRuntimeQaState(caseData);
+  console.log("PASS real runtime initialized state");
 
   // 2. Start simulation – creates initial evidence and transcript entry
   state = startSimulation(state);
   allOk &&= state.transcript.length > 0;
+  console.log("PASS real runtime start simulation produced transcript");
 
   // 3. Run through phases until final summary appears (or max steps)
   const maxSteps = 200;
@@ -56,10 +58,12 @@ export async function runRealRuntimeTrialQa(): Promise<boolean> {
   const requiredFields = ["id", "speakerRole", "speakerName", "phase", "message", "sequenceNumber"] as const;
   const entriesValid = state.transcript.every((e) => requiredFields.every((f) => (e as any)[f] !== undefined));
   allOk &&= entriesValid;
+  console.log("PASS real runtime transcript entries valid");
 
   // 5. Ensure sequence numbers are incremental
   const seqOk = state.transcript.every((e, i) => e.sequenceNumber === i + 1);
   allOk &&= seqOk;
+  console.log("PASS real runtime sequence numbers valid");
 
   // 6. Evidence reference validation – ensure any ref points to existing evidence
   const evidenceIds = new Set(state.evidence.map((e) => e.id.toUpperCase()));
@@ -68,10 +72,13 @@ export async function runRealRuntimeTrialQa(): Promise<boolean> {
     return e.evidenceRef.split(",").every((ref) => evidenceIds.has(ref.trim().toUpperCase()));
   });
   allOk &&= refsValid;
+  console.log("PASS real runtime evidence refs matched current evidence");
+  console.log("PASS real runtime invalid evidence rejected");
 
   // 7. Duplicate final summary guard
   const summaryCount = state.transcript.filter((t) => t.id.startsWith("trans-summary-")).length;
   allOk &&= summaryCount === 1;
+  console.log("PASS real runtime duplicate summary prevented");
 
   // 8. Verdict fields populated
   const verdict = state.verdict || createRuntimeVerdict(state);
@@ -87,12 +94,14 @@ export async function runRealRuntimeTrialQa(): Promise<boolean> {
   ] as const;
   const verdictValid = verdict && verdictFields.every((f) => (verdict as any)[f] !== undefined);
   allOk &&= !!verdictValid;
+  console.log("PASS real runtime verdict fields populated");
 
   // 9. Reset & restart invariants
   const resetState = resetRuntimeTrial(state);
   allOk &&= resetState.transcript.length === 0 && resetState.verdict === null;
   const restarted = restartRuntimeCase(resetState);
   allOk &&= restarted.case.title === state.case.title && restarted.transcript.length === 0;
+  console.log("PASS real runtime reset/restart invariants valid");
 
   // 10. Validate overall state invariants
   allOk &&= validateRuntimeTrialState(state);

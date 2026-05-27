@@ -113,12 +113,20 @@ allOk &&= runCommand('npm run typecheck', 'TypeScript type‑check');
 allOk &&= runCommand('npm run build', 'Production build');
 
 // ---- Compile QA harness (tsconfig.qa.json) ----
+// Remove stale .qa-build directory
+try {
+  const buildDir = path.join(projectRoot, '.qa-build');
+  fs.rmSync(buildDir, { recursive: true, force: true });
+  console.log('INFO cleaned .qa-build directory');
+} catch (e) {
+  console.warn('WARN could not clean .qa-build', e);
+}
 allOk &&= runCommand('npx tsc -p tsconfig.qa.json', 'Compile QA harness');
 
 // ---- Run real runtime QA harness ----
 async function runRealQa() {
   try {
-    const { runRealRuntimeTrialQa } = await import('../build/orchestration/qaRuntimeHarness.js');
+    const { runRealRuntimeTrialQa } = await import('../.qa-build/orchestration/qaRuntimeHarness.js');
     const ok = await runRealRuntimeTrialQa();
     console.log('\n🧪  REAL RUNTIME QA RESULT:', ok ? 'ALL CHECKS PASS' : 'ONE OR MORE CHECKS FAILED');
     allOk &&= ok;

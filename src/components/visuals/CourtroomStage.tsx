@@ -17,7 +17,8 @@ import {
   CourtroomLiveAvatar
 } from './CourtroomVisuals';
 import StageEvidencePresenter from './StageEvidencePresenter';
-import CourtroomGallery from './CourtroomGallery';
+
+import WebGLFallback from './WebGLFallback';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { getRoleLabel } from '../../utils/languageMode';
 import { summarizeCourtroomUtterance } from '../../utils/sanitizeAgentResponse';
@@ -179,10 +180,20 @@ export function CourtroomStage({
 }: CourtroomStageProps) {
 
   const [webglAvailable] = useState(() => isWebGLAvailable());
-  const [show3D, setShow3D] = useState(() => webglAvailable);
+  const [show3D, setShow3D] = useState(() => {
+    const failed = sessionStorage.getItem('3dFailed');
+    return webglAvailable && !failed;
+  });
+  const [errorKey, setErrorKey] = useState(0);
+  const handleRetry3D = () => {
+    // Reset error boundary by changing key and attempt to show 3D again
+    setErrorKey(prev => prev + 1);
+    setShow3D(true);
+  };
+
+  const { mode: languageMode } = useLanguage();
 
   // Check if there's an active objection
-  const { mode: languageMode } = useLanguage();
   const hasObjection = !!activeObjection;
   
   // Count admitted evidence
@@ -371,7 +382,7 @@ export function CourtroomStage({
 
       {/* Objection Stamp Overlay */}
       {isObjectionActive && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 overflow-hidden bg-red-950/10">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 overflow-hidden bg-red-900/5">
           <div 
             className="px-8 py-4 border-8 border-red-500 text-red-500 font-black text-4xl md:text-5xl uppercase tracking-widest bg-gray-950/95 rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.5)] flex flex-col items-center justify-center animate-scale-in"
             style={{
@@ -495,25 +506,11 @@ export function CourtroomStage({
       
       {/* Main stage area */}
       <div className="relative p-4 md:p-6 min-h-[280px] flex flex-col">
-        {show3D ? (
+        {!webglAvailable || !show3D ? (
+          <WebGLFallback setShow3D={setShow3D} onRetry={handleRetry3D} />
+        ) : (
           <div className="relative rounded-xl overflow-hidden border border-gray-850 shadow-inner mb-4 bg-gray-950 min-h-[320px] sm:min-h-[400px]">
-            <Courtroom3DErrorBoundary
-              fallback={
-                <div className="w-full h-[320px] sm:h-[400px] flex flex-col items-center justify-center bg-gray-950 border border-red-950/20 rounded-xl p-6 text-center">
-                  <span className="text-3xl mb-2 text-red-500">⚠️</span>
-                  <div className="text-xs font-bold text-red-400">3D Graphics Failure</div>
-                  <p className="text-[10px] text-gray-500 max-w-xs mt-1 leading-relaxed">
-                    Your browser or system failed to initialize the 3D WebGL engine. Toggling back to 2D view.
-                  </p>
-                  <button
-                    onClick={() => setShow3D(false)}
-                    className="mt-3 px-3 py-1.5 bg-red-950/30 hover:bg-red-900/20 text-red-300 border border-red-900/50 rounded-lg text-[10px] font-semibold active:scale-95 transition-all"
-                  >
-                    Use 2D Courtroom
-                  </button>
-                </div>
-              }
-            >
+            <Courtroom3DErrorBoundary key={errorKey} fallback={<WebGLFallback setShow3D={setShow3D} onRetry={handleRetry3D} />}>
               <Suspense
                 fallback={
                   <div className="w-full h-[320px] sm:h-[400px] flex flex-col items-center justify-center bg-gradient-to-b from-gray-950 to-gray-900 border border-gray-900/55 rounded-xl relative overflow-hidden">
@@ -540,11 +537,7 @@ export function CourtroomStage({
                 />
               </Suspense>
             </Courtroom3DErrorBoundary>
-          </div>
-        ) : (
-          <>
-            <CourtroomGallery />
-            {/* Row 1: Judge Bench at top center */}
+            
             <div className="flex justify-center mb-4">
               <JudgeStation 
                 judge={judge} 
@@ -556,7 +549,7 @@ export function CourtroomStage({
                 isGenerating={isGenerating}
               />
             </div>
-          </>
+          </div>
         )}
         
         {/* Live Discussion panel/bubble in the middle of the stage */}

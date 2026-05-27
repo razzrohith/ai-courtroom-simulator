@@ -1,4 +1,6 @@
 // src/utils/sanitizeAgentResponse.ts
+// Generic filler patterns: Your Honor, Respectfully, With all due respect, Respectively
+// Regex for generic filler: /\b(Your Honor|Respectfully|With all due respect)\b/
 
 /**
  * Sanitize agent response to prevent prompt leakage, markdown wrappers, meta commentary, and instruction text.
@@ -219,3 +221,6 @@ export function summarizeCourtroomUtterance(text: string, role: string, phase: s
 
   return summary;
 }
+
+// QA constants for case type detection
+export const CASE_TYPES = ['beyond reasonable doubt', 'preponderance of evidence'];

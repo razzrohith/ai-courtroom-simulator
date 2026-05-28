@@ -254,7 +254,7 @@ allOk &&= runCommand('npx tsc -p tsconfig.qa.json', 'Compile QA harness');
 // 16. WebGLFallback shows compact banner with warning
 allOk &&= checkFile(
   path.join(projectRoot, 'src', 'components', 'visuals', 'WebGLFallback.tsx'),
-  c => /bg-yellow-900/.test(c) && /3D graphics failed/.test(c),
+  c => /bg-red-/.test(c) && /Experimental 3D failed — returned to stable 2D/.test(c),
   'WebGL fallback compact banner present',
   'WebGL fallback banner missing or incorrect'
 );
@@ -287,7 +287,7 @@ allOk &&= checkFile(
 // 20. Verify WebGLFallback auto-switches to 2D on failure
 allOk &&= checkFile(
   path.join(projectRoot, 'src', 'components', 'visuals', 'WebGLFallback.tsx'),
-  c => /sessionStorage\.setItem\('3dFailed'\)/.test(c) && /setShow3D\(false\)/.test(c),
+  c => /sessionStorage\.setItem\('3dFailed',\s*'true'\)/.test(c) && /setShow3D\(false\)/.test(c),
   '3D fallback auto-switches to 2D on WebGL failure',
   'WebGL fallback does not auto-switch to 2D'
 );
@@ -385,7 +385,7 @@ allOk &&= checkCondition(() => {
 // 30. 3D failure uses compact badge not blocking panel
 allOk &&= checkCondition(() => {
   const fallbackContent = fs.readFileSync(fallbackPath, 'utf8');
-  const hasCompactBadgeText = fallbackContent.includes('3D unavailable — using stable 2D courtroom');
+  const hasCompactBadgeText = fallbackContent.includes('Experimental 3D failed — returned to stable 2D');
   const isCompact = !fallbackContent.includes('h-screen') && !fallbackContent.includes('fixed inset-0');
   return hasCompactBadgeText && isCompact;
 }, '3D failure uses compact badge not blocking panel', '3D failure uses compact badge not blocking panel');
@@ -405,7 +405,7 @@ allOk &&= checkCondition(() => {
 // 33. judge remains visible in 2D fallback
 allOk &&= checkCondition(() => {
   const stageContent = fs.readFileSync(stagePath, 'utf8');
-  const stable2DIndex = stageContent.indexOf('/* Stable 2D Courtroom fallback layout */');
+  const stable2DIndex = stageContent.indexOf('Stable 2D Courtroom');
   return stable2DIndex !== -1 && stageContent.indexOf('JudgeStation', stable2DIndex) !== -1;
 }, 'judge remains visible in 2D fallback', 'judge remains visible in 2D fallback');
 
@@ -414,6 +414,62 @@ allOk &&= checkCondition(() => {
   const stylesContent = fs.readFileSync(presenterStylesPath, 'utf8');
   return !/\bposition:\s*absolute\b/.test(stylesContent);
 }, 'evidence presenter remains in normal layout flow', 'evidence presenter remains in normal layout flow');
+
+// ---- Phase 9 checks ----
+// 35. 2D courtroom is default experience
+allOk &&= checkCondition(() => {
+  const stageContent = fs.readFileSync(stagePath, 'utf8');
+  const hasExperimental3DDefaultFalse = stageContent.includes("localStorage.getItem('judgebench.experimental3D') === 'true'");
+  const hasAttempt3DDefinition = stageContent.includes("attempt3D = experimental3D");
+  return hasExperimental3DDefaultFalse && hasAttempt3DDefinition;
+}, '2D courtroom is default experience', '2D courtroom is default experience');
+
+// 36. normal users do not see 3D failure banner
+allOk &&= checkCondition(() => {
+  const stageContent = fs.readFileSync(stagePath, 'utf8');
+  return stageContent.includes("experimental3D && failed3D &&");
+}, 'normal users do not see 3D failure banner', 'normal users do not see 3D failure banner');
+
+// 37. experimental 3D toggle exists
+allOk &&= checkCondition(() => {
+  const stageContent = fs.readFileSync(stagePath, 'utf8');
+  return stageContent.includes('Experimental 3D') && stageContent.includes('type="checkbox"') && stageContent.includes('experimental3D');
+}, 'experimental 3D toggle exists', 'experimental 3D toggle exists');
+
+// 38. 3D only runs when experimental mode is enabled
+allOk &&= checkCondition(() => {
+  const stageContent = fs.readFileSync(stagePath, 'utf8');
+  return stageContent.includes('attempt3D ?') && stageContent.includes('Courtroom3DStage');
+}, '3D only runs when experimental mode is enabled', '3D only runs when experimental mode is enabled');
+
+// 39. failed experimental 3D returns to stable 2D
+allOk &&= checkCondition(() => {
+  const stageContent = fs.readFileSync(stagePath, 'utf8');
+  return stageContent.includes('setFailed3D(!show)') || stageContent.includes('setFailed3D(true)');
+}, 'failed experimental 3D returns to stable 2D', 'failed experimental 3D returns to stable 2D');
+
+// 40. 2D courtroom includes judge prosecutor defense witness and evidence
+allOk &&= checkCondition(() => {
+  const stageContent = fs.readFileSync(stagePath, 'utf8');
+  const hasJudge2D = stageContent.includes('JudgeStation');
+  const hasAttorney2D = stageContent.includes('AttorneyStation');
+  const hasWitness2D = stageContent.includes('WitnessAndEvidenceArea');
+  return hasJudge2D && hasAttorney2D && hasWitness2D;
+}, '2D courtroom includes judge prosecutor defense witness and evidence', '2D courtroom includes judge prosecutor defense witness and evidence');
+
+// 41. 2D courtroom active speaker indicator exists
+allOk &&= checkCondition(() => {
+  const stageContent = fs.readFileSync(stagePath, 'utf8');
+  return stageContent.includes('SpeakingIndicator') || stageContent.includes('SpeakingPulseRing') || stageContent.includes('AudioVisualizerWave');
+}, '2D courtroom active speaker indicator exists', '2D courtroom active speaker indicator exists');
+
+// 42. 3D code remains isolated and not deleted
+allOk &&= checkCondition(() => {
+  const stageContent = fs.readFileSync(stagePath, 'utf8');
+  const has3DStageImport = stageContent.includes("lazy(() => import('./Courtroom3DStage'))");
+  const file3DExists = fs.existsSync(path.join(projectRoot, 'src', 'components', 'visuals', 'Courtroom3DStage.tsx'));
+  return has3DStageImport && file3DExists;
+}, '3D code remains isolated and not deleted', '3D code remains isolated and not deleted');
 
 if (!allOk) {
   process.exit(1);

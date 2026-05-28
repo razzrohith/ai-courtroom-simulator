@@ -180,16 +180,16 @@ export function CourtroomStage({
 }: CourtroomStageProps) {
 
   const [webglAvailable] = useState(() => isWebGLAvailable());
-  const [show3D, setShow3D] = useState(() => {
-    const failed = sessionStorage.getItem('3dFailed');
-    return webglAvailable && !failed;
+  const [experimental3D, setExperimental3D] = useState(() => {
+    return localStorage.getItem('judgebench.experimental3D') === 'true';
+  });
+  const [failed3D, setFailed3D] = useState(() => {
+    return sessionStorage.getItem('3dFailed') === 'true';
   });
   const [errorKey, setErrorKey] = useState(0);
-  const handleRetry3D = () => {
-    // Reset error boundary by changing key and attempt to show 3D again
-    setErrorKey(prev => prev + 1);
-    setShow3D(true);
-  };
+
+  const attempt3D = experimental3D && webglAvailable && !failed3D;
+
 
   const { mode: languageMode } = useLanguage();
 
@@ -345,15 +345,28 @@ export function CourtroomStage({
         }
       `}} />
 
-      {/* 3D / 2D View Mode Switcher */}
+      {/* Experimental 3D Toggle */}
       {webglAvailable && (
-        <div className="absolute top-12 right-4 z-30">
-          <button
-            onClick={() => setShow3D(!show3D)}
-            className="px-3 py-1.5 bg-gray-950/85 hover:bg-gray-900 border border-gray-800 rounded-lg text-[10px] font-bold text-gray-300 backdrop-blur-sm shadow-md active:scale-95 transition-all"
-          >
-            {show3D ? '🖥️ Switch to 2D' : '🖥️ Switch to 3D'}
-          </button>
+        <div className="absolute top-12 right-4 z-30 flex items-center gap-2 bg-gray-950/80 border border-gray-850 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-gray-300 backdrop-blur-sm shadow-md transition-all select-none">
+          <label htmlFor="experimental-3d-toggle" className="cursor-pointer">
+            Experimental 3D
+          </label>
+          <input
+            id="experimental-3d-toggle"
+            type="checkbox"
+            checked={experimental3D}
+            onChange={(e) => {
+              const val = e.target.checked;
+              setExperimental3D(val);
+              localStorage.setItem('judgebench.experimental3D', String(val));
+              if (val) {
+                sessionStorage.removeItem('3dFailed');
+                setFailed3D(false);
+                setErrorKey(prev => prev + 1);
+              }
+            }}
+            className="w-3.5 h-3.5 text-yellow-600 bg-gray-900 border-gray-700 rounded focus:ring-0 cursor-pointer"
+          />
         </div>
       )}
 
@@ -466,7 +479,7 @@ export function CourtroomStage({
       )}
 
       {/* Court backdrop pattern - wood floor effect (only for 2D) */}
-      {!show3D && (
+      {!attempt3D && (
         <div className="absolute inset-0 opacity-10 pointer-events-none">
           <div className="w-full h-full" style={{
             backgroundImage: `
@@ -506,18 +519,18 @@ export function CourtroomStage({
       
       {/* Main stage area */}
       <div className="relative p-4 md:p-6 min-h-[280px] flex flex-col">
-        {(!webglAvailable || sessionStorage.getItem('3dFailed') === 'true') && (
+        {experimental3D && failed3D && (
           <div className="mb-4">
-            <WebGLFallback setShow3D={setShow3D} onRetry={handleRetry3D} />
+            <WebGLFallback setShow3D={(show) => setFailed3D(!show)} />
           </div>
         )}
 
-        {show3D && webglAvailable && sessionStorage.getItem('3dFailed') !== 'true' ? (
-          <div className="relative rounded-xl overflow-hidden border border-gray-850 shadow-inner mb-4 bg-gray-950 min-h-[320px] sm:min-h-[400px]">
-            <Courtroom3DErrorBoundary key={errorKey} fallback={<WebGLFallback setShow3D={setShow3D} onRetry={handleRetry3D} />}>
+        {attempt3D ? (
+          <div className="relative rounded-xl overflow-hidden border border-gray-855 shadow-inner mb-4 bg-gray-950 min-h-[320px] sm:min-h-[400px]">
+            <Courtroom3DErrorBoundary key={errorKey} fallback={<WebGLFallback setShow3D={(show) => setFailed3D(!show)} />}>
               <Suspense
                 fallback={
-                  <div className="w-full h-[320px] sm:h-[400px] flex flex-col items-center justify-center bg-gradient-to-b from-gray-950 to-gray-900 border border-gray-900/55 rounded-xl relative overflow-hidden">
+                  <div className="w-full h-[320px] sm:h-[400px] flex flex-col items-center justify-center bg-gradient-to-b from-gray-955 to-gray-900 border border-gray-900/55 rounded-xl relative overflow-hidden">
                     <div className="w-8 h-8 border-2 border-yellow-500/20 border-t-yellow-500 rounded-full animate-spin mb-3"></div>
                     <div className="text-[10px] font-bold text-yellow-500 uppercase tracking-widest animate-pulse">
                       Entering Courtroom...
@@ -555,8 +568,8 @@ export function CourtroomStage({
             </div>
           </div>
         ) : (
-          /* Stable 2D Courtroom fallback layout */
-          <div className="relative rounded-xl overflow-hidden border border-gray-850 shadow-inner p-6 bg-[#0d131a]/95 min-h-[320px] flex flex-col justify-between gap-6 mb-4">
+          /* Stable 2D Courtroom default experience */
+          <div className="relative rounded-xl overflow-hidden border border-gray-800 shadow-inner p-6 bg-gradient-to-b from-[#0f172a] via-[#0b1329] to-[#040817] min-h-[350px] flex flex-col justify-between gap-6 mb-4">
             {/* Wood floor pattern background */}
             <div className="absolute inset-0 opacity-5 pointer-events-none" style={{
               backgroundImage: `
@@ -579,7 +592,7 @@ export function CourtroomStage({
             </div>
 
             {/* Middle row: Attorney Stations */}
-            <div className="flex justify-between items-start gap-4 z-10">
+            <div className="flex justify-between items-start gap-4 z-10 max-w-4xl mx-auto w-full px-4">
               <AttorneyStation 
                 participant={prosecutor}
                 role="prosecutor"
@@ -607,10 +620,12 @@ export function CourtroomStage({
 
             {/* Bottom row: Witness stand and evidence */}
             <div className="flex justify-center z-10">
-              <WitnessAndEvidenceArea 
-                evidence={evidence}
-                admittedCount={admittedEvidence.length}
-              />
+              <div className="bg-gray-950/70 border border-gray-800/80 rounded-xl px-6 py-3 shadow-lg flex justify-center backdrop-blur-sm">
+                <WitnessAndEvidenceArea 
+                  evidence={evidence}
+                  admittedCount={admittedEvidence.length}
+                />
+              </div>
             </div>
           </div>
         )}

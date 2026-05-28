@@ -506,9 +506,13 @@ export function CourtroomStage({
       
       {/* Main stage area */}
       <div className="relative p-4 md:p-6 min-h-[280px] flex flex-col">
-        {!webglAvailable || !show3D ? (
-          <WebGLFallback setShow3D={setShow3D} onRetry={handleRetry3D} />
-        ) : (
+        {(!webglAvailable || sessionStorage.getItem('3dFailed') === 'true') && (
+          <div className="mb-4">
+            <WebGLFallback setShow3D={setShow3D} onRetry={handleRetry3D} />
+          </div>
+        )}
+
+        {show3D && webglAvailable && sessionStorage.getItem('3dFailed') !== 'true' ? (
           <div className="relative rounded-xl overflow-hidden border border-gray-850 shadow-inner mb-4 bg-gray-950 min-h-[320px] sm:min-h-[400px]">
             <Courtroom3DErrorBoundary key={errorKey} fallback={<WebGLFallback setShow3D={setShow3D} onRetry={handleRetry3D} />}>
               <Suspense
@@ -550,11 +554,70 @@ export function CourtroomStage({
               />
             </div>
           </div>
+        ) : (
+          /* Stable 2D Courtroom fallback layout */
+          <div className="relative rounded-xl overflow-hidden border border-gray-850 shadow-inner p-6 bg-[#0d131a]/95 min-h-[320px] flex flex-col justify-between gap-6 mb-4">
+            {/* Wood floor pattern background */}
+            <div className="absolute inset-0 opacity-5 pointer-events-none" style={{
+              backgroundImage: `
+                repeating-linear-gradient(0deg, transparent, transparent 39px, #8B7355 39px, #8B7355 40px),
+                repeating-linear-gradient(90deg, transparent, transparent 99px, #D4AF37 99px, #D4AF37 100px)
+              `
+            }} />
+            
+            {/* Top row: Judge Station */}
+            <div className="flex justify-center z-10">
+              <JudgeStation 
+                judge={judge} 
+                currentSpeaker={currentSpeaker}
+                isSpeaking={isSpeaking} 
+                latestEntry={latestEntry}
+                isStageTyping={isStageTyping}
+                simulationSpeaker={simulationSpeaker}
+                isGenerating={isGenerating}
+              />
+            </div>
+
+            {/* Middle row: Attorney Stations */}
+            <div className="flex justify-between items-start gap-4 z-10">
+              <AttorneyStation 
+                participant={prosecutor}
+                role="prosecutor"
+                currentSpeaker={currentSpeaker}
+                isSpeaking={isSpeaking}
+                position="left"
+                latestEntry={latestEntry}
+                isStageTyping={isStageTyping}
+                simulationSpeaker={simulationSpeaker}
+                isGenerating={isGenerating}
+              />
+              
+              <AttorneyStation 
+                participant={defense}
+                role="defense"
+                currentSpeaker={currentSpeaker}
+                isSpeaking={isSpeaking}
+                position="right"
+                latestEntry={latestEntry}
+                isStageTyping={isStageTyping}
+                simulationSpeaker={simulationSpeaker}
+                isGenerating={isGenerating}
+              />
+            </div>
+
+            {/* Bottom row: Witness stand and evidence */}
+            <div className="flex justify-center z-10">
+              <WitnessAndEvidenceArea 
+                evidence={evidence}
+                admittedCount={admittedEvidence.length}
+              />
+            </div>
+          </div>
         )}
         
         {/* Live Discussion panel/bubble in the middle of the stage */}
         {isActive && latestEntry && (
-          <div className="my-3 mx-auto max-w-xl w-full bg-gray-950/85 backdrop-blur-md border border-gray-700/80 rounded-xl p-3.5 shadow-2xl text-left transition-all duration-300">
+          <div className="my-3 mx-auto max-w-xl w-full bg-gray-955/85 backdrop-blur-md border border-gray-700/80 rounded-xl p-3.5 shadow-2xl text-left transition-all duration-300">
             <div className="flex items-center justify-between border-b border-gray-800 pb-1.5 mb-1.5">
               <div className="flex items-center gap-2">
                 <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold text-white ${
@@ -597,47 +660,6 @@ export function CourtroomStage({
               </div>
             )}
           </div>
-        )}
-        
-        {!show3D && (
-          <>
-            {/* Row 2: Attorney stations - sides */}
-            <div className="flex justify-between items-start flex-1 -mt-2">
-              {/* Left side: Prosecutor */}
-              <AttorneyStation 
-                participant={prosecutor}
-                role="prosecutor"
-                currentSpeaker={currentSpeaker}
-                isSpeaking={isSpeaking}
-                position="left"
-                latestEntry={latestEntry}
-                isStageTyping={isStageTyping}
-                simulationSpeaker={simulationSpeaker}
-                isGenerating={isGenerating}
-              />
-              
-              {/* Right side: Defense */}
-              <AttorneyStation 
-                participant={defense}
-                role="defense"
-                currentSpeaker={currentSpeaker}
-                isSpeaking={isSpeaking}
-                position="right"
-                latestEntry={latestEntry}
-                isStageTyping={isStageTyping}
-                simulationSpeaker={simulationSpeaker}
-                isGenerating={isGenerating}
-              />
-            </div>
-            
-            {/* Row 3: Witness stand and evidence */}
-            <div className="flex justify-center mt-2">
-              <WitnessAndEvidenceArea 
-                evidence={evidence}
-                admittedCount={admittedEvidence.length}
-              />
-            </div>
-          </>
         )}
         
         {/* Stage Evidence Presenter */}

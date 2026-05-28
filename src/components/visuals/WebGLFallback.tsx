@@ -13,14 +13,9 @@ export const WebGLFallback: React.FC<WebGLFallbackProps> = ({ setShow3D, onRetry
   // Mark that 3D has failed for this session
   useEffect(() => {
     // Mark failure and automatically switch to 2D view
-    // sessionStorage.setItem('3dFailed')
     sessionStorage.setItem('3dFailed', 'true');
     setShow3D(false);
   }, []);
-
-  const handleUse2D = () => {
-    setShow3D(false);
-  };
 
   const handleRetry = () => {
     // Clear the failure flag and attempt to show 3D again
@@ -30,16 +25,17 @@ export const WebGLFallback: React.FC<WebGLFallbackProps> = ({ setShow3D, onRetry
   };
 
   return (
-    <div className="w-full p-2 bg-yellow-900/80 border border-yellow-700 rounded-md flex flex-col items-center text-center text-sm text-yellow-200">
-      <div className="mb-1 font-bold animate-pulse">3D graphics failed – switched to 2D view</div>
-      <div className="flex gap-2">
-        <button onClick={handleUse2D} className="px-3 py-1 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded text-gray-200 transition">
-          Use 2D Courtroom
-        </button>
-        <button onClick={handleRetry} className="px-3 py-1 bg-blue-800 hover:bg-blue-700 border border-blue-600 rounded text-gray-200 transition">
-          Try 3D Again
-        </button>
+    <div className="w-full flex items-center justify-between p-2.5 bg-[#0e1217] border border-amber-500/30 rounded-lg text-xs text-amber-500 shadow-md">
+      <div className="flex items-center gap-2">
+        <span className="text-amber-500">⚠️</span>
+        <span className="font-semibold animate-pulse">3D unavailable — using stable 2D courtroom</span>
       </div>
+      <button 
+        onClick={handleRetry} 
+        className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/25 border border-amber-500/30 hover:border-amber-500/50 rounded text-[10px] font-bold text-amber-400 transition"
+      >
+        Try 3D Again
+      </button>
     </div>
   );
 };

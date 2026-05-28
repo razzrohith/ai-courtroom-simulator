@@ -379,12 +379,12 @@ export function CourtroomLayout({
               {focusMode ? (
                 <>
                   {/* Theater Layout - Left Column: Stage (col-span-8) */}
-                  <div className="col-span-12 lg:col-span-8 relative bg-[#0d131a] rounded-xl border border-gray-8-00 overflow-hidden shadow-lg w-full">
+                  <div className="col-span-12 lg:col-span-8 relative bg-[#0d131a] rounded-xl border border-gray-800 overflow-hidden shadow-lg w-full">
                     {/* Focus Mode toggle button */}
                     <button
                       id="focus-mode-toggle"
                       onClick={() => setFocusMode(false)}
-                      className="absolute top-2 right-2 px-3 py-1 text-xs font-medium rounded bg-gray-8-00 hover:bg-gray-700 border border-gray-6-00 text-gray-200 z-10 transition"
+                      className="absolute top-2 right-2 px-3 py-1 text-xs font-medium rounded bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-200 z-10 transition"
                     >
                       Exit Focus Mode
                     </button>
@@ -418,7 +418,7 @@ export function CourtroomLayout({
                   </div>
 
                   {/* Theater Layout - Right Column: Transcript (col-span-4) */}
-                  <div className="col-span-12 lg:col-span-4 flex flex-col bg-[#0d131a]/95 border border-gray-8-50 rounded-xl overflow-hidden shadow-2xl h-[600px] md:h-[650px]">
+                  <div className="col-span-12 lg:col-span-4 flex flex-col bg-[#0d131a]/95 border border-gray-850 rounded-xl overflow-hidden shadow-2xl h-[600px] md:h-[650px]">
                     <div className="flex items-center justify-between border-b border-gray-800 p-3 bg-gray-950/40">
                       <span className="text-xs font-bold text-yellow-500">📜 Transcript</span>
                     </div>
@@ -434,12 +434,12 @@ export function CourtroomLayout({
               ) : (
                 <>
                   {/* Normal Layout - Stage Hero (Full Width - col-span-12) */}
-                  <div className="col-span-12 relative bg-[#0d131a] rounded-xl border border-gray-8-00 overflow-hidden shadow-lg w-full">
+                  <div className="col-span-12 relative bg-[#0d131a] rounded-xl border border-gray-800 overflow-hidden shadow-lg w-full">
                     {/* Focus Mode toggle button */}
                     <button
                       id="focus-mode-toggle"
                       onClick={() => setFocusMode(true)}
-                      className="absolute top-2 right-2 px-3 py-1 text-xs font-medium rounded bg-gray-8-00 hover:bg-gray-750 border border-gray-6-00 text-gray-250 z-10 transition"
+                      className="absolute top-2 right-2 px-3 py-1 text-xs font-medium rounded bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-200 z-10 transition"
                     >
                       Expand Courtroom
                     </button>
@@ -475,7 +475,7 @@ export function CourtroomLayout({
                   {/* Normal Layout - Left/Main Column (col-span-12 lg:col-span-7) */}
                   <div className="col-span-12 lg:col-span-7 order-3 lg:order-1 space-y-6">
                     {isComplete && (
-                      <div className="bg-gradient-to-br from-gray-900 via-gray-955 to-gray-900 border-2 border-yellow-500/40 rounded-xl p-5 md:p-6 shadow-2xl space-y-6 relative overflow-hidden">
+                      <div className="bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900 border-2 border-yellow-500/40 rounded-xl p-5 md:p-6 shadow-2xl space-y-6 relative overflow-hidden">
                         {/* Decorative background glow */}
                         <div className="absolute -right-20 -top-20 w-48 h-48 rounded-full bg-yellow-500/10 blur-3xl pointer-events-none" />
                         <div className="absolute -left-20 -bottom-20 w-48 h-48 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
@@ -485,7 +485,7 @@ export function CourtroomLayout({
                             <span className="text-[10px] font-bold text-yellow-500 tracking-widest uppercase">Simulation Adjourned</span>
                             <h3 className="text-xl md:text-2xl font-extrabold text-white tracking-tight mt-0.5">Final Case Disposition</h3>
                           </div>
-                          <div className="px-3 py-1 bg-yellow-955/40 border border-yellow-800/30 rounded-full text-xs font-bold text-yellow-400">
+                          <div className="px-3 py-1 bg-yellow-950/40 border border-yellow-800/30 rounded-full text-xs font-bold text-yellow-400">
                             Trial Completed ✅
                           </div>
                         </div>
@@ -570,7 +570,7 @@ export function CourtroomLayout({
                           {onStartNewCase && (
                             <button
                               onClick={onStartNewCase}
-                              className="w-full sm:w-auto px-5 py-2.5 bg-blue-955/30 hover:bg-blue-900/40 text-blue-400 font-bold rounded-xl border border-blue-900/30 active:scale-[0.98] transition-all duration-200 text-xs flex items-center justify-center gap-2"
+                              className="w-full sm:w-auto px-5 py-2.5 bg-blue-950/30 hover:bg-blue-900/40 text-blue-400 font-bold rounded-xl border border-blue-900/30 active:scale-[0.98] transition-all duration-200 text-xs flex items-center justify-center gap-2"
                             >
                               📁 Start New Case
                             </button>
@@ -590,7 +590,7 @@ export function CourtroomLayout({
                           onClick={() => { setShowTimeline(false); setShowExhibitView(false); }}
                           className={`text-xs px-2.5 py-1.5 rounded-lg font-bold border transition-all duration-200 ${
                             !showTimeline && !showExhibitView
-                              ? 'bg-yellow-955/40 text-yellow-500 border-yellow-750/30' 
+                              ? 'bg-yellow-950/40 text-yellow-500 border-yellow-750/30' 
                               : 'bg-gray-800/40 text-gray-400 border-gray-700/50 hover:bg-gray-800/60'
                           }`}
                         >
@@ -600,7 +600,7 @@ export function CourtroomLayout({
                           onClick={() => { setShowTimeline(true); setShowExhibitView(false); }}
                           className={`text-xs px-2.5 py-1.5 rounded-lg font-bold border transition-all duration-200 ${
                             showTimeline 
-                              ? 'bg-yellow-955/40 text-yellow-500 border-yellow-750/30' 
+                              ? 'bg-yellow-950/40 text-yellow-500 border-yellow-750/30' 
                               : 'bg-gray-800/40 text-gray-400 border-gray-700/50 hover:bg-gray-800/60'
                           }`}
                         >
@@ -610,7 +610,7 @@ export function CourtroomLayout({
                           onClick={() => { setShowExhibitView(true); setShowTimeline(false); }}
                           className={`text-xs px-2.5 py-1.5 rounded-lg font-bold border transition-all duration-200 ${
                             showExhibitView 
-                              ? 'bg-yellow-955/40 text-yellow-500 border-yellow-750/30' 
+                              ? 'bg-yellow-950/40 text-yellow-500 border-yellow-750/30' 
                               : 'bg-gray-800/40 text-gray-400 border-gray-700/50 hover:bg-gray-800/60'
                           }`}
                         >
@@ -631,14 +631,14 @@ export function CourtroomLayout({
                   {/* Normal Layout - Right Column (col-span-12 lg:col-span-5) */}
                   <div className="col-span-12 lg:col-span-5 order-2 lg:order-2">
                     <div className="flex flex-col bg-[#0d131a]/95 border border-gray-850 rounded-xl overflow-hidden shadow-2xl h-full">
-                      <div className="flex items-center justify-between border-b border-gray-800 p-3 bg-gray-955/40">
+                      <div className="flex items-center justify-between border-b border-gray-800 p-3 bg-gray-950/40">
                         <div className="flex gap-2">
                           <button
                             onClick={() => setRightTab('transcript')}
                             className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all duration-200 ${
                               rightTab === 'transcript'
-                                ? 'bg-yellow-955/40 text-yellow-500 border-yellow-750/30'
-                                : 'text-gray-400 hover:text-gray-250 hover:bg-gray-800/40 border border-transparent'
+                                ? 'bg-yellow-950/40 text-yellow-500 border-yellow-750/30'
+                                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/40 border border-transparent'
                             }`}
                           >
                             📜 Transcript
@@ -647,8 +647,8 @@ export function CourtroomLayout({
                             onClick={() => setRightTab('objections')}
                             className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all duration-200 ${
                               rightTab === 'objections'
-                                ? 'bg-yellow-955/40 text-yellow-500 border-yellow-750/30'
-                                : 'text-gray-400 hover:text-gray-250 hover:bg-gray-800/40 border border-transparent'
+                                ? 'bg-yellow-950/40 text-yellow-500 border-yellow-750/30'
+                                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/40 border border-transparent'
                             }`}
                           >
                             ⚖️ Records

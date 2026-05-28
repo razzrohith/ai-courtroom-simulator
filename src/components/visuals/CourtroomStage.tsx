@@ -617,7 +617,7 @@ export function CourtroomStage({
         
         {/* Live Discussion panel/bubble in the middle of the stage */}
         {isActive && latestEntry && (
-          <div className="my-3 mx-auto max-w-xl w-full bg-gray-955/85 backdrop-blur-md border border-gray-700/80 rounded-xl p-3.5 shadow-2xl text-left transition-all duration-300">
+          <div className="my-3 mx-auto max-w-xl w-full bg-gray-950/85 backdrop-blur-md border border-gray-700/80 rounded-xl p-3.5 shadow-2xl text-left transition-all duration-300">
             <div className="flex items-center justify-between border-b border-gray-800 pb-1.5 mb-1.5">
               <div className="flex items-center gap-2">
                 <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold text-white ${
@@ -627,7 +627,7 @@ export function CourtroomStage({
                 }`}>
                   {getRoleLabel(latestEntry.speakerRole as AgentRole, languageMode)}
                 </span>
-                <span className="text-xs font-bold text-gray-250">
+                <span className="text-xs font-bold text-gray-200">
                   {latestEntry.speakerName}
                 </span>
                 {isStageTyping && (
@@ -782,7 +782,7 @@ function JudgeStation({
               </span>
             )}
           </div>
-          <p className="text-[11px] text-gray-250 leading-relaxed italic select-text">
+          <p className="text-[11px] text-gray-200 leading-relaxed italic select-text">
             "{latestEntry.message}"
             {isStageTyping && <span className="animate-pulse text-yellow-500"> ▋</span>}
           </p>
@@ -919,7 +919,7 @@ function AttorneyStation({
               </span>
             )}
           </div>
-          <p className="text-[11px] text-gray-250 leading-relaxed italic select-text">
+          <p className="text-[11px] text-gray-200 leading-relaxed italic select-text">
             "{latestEntry.message}"
             {isStageTyping && <span className="animate-pulse text-yellow-500"> ▋</span>}
           </p>

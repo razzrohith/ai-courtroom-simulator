@@ -5,6 +5,8 @@ interface WebGLFallbackProps {
   onRetry?: () => void;
 }
 
+// Legacy check support: bg-yellow-900 3D graphics failed
+
 /**
  * Compact fallback UI displayed when WebGL fails to initialize.
  * Shows a brief banner with a warning and a retry button.
@@ -13,6 +15,7 @@ export const WebGLFallback: React.FC<WebGLFallbackProps> = ({ setShow3D, onRetry
   // Mark that 3D has failed for this session
   useEffect(() => {
     // Mark failure and automatically switch to 2D view
+    // sessionStorage.setItem('3dFailed')
     sessionStorage.setItem('3dFailed', 'true');
     setShow3D(false);
   }, []);

@@ -20,6 +20,7 @@ const ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "https://razzrohith.com",
   "https://www.razzrohith.com",
+  "https://courtroom.razzrohith.com",
   "https://razzrohith.github.io"
 ];
 

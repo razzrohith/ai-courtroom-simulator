@@ -64,8 +64,8 @@ const DEFAULT_MODELS: Record<ProviderId, string[]> = {
   mock: ['judge-reasoner-v1', 'prosecutor-advocate-v1', 'defense-strategist-v1'],
   openrouter: ['openai/gpt-4o', 'anthropic/claude-3.5-sonnet', 'google/gemini-pro'],
   openai: ['gpt-4o', 'gpt-4-turbo'],
-  anthropic: ['claude-sonnet-3.5-20241022', 'claude-3-opus-20240229'],
-  gemini: ['gemini-1.5-pro', 'gemini-1.5-flash'],
+  anthropic: ['claude-sonnet-5', 'claude-opus-4-8', 'claude-haiku-4-5-20251001'],
+  gemini: ['gemini-2.5-flash', 'gemini-2.5-pro'],
   ollama: ['llama3.1', 'mistral', 'codellama'],
   lmstudio: ['llama3.1', 'mixtral'],
   'custom-openai': ['gpt-4'],
@@ -682,7 +682,7 @@ export function ProviderSettings({ isOpen, onClose }: ProviderSettingsProps) {
                                 name={`or-mode-${role}`}
                                 checked={agentConfig.openRouterMode === 'demo' || (!agentConfig.openRouterMode && hasProxy)}
                                 onChange={() => {
-                                  const defaultFreeModel = 'meta-llama/llama-3.3-70b-instruct:free';
+                                  const defaultFreeModel = 'google/gemma-4-31b-it:free';
                                   updateAgentConfig(role, { 
                                     openRouterMode: 'demo',
                                     model: defaultFreeModel 

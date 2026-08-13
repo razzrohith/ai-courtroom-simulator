@@ -1,6 +1,7 @@
 import type { CaseData } from '../types/courtroom';
 import { loadApiKey, loadCourtroomConfig } from '../types/providers';
 import { parseCaseDraftJSON } from './caseDraftParser';
+import { sanitizeUserText } from './promptSafety';
 
 /**
  * AI-assisted Case Draft Generator Utility.
@@ -13,10 +14,10 @@ import { parseCaseDraftJSON } from './caseDraftParser';
  * Throws if all API calls fail.
  */
 export async function fetchCaseDraftFromAI(description: string): Promise<Partial<CaseData>> {
-  const sanitizedDescription = description
-    .replace(/<[^>]*>?/gm, '') // strip HTML/tags
-    .substring(0, 300)        // limit description length
-    .trim();
+  const sanitizedDescription = sanitizeUserText(
+    description.replace(/<[^>]*>?/gm, ''), // strip HTML/tags
+    300
+  );
 
   if (!sanitizedDescription) {
     throw new Error('Description is empty.');
@@ -83,7 +84,7 @@ Ensure there are exactly 3 key facts, and exactly 2 evidence items (one for pros
   // Try OpenRouter Free Demo if available and not already in the list
   const hasProxy = !!import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL;
   if (hasProxy && !providersToTry.some(p => p.id === 'openrouter')) {
-    providersToTry.push({ id: 'openrouter', model: 'meta-llama/llama-3.3-70b-instruct:free' });
+    providersToTry.push({ id: 'openrouter', model: 'google/gemma-4-31b-it:free' });
   }
 
   if (providersToTry.length === 0) {
@@ -100,12 +101,12 @@ Ensure there are exactly 3 key facts, and exactly 2 evidence items (one for pros
         const apiKey = loadApiKey('openrouter');
         const proxyUrl = import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL;
         const openRouterMode = judgeConfig.openRouterMode || (proxyUrl ? 'demo' : 'personal');
-        
+
         let url = '';
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
         };
-        
+
         if (openRouterMode === 'demo') {
           if (!proxyUrl) throw new Error('Proxy URL not configured');
           url = proxyUrl;
@@ -116,29 +117,48 @@ Ensure there are exactly 3 key facts, and exactly 2 evidence items (one for pros
           headers['HTTP-Referer'] = window.location.origin;
           headers['X-Title'] = 'JudgeBench';
         }
-        
-        const response = await fetch(url, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            model: provider.model,
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt }
-            ],
-            temperature: 0.5,
-            max_tokens: 1200,
-          })
-        });
-        
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(`OpenRouter HTTP ${response.status}: ${text}`);
+
+        // Same resilient free-model rotation the trial runtime uses
+        const draftModelChain = openRouterMode === 'demo'
+          ? [provider.model, 'openai/gpt-oss-20b:free', 'nvidia/nemotron-3-super-120b-a12b:free']
+          : [provider.model];
+
+        let chainError: any = null;
+        for (const draftModel of draftModelChain) {
+          try {
+            const response = await fetch(url, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({
+                model: draftModel,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: userPrompt }
+                ],
+                temperature: 0.5,
+                max_tokens: 1200,
+              }),
+              signal: AbortSignal.timeout(45000),
+            });
+
+            if (!response.ok) {
+              const text = await response.text();
+              throw new Error(`OpenRouter HTTP ${response.status}: ${text}`);
+            }
+
+            const data = await response.json();
+            const message = data.choices?.[0]?.message || {};
+            resultText = (message.content || '').trim() || (message.reasoning || '').trim();
+            if (!resultText) throw new Error(`Empty draft completion from ${draftModel}`);
+            chainError = null;
+            break;
+          } catch (err) {
+            console.warn(`Draft attempt with ${draftModel} failed:`, err);
+            chainError = err;
+          }
         }
-        
-        const data = await response.json();
-        resultText = data.choices?.[0]?.message?.content || '';
-        
+        if (chainError) throw chainError;
+
       } else if (provider.id === 'openai') {
         const apiKey = loadApiKey('openai');
         if (!apiKey) throw new Error('OpenAI key missing');
@@ -201,7 +221,8 @@ Ensure there are exactly 3 key facts, and exactly 2 evidence items (one for pros
           headers: {
             'Content-Type': 'application/json',
             'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01'
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
           },
           body: JSON.stringify({
             model: provider.model,
@@ -319,8 +340,8 @@ export function generateFallbackCase(description: string): CaseData {
   }
   
   // Clean names of symbols
-  plaintiff = plaintiff.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '').trim();
-  defense = defense.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '').trim();
+  plaintiff = plaintiff.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '').trim();
+  defense = defense.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, '').trim();
   
   // Truncate if too long
   if (plaintiff.length > 25) plaintiff = plaintiff.substring(0, 25);

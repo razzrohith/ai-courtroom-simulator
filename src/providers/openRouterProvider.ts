@@ -6,6 +6,8 @@
 
 import type { AgentRole, TranscriptEntry, Evidence, CourtPhase, CaseData } from '../types/courtroom';
 import { loadApiKey, loadCourtroomConfig, setAgentConnectionStatus } from '../types/providers';
+import { recordProviderEvent } from './telemetry';
+import { sanitizeUserText } from '../utils/promptSafety';
 
 // Base URL configuration
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -42,11 +44,11 @@ function buildContext(params: {
   
   let context = `You are playing the role of ${role.toUpperCase()} in a courtroom simulation.\n`;
   if (caseData) {
-    context += `Case Title: ${caseData.title}\n`;
-    context += `Case Type: ${caseData.caseType}\n`;
-    context += `Plaintiff Side: ${caseData.plaintiffSide}\n`;
-    context += `Defense Side: ${caseData.defenseSide}\n`;
-    context += `Claim Summary: ${caseData.claimSummary}\n\n`;
+    context += `Case Title: ${sanitizeUserText(caseData.title, 150)}\n`;
+    context += `Case Type: ${sanitizeUserText(caseData.caseType, 80)}\n`;
+    context += `Plaintiff Side: ${sanitizeUserText(caseData.plaintiffSide, 80)}\n`;
+    context += `Defense Side: ${sanitizeUserText(caseData.defenseSide, 80)}\n`;
+    context += `Claim Summary: ${sanitizeUserText(caseData.claimSummary, 600)}\n\n`;
   }
   context += `Current phase: ${phase}\n\n`;
   
@@ -119,11 +121,10 @@ export async function generateWithOpenRouter(params: {
 
   // Active free models to rotate through as fallbacks (total 3 attempts max)
   const fallbackModelIds = [
-    'meta-llama/llama-3.3-70b-instruct:free',
-    'meta-llama/llama-3.2-3b-instruct:free',
-    'nousresearch/hermes-3-llama-3.1-405b:free',
     'google/gemma-4-31b-it:free',
-    'deepseek/deepseek-v4-flash:free'
+    'openai/gpt-oss-20b:free',
+    'nvidia/nemotron-3-super-120b-a12b:free',
+    'nvidia/nemotron-3-nano-30b-a3b:free'
   ];
 
   // Build the list of models to try
@@ -165,7 +166,7 @@ export async function generateWithOpenRouter(params: {
             { role: 'user', content: params.prompt },
           ],
           temperature: 0.5,
-          max_tokens: 220,
+          max_tokens: 1200,
         }),
       });
 
@@ -190,10 +191,18 @@ export async function generateWithOpenRouter(params: {
         );
       }
 
-      return data.choices[0].message.content;
+      // Reasoning models (e.g. gpt-oss) may put text in `reasoning` when the
+      // token budget is exhausted before final content is emitted.
+      const message = data.choices[0].message || {};
+      const text = (message.content || '').trim() || (message.reasoning || '').trim();
+      if (!text) {
+        throw new Error(`Empty completion from ${currentModel}`);
+      }
+      return text;
 
     } catch (error) {
       console.warn(`Attempt ${attempt + 1} with model ${currentModel} failed:`, error);
+      recordProviderEvent('warn', 'openrouter', `Attempt ${attempt + 1} (${currentModel}) failed: ${(error as Error)?.message || error}`);
       lastError = error;
       
       // If we are not in demo mode, don't try other models

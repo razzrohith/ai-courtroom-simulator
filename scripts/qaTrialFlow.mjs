@@ -471,6 +471,558 @@ allOk &&= checkCondition(() => {
   return has3DStageImport && file3DExists;
 }, '3D code remains isolated and not deleted', '3D code remains isolated and not deleted');
 
+// ---- Phase 23: Gilded Verdict redesign checks ----
+const stylesPath = path.join(projectRoot, 'src', 'styles.css');
+const tailwindPath = path.join(projectRoot, 'tailwind.config.js');
+const soundHookPath = path.join(projectRoot, 'src', 'hooks', 'useSoundEffects.ts');
+const shortcutsHookPath = path.join(projectRoot, 'src', 'hooks', 'useKeyboardShortcuts.ts');
+const objectionFlashPath = path.join(projectRoot, 'src', 'components', 'effects', 'ObjectionFlash.tsx');
+const celebrationPath = path.join(projectRoot, 'src', 'components', 'effects', 'VerdictCelebration.tsx');
+const evidenceBoardPath = path.join(projectRoot, 'src', 'components', 'EvidenceBoard.tsx');
+const phaseTimelinePath = path.join(projectRoot, 'src', 'components', 'PhaseTimeline.tsx');
+const orProviderPath = path.join(projectRoot, 'src', 'providers', 'openRouterProvider.ts');
+const welcomePath = path.join(projectRoot, 'src', 'components', 'WelcomePanel.tsx');
+
+// 43. Animation dependencies installed
+allOk &&= checkFile(
+  pkgPath,
+  c => /"framer-motion"/.test(c) && /"canvas-confetti"/.test(c),
+  'animation dependencies (framer-motion, canvas-confetti) installed',
+  'animation dependencies missing from package.json'
+);
+
+// 44. ESLint configured with flat config
+allOk &&= checkCondition(
+  () => fs.existsSync(path.join(projectRoot, 'eslint.config.js')),
+  'eslint flat config exists',
+  'eslint flat config missing'
+);
+
+// 45. Design system: glass panel + brass primitives defined
+allOk &&= checkFile(
+  stylesPath,
+  c => /\.glass-panel\b/.test(c) && /\.btn-brass\b/.test(c) && /\.text-brass-gradient\b/.test(c),
+  'design system primitives (glass-panel, btn-brass, brass-gradient) defined',
+  'design system primitives missing from styles.css'
+);
+
+// 46. Tailwind theme extended with brass palette and display font
+allOk &&= checkFile(
+  tailwindPath,
+  c => /brass:\s*\{/.test(c) && /Cinzel/.test(c) && /'gavel-slam'/.test(c),
+  'tailwind theme has brass palette, Cinzel display font, gavel-slam keyframes',
+  'tailwind theme redesign tokens missing'
+);
+
+// 47. Sound effects hook synthesizes courtroom cues
+allOk &&= checkFile(
+  soundHookPath,
+  c => /playGavel/.test(c) && /playObjection/.test(c) && /playVerdict/.test(c) && /judgebench\.soundFx/.test(c),
+  'sound effects hook synthesizes gavel/objection/verdict with persisted toggle',
+  'sound effects hook incomplete'
+);
+
+// 48. Keyboard shortcuts hook covers core hotkeys
+allOk &&= checkFile(
+  shortcutsHookPath,
+  c => /onNextTurn/.test(c) && /onToggleAutoplay/.test(c) && /onToggleFocusMode/.test(c) && /onToggleSound/.test(c) && /isTypingTarget/.test(c),
+  'keyboard shortcuts hook covers next-turn/autoplay/focus/sound and ignores inputs',
+  'keyboard shortcuts hook incomplete'
+);
+
+// 49. Objection flash overlay exists and reacts to new objections
+allOk &&= checkFile(
+  objectionFlashPath,
+  c => /Objection!/.test(c) && /seenIds/.test(c) && /AnimatePresence/.test(c),
+  'objection flash overlay animates on new objections',
+  'objection flash overlay missing or incomplete'
+);
+
+// 50. Verdict celebration fires confetti and gavel slam
+allOk &&= checkFile(
+  celebrationPath,
+  c => /canvas-confetti/.test(c) && /Verdict Reached/.test(c) && /disableForReducedMotion/.test(c),
+  'verdict celebration fires confetti with reduced-motion respect',
+  'verdict celebration missing or incomplete'
+);
+
+// 51. Cinematic overlays wired into the main layout
+allOk &&= checkFile(
+  layoutPath,
+  c => /<ObjectionFlash/.test(c) && /<VerdictCelebration/.test(c) && /useSoundEffects\(\)/.test(c) && /useKeyboardShortcuts\(/.test(c),
+  'layout wires objection flash, verdict celebration, sound, and hotkeys',
+  'layout missing cinematic wiring'
+);
+
+// 52. Evidence board has click-to-inspect detail modal
+allOk &&= checkFile(
+  evidenceBoardPath,
+  c => /setSelected\(item\)/.test(c) && /Close evidence detail/.test(c),
+  'evidence board supports click-to-inspect detail modal',
+  'evidence detail modal missing'
+);
+
+// 53. Phase timeline shows animated trial progress percentage
+allOk &&= checkFile(
+  phaseTimelinePath,
+  c => /progressPct/.test(c) && /Trial Progress/.test(c),
+  'phase timeline shows animated trial progress percentage',
+  'phase timeline progress missing'
+);
+
+// 54. No stale OpenRouter free-model slugs remain in src
+allOk &&= checkCondition(() => {
+  const staleSlugs = [
+    'meta-llama/llama-3.3-70b-instruct:free',
+    'meta-llama/llama-3.2-3b-instruct:free',
+    'nousresearch/hermes-3-llama-3.1-405b:free',
+    'deepseek/deepseek-v4-flash:free',
+  ];
+  const srcDir = path.join(projectRoot, 'src');
+  const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+    const full = path.join(dir, entry.name);
+    return entry.isDirectory() ? walk(full) : [full];
+  });
+  const offenders = walk(srcDir).filter(f => {
+    if (!/\.(ts|tsx)$/.test(f)) return false;
+    const content = fs.readFileSync(f, 'utf8');
+    return staleSlugs.some(slug => content.includes(slug));
+  });
+  if (offenders.length) console.log('  stale slugs in:', offenders.join(', '));
+  return offenders.length === 0;
+}, 'no stale OpenRouter free-model slugs remain', 'stale OpenRouter model slugs found in src');
+
+// 55. OpenRouter provider handles reasoning-model empty content
+allOk &&= checkFile(
+  orProviderPath,
+  c => /message\.reasoning/.test(c) && /Empty completion from/.test(c),
+  'openrouter provider falls back to reasoning text and rejects empty completions',
+  'openrouter provider missing empty-content handling'
+);
+
+// 56. Current default free model is a live slug
+allOk &&= checkFile(
+  path.join(projectRoot, 'src', 'types', 'providers.ts'),
+  c => /google\/gemma-4-31b-it:free/.test(c),
+  'default agent model uses current live free slug',
+  'default agent model slug outdated'
+);
+
+// 57. Welcome hero uses the redesign motion system
+allOk &&= checkFile(
+  welcomePath,
+  c => /framer-motion/.test(c) && /staggerContainer/.test(c) && /glass-panel/.test(c),
+  'welcome hero uses staggered motion and glass design system',
+  'welcome hero not migrated to redesign'
+);
+
+// ---- Phase 24: Interactive courtroom feature checks ----
+const appPath = path.join(projectRoot, 'src', 'App.tsx');
+const persistencePath = path.join(projectRoot, 'src', 'data', 'sessionPersistence.ts');
+const setupPanelPath = path.join(projectRoot, 'src', 'components', 'CaseSetupPanel.tsx');
+const draftGenPath = path.join(projectRoot, 'src', 'utils', 'caseDraftGenerator.ts');
+const juryPanelPath = path.join(projectRoot, 'src', 'components', 'JuryPanel.tsx');
+const usageDashPath = path.join(projectRoot, 'src', 'components', 'UsageDashboard.tsx');
+const typesPath = path.join(projectRoot, 'src', 'types', 'courtroom.ts');
+const vitePath = path.join(projectRoot, 'vite.config.ts');
+
+// 58. Engine raises interactive PENDING objections
+allOk &&= checkFile(
+  ctrlPath,
+  c => /const isPending = state\.objectionHistory\.length % 2 === 0/.test(c) && /status: 'pending',\s*\n\s*timestamp/.test(c),
+  'engine raises interactive pending objections',
+  'pending objection generation missing'
+);
+
+// 59. Inline objection ruling dock in bottom bar
+allOk &&= checkFile(
+  layoutPath,
+  c => /Your Ruling/.test(c) && /Sustain/.test(c) && /Overrule/.test(c),
+  'inline objection ruling dock present in control bar',
+  'inline ruling dock missing'
+);
+
+// 60. Autoplay AI judge auto-rules pending objections
+allOk &&= checkFile(
+  appPath,
+  c => /determineObjectionRuling/.test(c) && /ruleOnObjection\(prev, pending\.id/.test(c),
+  'autoplay AI judge auto-rules pending objections',
+  'autoplay auto-ruling missing'
+);
+
+// 61. Objection flash fires for all new objections
+allOk &&= checkFile(
+  objectionFlashPath,
+  c => /objections\.find\(o => !seenIds\.current\.has\(o\.id\)\)/.test(c),
+  'objection flash fires for every new objection',
+  'objection flash still pending-only'
+);
+
+// 62. Draft generator uses model chain with timeout
+allOk &&= checkFile(
+  draftGenPath,
+  c => /draftModelChain/.test(c) && /AbortSignal\.timeout/.test(c) && /message\.reasoning/.test(c),
+  'draft generator rotates models with timeout and reasoning fallback',
+  'draft generator hardening missing'
+);
+
+// 63. Draft fallback notice surfaces to the user
+allOk &&= checkFile(
+  setupPanelPath,
+  c => /local-fallback/.test(c) && /generated locally from your prompt/.test(c),
+  'draft local-fallback notice shown to user',
+  'draft fallback notice missing'
+);
+
+// 64. Token usage threaded into transcript entries
+allOk &&= checkCondition(() => {
+  const types = fs.readFileSync(typesPath, 'utf8');
+  const ctrl = fs.readFileSync(ctrlPath, 'utf8');
+  return /totalTokens\?: number/.test(types) && /totalTokens: result\.totalTokens/.test(ctrl);
+}, 'token usage metadata threaded into transcript entries', 'usage metadata not threaded');
+
+// 65. Usage dashboard component rendered in layout
+allOk &&= checkCondition(() => {
+  const dash = fs.existsSync(usageDashPath) && /Session Usage/.test(fs.readFileSync(usageDashPath, 'utf8'));
+  const layout = fs.readFileSync(layoutPath, 'utf8');
+  return dash && /<UsageDashboard/.test(layout);
+}, 'usage dashboard exists and is rendered', 'usage dashboard missing');
+
+// 66. Motion system generates and rules motions
+allOk &&= checkFile(
+  ctrlPath,
+  c => /motion_to_admit_evidence/.test(c) && /motion_to_exclude_evidence/.test(c) && /export function ruleOnMotion/.test(c),
+  'motion system generates case-derived motions with rulings',
+  'motion system missing'
+);
+
+// 67. Motion panel wired to real ruling handler
+allOk &&= checkCondition(() => {
+  const layout = fs.readFileSync(layoutPath, 'utf8');
+  const app = fs.readFileSync(appPath, 'utf8');
+  return /onRuling={onMotionRuling}/.test(layout) && /ruleOnMotion\(prev, motionId/.test(app);
+}, 'motion panel wired to real ruling handler', 'motion panel still stubbed');
+
+// 68. Jury simulation with votes and dissent
+allOk &&= checkCondition(() => {
+  const ctrl = fs.readFileSync(ctrlPath, 'utf8');
+  const types = fs.readFileSync(typesPath, 'utf8');
+  const panel = fs.existsSync(juryPanelPath) && /Jury Deliberation/.test(fs.readFileSync(juryPanelPath, 'utf8'));
+  const layout = fs.readFileSync(layoutPath, 'utf8');
+  return /generateJuryVotes/.test(ctrl) && /interface JurorVote/.test(types) && panel && /<JuryPanel/.test(layout);
+}, 'jury simulation generates votes shown in jury panel', 'jury simulation missing');
+
+// 69. Play-a-role: engine accepts human turns
+allOk &&= checkFile(
+  ctrlPath,
+  c => /processNextTurnAsync\(state: CourtState, userMessage\?: string\)/.test(c) && /providerUsed: 'human'/.test(c),
+  'engine accepts human turns for play-a-role mode',
+  'play-a-role engine support missing'
+);
+
+// 70. Play-a-role UI: role selector and argument dock
+allOk &&= checkFile(
+  layoutPath,
+  c => /Play as/.test(c) && /Address the Court/.test(c) && /isUserTurn/.test(c),
+  'play-a-role selector and argument dock present',
+  'play-a-role UI missing'
+);
+
+// 71. Quick trial mode skips secondary phases
+allOk &&= checkCondition(() => {
+  const app = fs.readFileSync(appPath, 'utf8');
+  const layout = fs.readFileSync(layoutPath, 'utf8');
+  return /QUICK_SKIP_PHASES/.test(app) && /Quick Trial/.test(layout);
+}, 'quick trial mode skips secondary phases', 'quick trial mode missing');
+
+// 72. Replay export/import + markdown report + case library
+allOk &&= checkFile(
+  persistencePath,
+  c => /exportTrialReplay/.test(c) && /parseTrialReplay/.test(c) && /exportCaseReportMarkdown/.test(c) && /saveToLibrary/.test(c) && /judgebench-replay/.test(c),
+  'replay export/import, markdown report, and case library implemented',
+  'persistence features missing'
+);
+
+// 73. Case library modal and file buttons in layout
+allOk &&= checkFile(
+  layoutPath,
+  c => /Case Library/.test(c) && /Export Trial Replay/.test(c) && /Import Trial Replay/.test(c) && /Export Case Report/.test(c),
+  'case library modal and export/import buttons present',
+  'case file UI missing'
+);
+
+// 74. Language selector surfaced in sidebar
+allOk &&= checkFile(
+  layoutPath,
+  c => /<LanguageSelector \/>/.test(c),
+  'language selector rendered in sidebar',
+  'language selector not rendered'
+);
+
+// 75. Provider catalogs updated to current model generations
+allOk &&= checkCondition(() => {
+  const catalog = fs.readFileSync(path.join(projectRoot, 'src', 'providers', 'modelCatalog.ts'), 'utf8');
+  return /claude-sonnet-5/.test(catalog) && /gemini-2\.5-flash/.test(catalog);
+}, 'provider catalogs updated to current model generations', 'provider catalogs outdated');
+
+// 76. Vendor bundle splitting configured
+allOk &&= checkFile(
+  vitePath,
+  c => /manualChunks/.test(c) && /vendor-react/.test(c),
+  'vendor bundle splitting configured',
+  'bundle splitting missing'
+);
+
+// 77. Verdict motion impact reflects actual motions
+allOk &&= checkFile(
+  ctrlPath,
+  c => /state\.motionHistory\.map\(m =>/.test(c) && /No formal motions were filed/.test(c),
+  'verdict motion impact derived from actual motions',
+  'verdict motion impact still hardcoded'
+);
+
+// ---- Phase 25: upgrade-pack checks ----
+const juryEnrichPath = path.join(projectRoot, 'src', 'utils', 'juryEnrichment.ts');
+const scorecardPath = path.join(projectRoot, 'src', 'components', 'PlayerScorecard.tsx');
+const casePacksPath = path.join(projectRoot, 'src', 'data', 'casePacks.ts');
+const highlightsPath = path.join(projectRoot, 'src', 'components', 'TrialHighlights.tsx');
+const achievementsPath = path.join(projectRoot, 'src', 'utils', 'achievements.ts');
+const achievementsPanelPath = path.join(projectRoot, 'src', 'components', 'AchievementsPanel.tsx');
+const telemetryPath = path.join(projectRoot, 'src', 'providers', 'telemetry.ts');
+const telemetryDrawerPath = path.join(projectRoot, 'src', 'components', 'TelemetryDrawer.tsx');
+const mockProviderPath = path.join(projectRoot, 'src', 'providers', 'mockModelProvider.ts');
+
+// 78. AI juror enrichment wired with silent fallback
+allOk &&= checkCondition(() => {
+  const util = fs.existsSync(juryEnrichPath) && /enrichJurorReasoning/.test(fs.readFileSync(juryEnrichPath, 'utf8'));
+  const app = fs.readFileSync(appPath, 'utf8');
+  return util && /enrichJurorReasoning\(state\.case, state\.verdict\)/.test(app);
+}, 'AI juror reasoning enrichment wired with silent fallback', 'juror enrichment missing');
+
+// 79. Player objections: engine + button + AI-judge ruling
+allOk &&= checkCondition(() => {
+  const ctrl = fs.readFileSync(ctrlPath, 'utf8');
+  const layout = fs.readFileSync(layoutPath, 'utf8');
+  const app = fs.readFileSync(appPath, 'utf8');
+  return /export function recordPlayerObjection/.test(ctrl)
+    && /✋ Object!/.test(layout)
+    && /obj-player-/.test(app);
+}, 'player objections with Object! button and AI-judge ruling', 'player objections missing');
+
+// 80. Player scorecard graded after play-a-role trials
+allOk &&= checkCondition(() => {
+  const card = fs.existsSync(scorecardPath) && /gradeSide/.test(fs.readFileSync(scorecardPath, 'utf8'));
+  const layout = fs.readFileSync(layoutPath, 'utf8');
+  return card && /<PlayerScorecard/.test(layout);
+}, 'player scorecard renders after play-a-role trials', 'player scorecard missing');
+
+// 81. Interactive witness examination uses the human question
+allOk &&= checkCondition(() => {
+  const mock = fs.readFileSync(mockProviderPath, 'utf8');
+  const ctrl = fs.readFileSync(ctrlPath, 'utf8');
+  return /customQuestion/.test(mock) && /customQuestion: userQuestion/.test(ctrl);
+}, 'witness answers respond to the human examiner question', 'interactive witness examination missing');
+
+// 82. Hot-seat mode: both sides human
+allOk &&= checkCondition(() => {
+  const app = fs.readFileSync(appPath, 'utf8');
+  const layout = fs.readFileSync(layoutPath, 'utf8');
+  return /'both'/.test(app) && /Hot-seat/.test(layout);
+}, 'hot-seat mode lets humans argue both sides', 'hot-seat mode missing');
+
+// 83. Voice dictation in the argument dock
+allOk &&= checkFile(
+  layoutPath,
+  c => /webkitSpeechRecognition/.test(c) && /Dictate/.test(c),
+  'voice dictation available in argument dock',
+  'voice dictation missing'
+);
+
+// 84. Case pack gallery with 8 curated cases
+allOk &&= checkCondition(() => {
+  const packs = fs.readFileSync(casePacksPath, 'utf8');
+  const setup = fs.readFileSync(setupPanelPath, 'utf8');
+  const packCount = (packs.match(/^\s*pack\(/gm) || []).length;
+  return packCount >= 8 && /CASE_PACKS/.test(setup) && /Case Gallery/.test(setup);
+}, 'case gallery ships 8 curated cases', 'case gallery missing or short');
+
+// 85. Trial highlights reel compiled after completion
+allOk &&= checkCondition(() => {
+  const reel = fs.existsSync(highlightsPath) && /extractHighlights/.test(fs.readFileSync(highlightsPath, 'utf8'));
+  const layout = fs.readFileSync(layoutPath, 'utf8');
+  return reel && /<TrialHighlights/.test(layout);
+}, 'trial highlights reel compiled after completion', 'highlights reel missing');
+
+// 86. Achievements: stats persistence + badge panel
+allOk &&= checkCondition(() => {
+  const util = fs.readFileSync(achievementsPath, 'utf8');
+  const panel = fs.existsSync(achievementsPanelPath);
+  const app = fs.readFileSync(appPath, 'utf8');
+  return /recordTrialCompletion/.test(util) && /judgebench\.stats\.v1/.test(util) && panel && /recordTrialCompletion\(state, userRole\)/.test(app);
+}, 'achievement stats persist with badge panel', 'achievements missing');
+
+// 87. Print / Save-as-PDF report export
+allOk &&= checkCondition(() => {
+  const persist = fs.readFileSync(persistencePath, 'utf8');
+  const layout = fs.readFileSync(layoutPath, 'utf8');
+  return /exportCaseReportPdf/.test(persist) && /window\.print\(\)/.test(persist) && /Print \/ Save as PDF/.test(layout);
+}, 'print/save-as-PDF report export available', 'PDF export missing');
+
+// 88. Replay theater: turn-by-turn playback with guards
+allOk &&= checkCondition(() => {
+  const app = fs.readFileSync(appPath, 'utf8');
+  const layout = fs.readFileSync(layoutPath, 'utf8');
+  return /handleWatchReplay/.test(app) && /replayQueueRef/.test(app)
+    && /Watch Replay \(Theater\)/.test(layout) && /Replay Theater/.test(layout)
+    && /if \(isReplaying\) return;/.test(app);
+}, 'replay theater plays trials back with engine guards', 'replay theater missing');
+
+// 89. Provider telemetry drawer
+allOk &&= checkCondition(() => {
+  const t = fs.existsSync(telemetryPath) && /recordProviderEvent/.test(fs.readFileSync(telemetryPath, 'utf8'));
+  const drawer = fs.existsSync(telemetryDrawerPath);
+  const or = fs.readFileSync(orProviderPath, 'utf8');
+  return t && drawer && /recordProviderEvent\(/.test(or);
+}, 'provider telemetry drawer records failures', 'telemetry drawer missing');
+
+// 90. Vitest unit tests wired into package scripts
+allOk &&= checkCondition(() => {
+  const pkg = fs.readFileSync(pkgPath, 'utf8');
+  const tests = fs.existsSync(path.join(projectRoot, 'src', 'test', 'engine.test.ts'));
+  return /"test":\s*"vitest run"/.test(pkg) && /"vitest"/.test(pkg) && tests;
+}, 'vitest unit test suite wired into scripts', 'vitest suite missing');
+
+// ---- Phase 26: power-layer checks ----
+const promptSafetyPath = path.join(projectRoot, 'src', 'utils', 'promptSafety.ts');
+const scoringPath = path.join(projectRoot, 'src', 'legal', 'argumentScoring.ts');
+const strategyPath = path.join(projectRoot, 'src', 'legal', 'strategyMemory.ts');
+const personaPath = path.join(projectRoot, 'src', 'legal', 'witnessPersona.ts');
+const verdictDelibPath = path.join(projectRoot, 'src', 'utils', 'verdictDeliberation.ts');
+const degradationPath = path.join(projectRoot, 'src', 'components', 'effects', 'DegradationBanner.tsx');
+const errorBoundaryPath = path.join(projectRoot, 'src', 'components', 'AppErrorBoundary.tsx');
+const workerPath = path.join(projectRoot, 'worker', 'index.js');
+const platformPath = path.join(projectRoot, 'src', 'platform', 'platformClient.ts');
+
+// 91. Prompt-injection defense wired into prompt assembly
+allOk &&= checkCondition(() => {
+  const util = fs.existsSync(promptSafetyPath) && /INJECTION_PATTERNS/.test(fs.readFileSync(promptSafetyPath, 'utf8'));
+  const agent = fs.readFileSync(agentPath, 'utf8');
+  return util && /fenceUserContent\('CASE SUMMARY'/.test(agent) && /sanitizeUserText/.test(agent);
+}, 'prompt-injection defense fences user case text', 'injection defense missing');
+
+// 92. Argument scoring attached to counsel turns
+allOk &&= checkCondition(() => {
+  const scoring = fs.existsSync(scoringPath) && /scoreArgumentHeuristic/.test(fs.readFileSync(scoringPath, 'utf8'));
+  const ctrl = fs.readFileSync(ctrlPath, 'utf8');
+  return scoring && /argumentScore = scoreArgumentHeuristic/.test(ctrl) && /argumentScore,/.test(ctrl);
+}, 'argument scoring runs on every counsel turn', 'argument scoring missing');
+
+// 93. Verdict derives from argument scores with burden-of-proof ties
+allOk &&= checkFile(
+  ctrlPath,
+  c => /aggregateSideScore\(state\.transcript/.test(c) && /plaintiffTotal > defenseTotal/.test(c) && !/title\.length % 2/.test(c),
+  'verdict weighs argument quality; ties resolve on burden of proof',
+  'verdict still uses evidence-count/title-hash logic'
+);
+
+// 94. Preset case no longer returns a hardcoded verdict
+allOk &&= checkFile(
+  ctrlPath,
+  c => !/return \{ \.\.\.MOCK_VERDICT/.test(c),
+  'preset case verdict computed from the live record',
+  'preset verdict still hardcoded'
+);
+
+// 95. LLM verdict deliberation enrichment wired with silent fallback
+allOk &&= checkCondition(() => {
+  const util = fs.existsSync(verdictDelibPath) && /enrichVerdictDeliberation/.test(fs.readFileSync(verdictDelibPath, 'utf8'));
+  const app = fs.readFileSync(appPath, 'utf8');
+  return util && /enrichVerdictDeliberation\(state, state\.verdict\)/.test(app);
+}, 'verdict deliberation enriched from real transcript', 'verdict deliberation missing');
+
+// 96. Agent strategy memory generated and injected into prompts
+allOk &&= checkCondition(() => {
+  const strat = fs.existsSync(strategyPath) && /buildAgentStrategies/.test(fs.readFileSync(strategyPath, 'utf8'));
+  const ctrl = fs.readFileSync(ctrlPath, 'utf8');
+  const agent = fs.readFileSync(agentPath, 'utf8');
+  return strat && /agentStrategies: buildAgentStrategies/.test(ctrl) && /formatStrategyForPrompt/.test(agent);
+}, 'agents argue from private strategy memory', 'strategy memory missing');
+
+// 97. Rebuttal targeting: prompts quote the opponent last argument
+allOk &&= checkFile(
+  agentPath,
+  c => /OPPOSING COUNSEL'S MOST RECENT ARGUMENT/.test(c),
+  'prompts force engagement with the opponent last argument',
+  'rebuttal targeting missing'
+);
+
+// 98. Self-critique pass in quality mode high
+allOk &&= checkFile(
+  agentPath,
+  c => /judgebench\.qualityMode/.test(c) && /revisePrompt/.test(c),
+  'quality mode high adds a self-critique revision pass',
+  'self-critique pass missing'
+);
+
+// 99. Persona witnesses crack under targeted cross-examination
+allOk &&= checkCondition(() => {
+  const persona = fs.existsSync(personaPath) && /secretWeakness/.test(fs.readFileSync(personaPath, 'utf8'));
+  const mock = fs.readFileSync(mockProviderPath, 'utf8');
+  const ctrl = fs.readFileSync(ctrlPath, 'utf8');
+  return persona && /weaknessHit/.test(mock) && /CRACKED UNDER CROSS/.test(ctrl);
+}, 'persona witnesses crack when their weakness is targeted', 'persona witnesses missing');
+
+// 100. Honest degradation banner + error boundary
+allOk &&= checkCondition(() => {
+  const banner = fs.existsSync(degradationPath) && /scripted fallback/.test(fs.readFileSync(degradationPath, 'utf8'));
+  const boundary = fs.existsSync(errorBoundaryPath);
+  const main = fs.readFileSync(path.join(projectRoot, 'src', 'main.tsx'), 'utf8');
+  const layout = fs.readFileSync(layoutPath, 'utf8');
+  return banner && boundary && /<AppErrorBoundary>/.test(main) && /<DegradationBanner/.test(layout);
+}, 'degradation banner and app error boundary active', 'trust UX missing');
+
+// 101. Quality mode toggle in UI
+allOk &&= checkFile(
+  layoutPath,
+  c => /qualityMode/.test(c) && /self-critique/.test(c),
+  'quality mode toggle available pre-trial',
+  'quality mode toggle missing'
+);
+
+// 102. Worker source hardened (rate limit, budget, longer tokens, SSE-ready)
+allOk &&= checkFile(
+  workerPath,
+  c => /RATE_LIMIT_MAX/.test(c) && /DAILY_BUDGET_MAX/.test(c) && /1400/.test(c) && /text\/event-stream/.test(c) && /requestedModel/.test(c),
+  'proxy worker source hardened with rate limits and SSE passthrough',
+  'worker hardening missing'
+);
+
+// 103. Supabase platform scaffold (dormant, flag-gated)
+allOk &&= checkCondition(() => {
+  const sql = fs.existsSync(path.join(projectRoot, 'supabase', 'migrations', '0001_init.sql'));
+  const client = fs.existsSync(platformPath) && /isPlatformEnabled/.test(fs.readFileSync(platformPath, 'utf8'));
+  const doc = fs.existsSync(path.join(projectRoot, 'docs', 'PLATFORM_SETUP.md'));
+  return sql && client && doc;
+}, 'supabase platform scaffold ready behind feature flag', 'platform scaffold missing');
+
+// 104. CI workflow present
+allOk &&= checkCondition(
+  () => fs.existsSync(path.join(projectRoot, '.github', 'workflows', 'ci.yml')),
+  'GitHub Actions CI workflow present',
+  'CI workflow missing'
+);
+
+// 105. Longer turns: token caps raised
+allOk &&= checkFile(
+  orProviderPath,
+  c => /max_tokens: 1200/.test(c),
+  'turn token budget raised for developed arguments',
+  'token budget still capped low'
+);
+
+// ---- Unit test suite gate ----
+allOk &&= runCommand('npm test', 'Engine unit tests (vitest)');
+
 if (!allOk) {
   process.exit(1);
 }

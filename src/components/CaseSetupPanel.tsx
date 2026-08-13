@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { CaseData, Evidence } from '../types/courtroom';
 import { SAMPLE_CASE } from '../data/sampleCase';
 import { fetchCaseDraftFromAI, generateFallbackCase } from '../utils/caseDraftGenerator';
+import { CASE_PACKS } from '../data/casePacks';
 
 interface CaseSetupPanelProps {
   caseData: CaseData;
@@ -28,6 +29,8 @@ export function CaseSetupPanel({ caseData, onUpdateCase }: CaseSetupPanelProps) 
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedDraft, setGeneratedDraft] = useState<CaseData | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [draftSource, setDraftSource] = useState<'ai' | 'local-fallback'>('ai');
+  const [showGallery, setShowGallery] = useState(false);
 
   // Sync state if caseData changes externally
   useEffect(() => {
@@ -149,12 +152,14 @@ export function CaseSetupPanel({ caseData, onUpdateCase }: CaseSetupPanelProps) 
         schemaVersion: 2
       };
       
+      setDraftSource('ai');
       setGeneratedDraft(completeDraft);
       setShowPreview(true);
     } catch (err) {
       console.warn('AI Case Generation failed, executing local fallback:', err);
       // Fallback to local, deterministic case generator
       const fallback = generateFallbackCase(cleanPrompt);
+      setDraftSource('local-fallback');
       setGeneratedDraft(fallback);
       setShowPreview(true);
     } finally {
@@ -165,15 +170,22 @@ export function CaseSetupPanel({ caseData, onUpdateCase }: CaseSetupPanelProps) 
   const displayData = isEditing ? editData : caseData;
 
   return (
-    <div className="bg-courtroom-card rounded-lg border border-gray-700 shadow-md flex flex-col overflow-hidden">
+    <div className="glass-panel flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/60">
+      <div className="p-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
           📁 Case Information
         </h3>
         <div className="flex gap-1.5">
           {!isEditing && (
             <>
+              <button
+                onClick={() => setShowGallery(true)}
+                className="text-[10px] font-bold px-2 py-1 bg-brass-700 hover:bg-brass-600 text-white rounded transition-colors duration-200"
+                title="Browse the curated case gallery"
+              >
+                🗃️ Gallery
+              </button>
               <button
                 onClick={handleLoadPreset}
                 className="text-[10px] font-bold px-2 py-1 bg-purple-700 hover:bg-purple-650 text-white rounded transition-colors duration-200"
@@ -535,6 +547,60 @@ export function CaseSetupPanel({ caseData, onUpdateCase }: CaseSetupPanelProps) 
         </div>
       )}
 
+      {/* Case Pack Gallery Modal */}
+      {showGallery && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowGallery(false)}
+        >
+          <div
+            className="glass-panel-brass max-w-2xl w-full max-h-[88vh] flex flex-col overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-white/10 flex justify-between items-center">
+              <div>
+                <h3 className="font-display text-base font-bold text-brass-gradient tracking-wide">🗃️ Case Gallery</h3>
+                <p className="text-[10px] text-gray-400 mt-0.5">Curated disputes, ready to try. Pick one and start the trial.</p>
+              </div>
+              <button
+                onClick={() => setShowGallery(false)}
+                className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white text-sm font-bold"
+                aria-label="Close case gallery"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {CASE_PACKS.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => {
+                    onUpdateCase?.(p.caseData);
+                    setEditData(p.caseData);
+                    setShowGallery(false);
+                  }}
+                  className="text-left glass-panel !rounded-xl p-3.5 hover:border-brass-500/40 transition-colors duration-200 group"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-2xl group-hover:scale-125 transition-transform duration-200">{p.emoji}</span>
+                    <span className="text-[9px] font-black text-brass-300 bg-brass-500/10 border border-brass-500/25 rounded px-1.5 py-0.5 uppercase tracking-wider">
+                      {p.category}
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-bold text-white leading-snug">{p.caseData.title}</h4>
+                  <p className="text-[10px] text-gray-400 mt-1 italic">{p.tagline}</p>
+                  <p className="text-[10px] text-gray-500 mt-1.5">
+                    <span className="text-sky-400">{p.caseData.plaintiffSide}</span>
+                    {' v. '}
+                    <span className="text-rose-400">{p.caseData.defenseSide}</span>
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Case Draft Preview Modal */}
       {showPreview && generatedDraft && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -559,6 +625,16 @@ export function CaseSetupPanel({ caseData, onUpdateCase }: CaseSetupPanelProps) 
 
             {/* Content */}
             <div className="p-4 overflow-y-auto space-y-4 text-xs">
+              {draftSource === 'local-fallback' && (
+                <div className="bg-amber-950/40 border border-amber-600/40 rounded-lg p-2.5 text-[11px] text-amber-300 font-semibold flex items-start gap-2">
+                  <span>⚠️</span>
+                  <span>
+                    The AI drafting service is busy or unavailable right now, so this draft was
+                    generated locally from your prompt. You can use it as-is, edit it, or try
+                    Generate again in a moment.
+                  </span>
+                </div>
+              )}
               {/* Case header card */}
               <div className="bg-gray-950/35 p-3 rounded-lg border border-gray-800 space-y-1">
                 <div className="flex justify-between items-center">

@@ -92,9 +92,8 @@ function StylizedAvatar({
         const pulseCycle = (time * 1.8) % 1.0;
         const scale = 1.0 + pulseCycle * 0.8;
         pulseRingRef.current.scale.set(scale, 1, scale);
-        // @ts-ignore
         if (pulseRingRef.current.material) {
-          // @ts-ignore
+          // @ts-expect-error three.js material typing
           pulseRingRef.current.material.opacity = (1.0 - pulseCycle) * 0.7;
         }
         pulseRingRef.current.visible = true;
@@ -295,8 +294,8 @@ function CameraController({
     const time = state.clock.getElapsedTime();
 
     // Default broad view of deeper courtroom
-    let targetPos = new THREE.Vector3(0, 4.4, 8.5);
-    let targetLook = new THREE.Vector3(0, 1.3, -2.5);
+    const targetPos = new THREE.Vector3(0, 4.4, 8.5);
+    const targetLook = new THREE.Vector3(0, 1.3, -2.5);
 
     if (isVerdictActive) {
       // Slow majestic panning orbit view for verdict ceremony

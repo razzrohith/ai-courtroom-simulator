@@ -351,13 +351,61 @@ export function generateWitnessQAndA(params: {
   examinerRole: 'prosecutor' | 'defense' | 'judge';
   questionType: 'direct' | 'cross' | 'clarification';
   caseData?: CaseData;
+  /** Phase 25: a human examiner's own question drives the witness's answer */
+  customQuestion?: string;
+  /** Phase 26: the witness's persona sheet (bias + secret weakness) */
+  persona?: {
+    background: string;
+    bias: string;
+    secretWeakness: string;
+    weaknessKeywords: string[];
+  };
 }): {
   question: string;
   answer: string;
   examinerRole: 'prosecutor' | 'defense' | 'judge';
   evidenceIds?: string[];
+  /** Phase 26: the cross-examination hit the witness's secret weakness */
+  weaknessHit?: boolean;
 } {
-  const { witnessId, examinerRole, questionType, caseData } = params;
+  const { witnessId, examinerRole, questionType, caseData, customQuestion, persona } = params;
+
+  // Interactive examination: answer the human's actual question with a
+  // case-grounded response instead of the scripted pair.
+  if (customQuestion && customQuestion.trim() && caseData) {
+    const plaintiff = caseData.plaintiffSide || 'the Plaintiff';
+    const defense = caseData.defenseSide || 'the Defendant';
+    const forPlaintiff = witnessId === 'wit-001';
+    const mySide = forPlaintiff ? plaintiff : defense;
+    const otherSide = forPlaintiff ? defense : plaintiff;
+    const friendly = (forPlaintiff && examinerRole === 'prosecutor') || (!forPlaintiff && examinerRole === 'defense');
+    const q = customQuestion.trim();
+    const mentionsEvidence = /EXHIBIT|E\d\d|record|report|study|document/i.test(q);
+
+    // Phase 26: a hostile question that targets the persona's secret weakness
+    // cracks the witness — they concede, and credibility takes the hit.
+    const weaknessHit = !friendly && !!persona &&
+      persona.weaknessKeywords.some(k => q.toLowerCase().includes(k.toLowerCase()));
+    if (weaknessHit && persona) {
+      return {
+        question: q,
+        answer: `I… will concede the point counsel is driving at. ${persona.secretWeakness} I maintain my conclusions, but yes — that limitation is real, and the court should weigh my testimony with that in mind.`,
+        examinerRole,
+        weaknessHit: true,
+      };
+    }
+
+    const answer = friendly
+      ? `That is correct. ${mentionsEvidence ? `The exhibit supports exactly that — ` : ''}my analysis of ${mySide} confirms the point counsel raises: ${caseData.claimSummary.split('.')[0]}. I stand by those findings.`
+      : `I must push back on counsel's framing. ${mentionsEvidence ? `The material cited does not say what counsel implies. ` : ''}My expert assessment of ${mySide} does not support that characterization, and nothing in the record from ${otherSide} changes my professional opinion.`;
+    return {
+      question: q,
+      answer,
+      examinerRole,
+      evidenceIds: mentionsEvidence ? [forPlaintiff ? 'EXHIBITP1' : 'EXHIBITD1'] : undefined,
+      weaknessHit: false,
+    };
+  }
   
   const isHenEgg = caseData?.title?.toLowerCase().includes('hen') && caseData?.title?.toLowerCase().includes('egg');
   if (caseData && !isHenEgg) {

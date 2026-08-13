@@ -94,7 +94,7 @@ export const PROVIDER_REGISTRY: Record<ProviderId, ProviderRegistryEntry> = {
     requiresBaseUrl: false,
     supportsModelCatalog: false,
     supportsFreeModels: false,
-    defaultModels: ['claude-3-5-sonnet-20241022', 'claude-3-opus-20240229'],
+    defaultModels: ['claude-sonnet-5', 'claude-opus-4-8', 'claude-haiku-4-5-20251001'],
     icon: '',
     status: 'Direct Claude API provider. Requires API key.',
     docsUrl: 'https://docs.anthropic.com',
@@ -200,7 +200,7 @@ const hasProxy = !!import.meta.env.VITE_OPENROUTER_FREE_PROXY_URL;
 export const DEFAULT_MODEL_CONFIG: CourtroomModelConfig = {
   judge: hasProxy ? {
     providerId: 'openrouter',
-    model: 'meta-llama/llama-3.3-70b-instruct:free',
+    model: 'google/gemma-4-31b-it:free',
     mode: 'api',
     openRouterMode: 'demo',
   } : {
@@ -210,7 +210,7 @@ export const DEFAULT_MODEL_CONFIG: CourtroomModelConfig = {
   },
   prosecutor: hasProxy ? {
     providerId: 'openrouter',
-    model: 'meta-llama/llama-3.3-70b-instruct:free',
+    model: 'google/gemma-4-31b-it:free',
     mode: 'api',
     openRouterMode: 'demo',
   } : {
@@ -220,7 +220,7 @@ export const DEFAULT_MODEL_CONFIG: CourtroomModelConfig = {
   },
   defense: hasProxy ? {
     providerId: 'openrouter',
-    model: 'meta-llama/llama-3.3-70b-instruct:free',
+    model: 'google/gemma-4-31b-it:free',
     mode: 'api',
     openRouterMode: 'demo',
   } : {

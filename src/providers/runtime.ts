@@ -15,6 +15,7 @@ import { generateWithOpenAI, isOpenAIConfigured, getOpenAIStatus } from './openA
 import { generateWithAnthropic, isAnthropicConfigured, getAnthropicStatus } from './anthropicProvider';
 import { generateWithGemini, isGeminiConfigured, getGeminiStatus } from './geminiProvider';
 import { generateWithLMStudio, isLMStudioAvailable } from './lmStudioProvider';
+import { recordProviderEvent } from './telemetry';
 
 /**
  * Test a specific provider & model configuration for an agent and update status.
@@ -81,7 +82,7 @@ export async function testProviderAndModel(
     setAgentConnectionStatus(role, providerId, config.model, 'connected');
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    const sanitizedMsg = errorMsg.replace(/(?:sk-|AIzaSy)[a-zA-Z0-9_\-]+/g, '***REDACTED***');
+    const sanitizedMsg = errorMsg.replace(/(?:sk-|AIzaSy)[a-zA-Z0-9_-]+/g, '***REDACTED***');
     
     let failedReason = `Failed — ${sanitizedMsg}`;
     if (sanitizedMsg.toLowerCase().includes('shared key not set') || sanitizedMsg.toLowerCase().includes('proxy configuration error')) {
@@ -211,6 +212,7 @@ export async function generateResponse(params: {
       });
     } catch (error) {
       console.error('OpenRouter error, falling back to mock:', error);
+      recordProviderEvent('error', 'runtime', `${role} turn fell back to mock: ${(error as Error)?.message || error}`);
       return generateMockResponse({ role, phase, prompt, transcript: params.transcript, caseData });
     }
   }

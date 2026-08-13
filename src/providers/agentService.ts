@@ -9,6 +9,10 @@ import { generateResponseWithMetadata } from './runtime';
 import { sanitizeAgentResponse } from '../utils/sanitizeAgentResponse';
 import { PHASE_INSTRUCTIONS, getJuryInstruction } from '../data/mockCourtFlow';
 import { sanitizeCaseTypeText, assertCaseTypeReasoningSafe } from '../legal/caseReasoningProfiles';
+import { sanitizeUserText, fenceUserContent } from '../utils/promptSafety';
+import { formatStrategyForPrompt } from '../legal/strategyMemory';
+import { generateResponse } from './runtime';
+import type { AgentStrategy } from '../types/courtroom';
 
 /**
  * Build a trimmed context window for the agent
@@ -43,25 +47,27 @@ export function buildCourtroomContext(params: {
 export function formatContextAsPrompt(context: CourtroomContext): string {
   let prompt = '';
 
-  prompt += `Case Overview: ${context.caseSummary}\n\n`;
+  // Injection defense: all user-authored case text enters the prompt fenced
+  // and sanitized — it is case data, never instructions.
+  prompt += `${fenceUserContent('CASE SUMMARY', context.caseSummary)}\n\n`;
 
   // Add case key facts if available
   if (context.caseKeyFacts && context.caseKeyFacts.length > 0) {
-    prompt += `Key Facts:\n`;
+    prompt += `Key Facts (user-provided case data):\n`;
     context.caseKeyFacts.slice(0, 5).forEach((fact, i) => {
-      prompt += `${i + 1}. ${fact}\n`;
+      prompt += `${i + 1}. ${sanitizeUserText(fact, 300)}\n`;
     });
     prompt += '\n';
   }
 
   prompt += `Current Phase: ${context.currentPhase}\n\n`;
 
-  // Add recent transcript entries
+  // Add recent transcript entries (may include human-typed play-a-role turns)
   if (context.recentTranscript.length > 0) {
     prompt += 'Recent Statements:\n';
     context.recentTranscript.forEach(t => {
       const prefix = t.speakerRole === 'judge' ? 'COURT' : t.speakerRole === 'prosecutor' ? 'PLAINTIFF' : 'DEFENSE';
-      prompt += `[${prefix}] ${truncate(t.message, 100)}\n`;
+      prompt += `[${prefix}] ${sanitizeUserText(truncate(t.message, 220), 260)}\n`;
     });
     prompt += '\n';
   }
@@ -71,7 +77,7 @@ export function formatContextAsPrompt(context: CourtroomContext): string {
     prompt += 'Evidence Status:\n';
     context.relevantEvidence.forEach(e => {
       const statusMarker = e.status === 'disputed' ? '(DISPUTED)' : e.status === 'admitted' ? '(ACCEPTED)' : `(${e.status.toUpperCase()})`;
-      prompt += `- ${e.id}: ${e.title} ${statusMarker}\n`;
+      prompt += `- ${e.id}: ${sanitizeUserText(e.title, 120)} ${statusMarker}\n`;
     });
     prompt += '\n';
   }
@@ -173,8 +179,8 @@ function getFallbackMessage(role: AgentRole): string {
 }
 
 function getPersonaInstructions(role: AgentRole, caseData?: CaseData): string {
-  const plaintiffSide = caseData?.plaintiffSide || 'the Plaintiff';
-  const defenseSide = caseData?.defenseSide || 'the Defendant';
+  const plaintiffSide = sanitizeUserText(caseData?.plaintiffSide || 'the Plaintiff', 80);
+  const defenseSide = sanitizeUserText(caseData?.defenseSide || 'the Defendant', 80);
 
   const base = role === 'judge' 
     ? `You are the Presiding Judge. Remain neutral, fair, and procedural. Control the courtroom firmly but courteously. Keep arguments simple and clear.`
@@ -189,8 +195,8 @@ function getPersonaInstructions(role: AgentRole, caseData?: CaseData): string {
 - Answer directly as your character.`;
 
   const lengthRule = `\n\nRESPONSE LENGTH & STYLE RULES:
-- Keep your response brief: target 2 to 5 short sentences (maximum 80-140 words).
-- Write in plain English, short, layman-friendly, and human style.
+- Target 3 to 7 sentences (roughly 120-220 words) — enough to develop one real argument with support.
+- Write in plain English, layman-friendly, and human style.
 - Avoid long legalistic essays, excessive markdown, and heavy jargon.
 - If discussing the case:
   * Plaintiff counsel (${plaintiffSide} side) must argue in favor of their claim and evidence.
@@ -233,13 +239,20 @@ export async function generateAgentResponse(params: {
   objectionHistory?: ObjectionEvent[];
   caseKeyFacts?: string[];
   caseData?: CaseData;
+  /** Phase 26: this agent's private case strategy */
+  strategy?: AgentStrategy;
 }): Promise<{
   message: string;
   providerUsed: string;
   modelUsed: string;
   responseSource: 'mock' | 'real' | 'fallback';
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  latencyMs?: number;
+  estimatedCost?: number;
 }> {
-  const { role, config, phase, transcript, evidence, caseSummary, objectionHistory = [], caseKeyFacts = [], caseData } = params;
+  const { role, config, phase, transcript, evidence, caseSummary, objectionHistory = [], caseKeyFacts = [], caseData, strategy } = params;
   const providerId = (config as any).providerId || 'mock';
 
   const context = buildCourtroomContext({
@@ -255,7 +268,21 @@ export async function generateAgentResponse(params: {
   const phaseInstruction = getPhaseInstruction(phase, role, caseData);
   const persona = getPersonaInstructions(role, caseData);
 
-  const prompt = `${persona}\n\n${contextStr}\n\nTask: ${phaseInstruction}\n\nREMINDER: You must output ONLY the direct courtroom speech of your character. Do NOT include planning notes, meta-commentary, or instructions.`;
+  // Phase 26: private strategy memory — the agent argues a consistent line
+  const strategyBlock = role !== 'judge' && strategy ? `\n\n${formatStrategyForPrompt(strategy)}` : '';
+
+  // Phase 26: rebuttal targeting — counsel must engage the opponent's last
+  // actual argument, not the transcript in the abstract
+  let rebuttalBlock = '';
+  if (role !== 'judge') {
+    const opponentRole = role === 'prosecutor' ? 'defense' : 'prosecutor';
+    const opponentLast = [...transcript].reverse().find(t => t.speakerRole === opponentRole && t.isComplete && t.message);
+    if (opponentLast) {
+      rebuttalBlock = `\n\nOPPOSING COUNSEL'S MOST RECENT ARGUMENT (engage it directly — agree, distinguish, or refute at least one specific point):\n"${sanitizeUserText(opponentLast.message, 400)}"`;
+    }
+  }
+
+  const prompt = `${persona}${strategyBlock}\n\n${contextStr}${rebuttalBlock}\n\nTask: ${phaseInstruction}\n\nREMINDER: You must output ONLY the direct courtroom speech of your character. Do NOT include planning notes, meta-commentary, or instructions.`;
 
   try {
     // Generate response (real or fallback) then apply case‑type sanitization uniformly
@@ -269,9 +296,37 @@ export async function generateAgentResponse(params: {
       caseData,
     });
 
+    // Phase 26: self-critique pass — in quality mode 'high' with a real
+    // provider, the agent revises its own argument before speaking.
+    let refined = message;
+    let qualityMode = 'fast';
+    try {
+      qualityMode = localStorage.getItem('judgebench.qualityMode') || 'fast';
+    } catch {}
+    if (qualityMode === 'high' && !metadata.fallbackUsed && role !== 'judge' && message.length > 60) {
+      try {
+        const liveExhibits = evidence.filter(e => e.status !== 'excluded').map(e => e.id).join(', ') || 'none';
+        const revisePrompt = `You are ${role} counsel in a courtroom simulation. Below is YOUR OWN draft argument. Revise it to be stronger: sharpen the reasoning chain, ensure any exhibits cited actually exist (${liveExhibits}), directly answer opposing counsel where possible, and remove filler. Keep the same position and roughly the same length. Output ONLY the revised courtroom speech.\n\nDRAFT:\n${message}`;
+        const revised = await generateResponse({
+          role,
+          config,
+          phase,
+          transcript,
+          evidence,
+          prompt: revisePrompt,
+          caseData,
+        });
+        if (revised && revised.trim().length > 60 && !revised.startsWith('[Mock')) {
+          refined = revised.trim();
+        }
+      } catch {
+        // Self-critique is best-effort; keep the draft
+      }
+    }
+
     // Apply case‑type specific sanitization to prevent prohibited terminology
     const caseType = caseData?.caseType ?? '';
-    const sanitized = caseType ? sanitizeCaseTypeText(message, caseType) : message;
+    const sanitized = caseType ? sanitizeCaseTypeText(refined, caseType) : refined;
     // Ensure no banned terms remain; will throw if violation detected
     assertCaseTypeReasoningSafe(sanitized, caseType);
     const finalMessage = sanitized.trim();
@@ -281,6 +336,11 @@ export async function generateAgentResponse(params: {
       providerUsed: metadata.providerUsed,
       modelUsed: metadata.modelUsed,
       responseSource: metadata.fallbackUsed ? 'fallback' : 'real',
+      promptTokens: metadata.promptTokens,
+      completionTokens: metadata.completionTokens,
+      totalTokens: metadata.totalTokens,
+      latencyMs: metadata.latencyMs,
+      estimatedCost: (metadata.inputCost || 0) + (metadata.outputCost || 0) || undefined,
     };
   } catch (error) {
     console.error(`Provider error: ${providerId}`, error);
@@ -303,6 +363,7 @@ export async function generateAgentResponse(params: {
       providerUsed: metadata.providerUsed,
       modelUsed: metadata.modelUsed,
       responseSource: 'fallback',
+      latencyMs: metadata.latencyMs,
     };
   }
 }
@@ -338,7 +399,7 @@ export function parseEvidenceReferences(message: string): string[] {
   // Matches e.g. E01, E1, Evidence-1, Exhibit-1, Exhibit P-1, Exhibit D-1, etc.
   const regexMatches = message.matchAll(/(?:E(?:0)?\d+|Evidence[-\s]?\d+|Ex(?:hibit)?\s?[-]?\s?(?:P|D)?\s?[-]?\d+)/gi);
   for (const match of regexMatches) {
-    let raw = match[0].toUpperCase();
+    const raw = match[0].toUpperCase();
     let ref = raw.replace(/[-\s]/g, '');
     
     // Normalize prefix patterns

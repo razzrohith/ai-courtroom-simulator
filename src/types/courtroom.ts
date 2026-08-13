@@ -81,6 +81,22 @@ export interface TranscriptEntry {
   // Streaming metadata (Phase 5)
   isComplete?: boolean;
   streamedChars?: number;
+  // Usage metadata (Phase 24)
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  latencyMs?: number;
+  estimatedCost?: number;
+  // Argument quality (Phase 26) — scored rubric that feeds the verdict
+  argumentScore?: {
+    relevance: number;
+    evidenceUse: number;
+    rebuttal: number;
+    persuasion: number;
+    total: number;
+    method: 'heuristic' | 'llm';
+    rationale?: string;
+  };
 }
 
 export type EvidenceStatus = 'pending' | 'offered' | 'admitted' | 'disputed' | 'excluded' | 'sealed';
@@ -150,6 +166,15 @@ export interface Witness {
   crossExamination?: string;
   // Credibility notes
   credibilityNotes?: string;
+  // Phase 26: persona sheet — what makes the witness a person, not a template
+  persona?: {
+    background: string;
+    bias: string;
+    /** the crack in the testimony — targeting it in cross-exam damages credibility */
+    secretWeakness: string;
+    /** keywords that count as "targeting the weakness" */
+    weaknessKeywords: string[];
+  };
 }
 
 // Phase 9: Motion types (enhanced in Phase 11)
@@ -204,6 +229,16 @@ export interface Verdict {
   whyLoserLost?: string;
   keyReasons?: string[];
   evidenceConsidered?: string[];
+  // Phase 24: Jury simulation
+  jurors?: JurorVote[];
+}
+
+export interface JurorVote {
+  id: string;
+  name: string;
+  persona: string;
+  vote: 'plaintiff' | 'defense';
+  reasoning: string;
 }
 
 export interface CaseData {
@@ -221,7 +256,16 @@ export interface CaseData {
   schemaVersion?: number;
 }
 
+// Phase 26: private per-agent case strategy (never shown to the opponent)
+export interface AgentStrategy {
+  theoryOfCase: string;
+  attackLines: string[];
+  avoid: string[];
+}
+
 export interface CourtState {
+  /** Phase 26: counsel strategy memory, generated at trial start */
+  agentStrategies?: Partial<Record<'prosecutor' | 'defense', AgentStrategy>>;
   objectionHistory: ObjectionEvent[];
   // Phase 9: Witnesses and motions
   witnesses: Witness[];

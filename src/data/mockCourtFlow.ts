@@ -44,7 +44,7 @@ export const JUDGE_TRANSITIONS: Record<CourtPhase, string> = {
 };
 
 // Phase instruction context for agents
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export const PHASE_INSTRUCTIONS: any = {
   case_setup: {
     judge: 'You are the judge. Begin case setup.',
@@ -167,7 +167,7 @@ export function getJuryInstruction(phase: CourtPhase): string | null {
 }
 
 // Mock messages for each phase and speaker
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export const MOCK_MESSAGES: any = {
   court_opening: {
     judge: [
@@ -343,7 +343,7 @@ export function generateTranscriptForPhase(
   speakerName: string,
   sequenceBase: number
 ): TranscriptEntry | null {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const phaseMessages = (MOCK_MESSAGES as any)[phase];
   const messages = phaseMessages?.[speakerRole];
   if (!messages || messageIndex >= messages.length) {

@@ -1,8 +1,9 @@
 /**
- * AgentPanel — Individual agent display card
- * Phase 16: Integrated with courtroom avatar visuals
+ * AgentPanel — Individual agent display card.
+ * Gilded Verdict redesign: glass card, role-tinted glow, animated speaking state.
  */
 
+import { motion } from 'framer-motion';
 import type { AgentRole, AgentParticipant } from '../types/courtroom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getRoleLabel } from '../utils/languageMode';
@@ -26,10 +27,25 @@ interface AgentPanelProps {
   modelInfo?: AgentModelInfo | null;
 }
 
-const roleColors: Record<AgentRole, { bg: string; border: string; text: string }> = {
-  judge: { bg: 'bg-blue-900/40', border: 'border-blue-500', text: 'text-blue-400' },
-  prosecutor: { bg: 'bg-emerald-900/40', border: 'border-emerald-500', text: 'text-emerald-400' },
-  defense: { bg: 'bg-rose-900/40', border: 'border-rose-500', text: 'text-rose-400' },
+const roleTheme: Record<AgentRole, { text: string; border: string; glow: string; chip: string }> = {
+  judge: {
+    text: 'text-brass-300',
+    border: 'border-brass-500/50',
+    glow: 'shadow-[0_0_24px_rgba(201,162,39,0.25)]',
+    chip: 'bg-brass-500/15 text-brass-200 border-brass-500/30',
+  },
+  prosecutor: {
+    text: 'text-sky-400',
+    border: 'border-sky-500/50',
+    glow: 'shadow-[0_0_24px_rgba(56,189,248,0.2)]',
+    chip: 'bg-sky-500/10 text-sky-300 border-sky-500/30',
+  },
+  defense: {
+    text: 'text-rose-400',
+    border: 'border-rose-500/50',
+    glow: 'shadow-[0_0_24px_rgba(251,113,133,0.2)]',
+    chip: 'bg-rose-500/10 text-rose-300 border-rose-500/30',
+  },
 };
 
 const roleIcons: Record<AgentRole, string> = {
@@ -53,7 +69,7 @@ const statusStyles: Record<AgentConnectionStatus, { label: string; class: string
 
 export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo }: AgentPanelProps) {
   const { mode } = useLanguage();
-  const colors = roleColors[participant.role];
+  const theme = roleTheme[participant.role];
   const isSpeaking = isActive && isCurrentSpeaker;
 
   const configToTest = modelInfo ? {
@@ -64,23 +80,21 @@ export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo 
 
   const errorMsg = modelInfo?.status === 'failed' ? getAgentStatusError(participant.role, configToTest) : undefined;
 
-  // Build compact provider info string for avatar
   const providerInfo = modelInfo ? (
-    modelInfo.isPlaceholder 
+    modelInfo.isPlaceholder
       ? `(mock)`
       : `${modelInfo.providerId}`
   ) : undefined;
 
-  // Get mode badge style
   const getModeBadge = () => {
     if (!modelInfo) {
       return { label: 'Mock', class: 'bg-green-950 text-green-400 border border-green-800' };
     }
-    
+
     if (modelInfo.status === 'fallback') {
       return { label: 'Fallback', class: 'bg-amber-950 text-amber-400 border border-amber-800' };
     }
-    
+
     switch (modelInfo.mode) {
       case 'mock':
         return { label: 'Mock', class: 'bg-green-950 text-green-400 border border-green-800' };
@@ -99,45 +113,58 @@ export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo 
   const statusInfo = statusStyles[modelInfo?.status || 'mock'];
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 26 }}
       className={`
-        ${colors.bg} rounded-lg border ${isSpeaking ? colors.border : 'border-gray-700'}
-        p-3 transition-smooth ${isSpeaking ? 'ring-2 ring-yellow-500/50' : ''}
+        glass-panel !rounded-xl p-4 transition-all duration-300
+        ${isSpeaking ? `${theme.border} ${theme.glow}` : ''}
       `}
     >
-      <div className="flex items-center gap-3 mb-2">
-        <span className="text-xl">{roleIcons[participant.role]}</span>
-        <span className={`text-xs uppercase tracking-wider ${colors.text}`}>
+      <div className="flex items-center gap-2.5 mb-3">
+        <motion.span
+          className="text-xl"
+          animate={isSpeaking ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+          transition={isSpeaking ? { repeat: Infinity, duration: 1.4 } : undefined}
+        >
+          {roleIcons[participant.role]}
+        </motion.span>
+        <span className={`text-[11px] font-bold uppercase tracking-widest ${theme.text}`}>
           {getRoleLabel(participant.role as any, mode)}
         </span>
         {isSpeaking && (
-          <span className="px-2 py-0.5 bg-yellow-600 rounded text-xs text-white animate-pulse">
-            SPEAKING
+          <span className={`ml-auto inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-wider ${theme.chip}`}>
+            {/* mini audio-wave */}
+            <span className="flex items-end gap-[2px] h-2.5">
+              <span className="speak-bar w-[2px] h-full bg-current rounded-full" />
+              <span className="speak-bar w-[2px] h-full bg-current rounded-full" />
+              <span className="speak-bar w-[2px] h-full bg-current rounded-full" />
+            </span>
+            Speaking
           </span>
         )}
       </div>
 
-      <div className="flex items-start gap-2">
-        {/* Small Courtroom Avatar indicator */}
+      <div className="flex items-start gap-2.5">
         <CourtroomAvatar
           role={participant.role}
           isSpeaking={isSpeaking}
           providerInfo={providerInfo}
           compact={true}
         />
-        
-        {/* Agent Info */}
+
         <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-base mb-0.5">{participant.name}</h4>
-          <p className="text-xs text-gray-400 mb-2">{participant.title}</p>
+          <h4 className="font-bold text-sm mb-0.5 text-white truncate">{participant.name}</h4>
+          <p className="text-[11px] text-gray-400 mb-1">{participant.title}</p>
         </div>
       </div>
 
       {/* Model configuration display */}
-      <div className="text-xs text-gray-500 space-y-1.5 pt-2 border-t border-gray-700/50">
+      <div className="text-[11px] text-gray-500 space-y-1.5 pt-2.5 mt-2 border-t border-white/5">
         <div className="flex items-center justify-between">
           <span>Provider:</span>
-          <span className="text-gray-400 font-medium capitalize">
+          <span className="text-gray-400 font-semibold capitalize">
             {modelInfo?.providerId || participant?.modelConfig?.provider?.id || 'mock'}
           </span>
         </div>
@@ -149,13 +176,13 @@ export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo 
         </div>
         <div className="flex items-center justify-between">
           <span>Mode:</span>
-          <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-semibold ${modeBadge.class}`}>
+          <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${modeBadge.class}`}>
             {modeBadge.label}
           </span>
         </div>
         <div className="flex flex-col pt-1.5 gap-1">
-          <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Status</span>
-          <span className={`px-2 py-1 rounded text-xs text-center font-medium ${statusInfo.class}`}>
+          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Status</span>
+          <span className={`px-2 py-1 rounded-lg text-[11px] text-center font-semibold ${statusInfo.class}`}>
             {statusInfo.label}
           </span>
           {modelInfo?.status === 'failed' && (
@@ -167,6 +194,6 @@ export function AgentPanel({ participant, isCurrentSpeaker, isActive, modelInfo 
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

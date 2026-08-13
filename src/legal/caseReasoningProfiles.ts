@@ -1,6 +1,6 @@
 // src/legal/caseReasoningProfiles.ts
 /**
- * Case reasoning profiles for Phase 6.
+ * Case reasoning profiles for Phase 6.
  * Each profile defines the legal vocabulary, burden of proof and
  * prohibited/template terms for a given case type.
  */

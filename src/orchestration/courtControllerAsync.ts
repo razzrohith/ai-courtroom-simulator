@@ -10,8 +10,11 @@ import { createMockConfig } from '../providers/modelProviderTypes';
 import { getSpeakersForPhase } from './phaseEngine';
 import { generateAgentResponse, parseEvidenceReferences } from '../providers/agentService';
 import { generateWitnessQAndA, calculateCredibilityScore } from '../providers/mockModelProvider';
-import { JUDGE_TRANSITIONS, shouldTriggerObjection, MOCK_VERDICT } from '../data/mockCourtFlow';
+import { JUDGE_TRANSITIONS, shouldTriggerObjection } from '../data/mockCourtFlow';
 import { loadCourtroomConfig, setAgentConnectionStatus } from '../types/providers';
+import { scoreArgumentHeuristic, aggregateSideScore } from '../legal/argumentScoring';
+import { buildAgentStrategies } from '../legal/strategyMemory';
+import { buildWitnessPersona } from '../legal/witnessPersona';
 import type { CaseData } from '../types/courtroom';
 export const preventDuplicateFinalSummary = true;
 
@@ -71,7 +74,7 @@ export function createInitialState(): CourtState {
 }
 
 export function startSimulation(state: CourtState): CourtState {
-  let updatedCase = { ...state.case };
+  const updatedCase = { ...state.case };
   let updatedEvidence = [...state.evidence];
   let updatedWitnesses = [...state.witnesses];
 
@@ -165,6 +168,11 @@ export function startSimulation(state: CourtState): CourtState {
     }
   }
 
+  // Phase 26: every witness enters with a persona sheet (bias + weakness)
+  updatedWitnesses = updatedWitnesses.map(w =>
+    w.persona ? w : { ...w, persona: buildWitnessPersona(w.role === 'defense' ? 'defense' : 'prosecution', updatedCase) }
+  );
+
   return {
     ...state,
     isActive: true,
@@ -172,7 +180,9 @@ export function startSimulation(state: CourtState): CourtState {
     currentSpeaker: 'judge',
     case: updatedCase,
     evidence: updatedEvidence,
-    witnesses: updatedWitnesses
+    witnesses: updatedWitnesses,
+    // Phase 26: each counsel enters trial with a private strategy
+    agentStrategies: buildAgentStrategies(updatedCase, updatedEvidence),
   };
 }
 
@@ -222,7 +232,7 @@ export function getNextSpeakerRole(state: CourtState): AgentRole | null {
   return speakers[speakerIndex];
 }
 
-export async function processNextTurnAsync(state: CourtState): Promise<CourtState> {
+export async function processNextTurnAsync(state: CourtState, userMessage?: string): Promise<CourtState> {
   if (!state.isActive) return state;
   const phase = state.currentPhase;
   const nextSpeaker = getNextSpeakerRole(state);
@@ -232,29 +242,31 @@ export async function processNextTurnAsync(state: CourtState): Promise<CourtStat
   }
 
   if (phase === 'witness_testimony') {
-    return processWitnessTestimony(await addTranscriptEntryAsync(state, nextSpeaker), nextSpeaker);
+    return processWitnessTestimony(await addTranscriptEntryAsync(state, nextSpeaker, userMessage), nextSpeaker, userMessage);
   }
-  return addTranscriptEntryAsync(state, nextSpeaker);
+  return addTranscriptEntryAsync(state, nextSpeaker, userMessage);
 }
 
 /**
  * Process witness testimony phase - generate Q&A and update credibility
  * Phase 10: Dynamic witness questions
  */
-function processWitnessTestimony(state: CourtState, speakerRole: AgentRole): CourtState {
+function processWitnessTestimony(state: CourtState, speakerRole: AgentRole, userQuestion?: string): CourtState {
   // Get current witness based on speaker role
   const witnessRole = speakerRole === 'prosecutor' ? 'prosecution' : speakerRole === 'defense' ? 'defense' : 'court';
   const witnessIdx = state.witnesses.findIndex(w => w.role === witnessRole);
   if (witnessIdx < 0) return state;
-  
+
   const witness = state.witnesses[witnessIdx];
   const questionType = speakerRole === 'judge' ? 'clarification' : speakerRole === 'prosecutor' ? 'direct' : 'cross';
-  
+
   const qa = generateWitnessQAndA({
     witnessId: witness.id,
     examinerRole: speakerRole,
     questionType,
-    caseData: state.case
+    caseData: state.case,
+    customQuestion: userQuestion,
+    persona: witness.persona,
   });
   
   // Build Q&A entry
@@ -278,13 +290,23 @@ function processWitnessTestimony(state: CourtState, speakerRole: AgentRole): Cou
   let newCredibilityNotes = witness.credibilityNotes;
   
   if (questionType === 'cross') {
-    const credResult = calculateCredibilityScore({
-      consistencyWithEvidence: 70,
-      contradictions: Math.floor(Math.random() * 2),
-      corroborations: 1,
-    });
+    // Phase 26: a cross-exam question that hits the persona's secret weakness
+    // deterministically cracks credibility; otherwise use the standard model.
+    const credResult = qa.weaknessHit
+      ? calculateCredibilityScore({
+          consistencyWithEvidence: 35,
+          contradictions: 2,
+          corroborations: 0,
+        })
+      : calculateCredibilityScore({
+          consistencyWithEvidence: 70,
+          contradictions: Math.floor(Math.random() * 2),
+          corroborations: 1,
+        });
     newScore = credResult.score;
-    newCredibilityNotes = (newCredibilityNotes || '') + '\n' + credResult.notes;
+    newCredibilityNotes = (newCredibilityNotes || '')
+      + '\n' + credResult.notes
+      + (qa.weaknessHit ? `\nCRACKED UNDER CROSS: conceded — ${witness.persona?.secretWeakness || 'a material limitation in the testimony'}` : '');
     
     // Add evidence links if referenced - cross-examination may contradict
     if (qa.evidenceIds && qa.evidenceIds.length > 0) {
@@ -337,7 +359,7 @@ function getObjectionText(type: ObjectionType): string {
   return texts[type] || "Objection, Your Honor!";
 }
 
-function determineObjectionRuling(type: ObjectionType, phase: CourtPhase): boolean {
+export function determineObjectionRuling(type: ObjectionType, phase: CourtPhase): boolean {
   if (['relevance', 'lack_of_foundation', 'misleading_evidence'].includes(type)) {
     if (phase.includes('opening')) return true;
     return Math.random() < 0.6; // 60% sustained
@@ -349,36 +371,69 @@ function determineObjectionRuling(type: ObjectionType, phase: CourtPhase): boole
   return Math.random() < 0.5;
 }
 
-async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole): Promise<CourtState> {
+async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole, userMessage?: string): Promise<CourtState> {
   const speakerName = getParticipantName(state, speakerRole);
   const config = getParticipantConfig(speakerRole);
 
-  const result = await generateAgentResponse({ 
-    role: speakerRole, 
-    config, 
-    phase: state.currentPhase, 
-    transcript: state.transcript, 
-    evidence: state.evidence, 
-    caseTitle: state.case.title, 
-    caseSummary: state.case.claimSummary,
-    objectionHistory: state.objectionHistory,
-    caseKeyFacts: state.case.keyFacts,
-    caseData: state.case
-  });
+  // Play-a-role mode: a human is speaking for this side — use their words
+  // verbatim instead of generating an AI response.
+  const result = userMessage !== undefined
+    ? {
+        message: userMessage.trim(),
+        providerUsed: 'human',
+        modelUsed: 'you',
+        responseSource: 'real' as const,
+        promptTokens: undefined,
+        completionTokens: undefined,
+        totalTokens: undefined,
+        latencyMs: undefined,
+        estimatedCost: undefined,
+      }
+    : await generateAgentResponse({
+        role: speakerRole,
+        config,
+        phase: state.currentPhase,
+        transcript: state.transcript,
+        evidence: state.evidence,
+        caseTitle: state.case.title,
+        caseSummary: state.case.claimSummary,
+        objectionHistory: state.objectionHistory,
+        caseKeyFacts: state.case.keyFacts,
+        caseData: state.case,
+        strategy: speakerRole !== 'judge' ? state.agentStrategies?.[speakerRole] : undefined,
+      });
 
   // Update provider connection status based on whether it succeeded or fell back
-  setAgentConnectionStatus(
-    speakerRole,
-    config.providerId,
-    config.model,
-    result.responseSource === 'real' ? 'connected' : 'fallback'
-  );
+  if (userMessage === undefined) {
+    setAgentConnectionStatus(
+      speakerRole,
+      config.providerId,
+      config.model,
+      result.responseSource === 'real' ? 'connected' : 'fallback'
+    );
+  }
 
   // Parse evidence references
   const evidenceRefs = parseEvidenceReferences(result.message);
+
+  // Phase 26: score counsel arguments — the rubric feeds the verdict
+  let argumentScore: TranscriptEntry['argumentScore'];
+  if (speakerRole !== 'judge' && result.message.trim().length > 0) {
+    const opponentRole = speakerRole === 'prosecutor' ? 'defense' : 'prosecutor';
+    const opponentLast = [...state.transcript].reverse().find(
+      t => t.speakerRole === opponentRole && t.isComplete && t.message
+    );
+    argumentScore = scoreArgumentHeuristic({
+      message: result.message,
+      role: speakerRole,
+      evidence: state.evidence,
+      caseData: state.case,
+      opponentLastMessage: opponentLast?.message,
+    });
+  }
   
   // Update evidence - status and timeline tracking
-  let updatedEvidence = [...state.evidence];
+  const updatedEvidence = [...state.evidence];
   evidenceRefs.forEach(ref => {
     const idx = updatedEvidence.findIndex(e => e.id.toUpperCase() === ref.toUpperCase());
     if (idx >= 0) {
@@ -400,8 +455,8 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
   const speakerTurn = state.transcript.filter(t => t.phase === state.currentPhase && t.speakerRole === speakerRole).length;
   const objectionType = shouldTriggerObjection(state.currentPhase, speakerTurn, state.objectionHistory, evidenceRefs);
   
-  let updatedObjections = [...state.objectionHistory];
-  let finalTranscript = [...state.transcript];
+  const updatedObjections = [...state.objectionHistory];
+  const finalTranscript = [...state.transcript];
 
   const newEntry: TranscriptEntry = { 
     id: `trans-${Date.now()}-${speakerRole}`, 
@@ -412,34 +467,26 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
     sequenceNumber: finalTranscript.length + 1, 
     timestamp: new Date().toISOString(),
     evidenceRef: evidenceRefs.length > 0 ? evidenceRefs.join(',') : undefined,
-    providerUsed: result.providerUsed, 
-    modelUsed: result.modelUsed, 
+    providerUsed: result.providerUsed,
+    modelUsed: result.modelUsed,
     responseSource: result.responseSource,
-    isComplete: true 
+    promptTokens: result.promptTokens,
+    completionTokens: result.completionTokens,
+    totalTokens: result.totalTokens,
+    latencyMs: result.latencyMs,
+    estimatedCost: result.estimatedCost,
+    argumentScore,
+    isComplete: true
   };
   finalTranscript.push(newEntry);
 
   if (objectionType) {
     const raisedBy = speakerRole === 'prosecutor' ? 'defense' : 'prosecutor';
-    const sustained = determineObjectionRuling(objectionType, state.currentPhase);
-    
-    // Create resolved objection
-    const objectionReason = sustained 
-      ? 'Objection deemed relevant and impacts evidence admissibility.' 
-      : 'Objection not pertinent; evidence remains admissible.';
-    const objectionImpact = sustained ? 'Evidence excluded or limited.' : 'Evidence admitted.';
-    
-    const objection: ObjectionEvent = {
-      id: `obj-${Date.now()}`,
-      raisedBy,
-      type: objectionType,
-      targetEvidence: evidenceRefs[0],
-      status: sustained ? 'sustained' : 'overruled',
-      reason: objectionReason,
-      impact: objectionImpact,
-      timestamp: new Date().toISOString(),
-    };
-    updatedObjections.push(objection);
+
+    // Alternate between interactive and auto-resolved objections:
+    // even-numbered objections stay PENDING so the court (the user, or the
+    // AI judge on autoplay) must rule before the trial continues.
+    const isPending = state.objectionHistory.length % 2 === 0;
 
     // Create opposing counsel objection statement
     const objectionEntry: TranscriptEntry = {
@@ -457,36 +504,65 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
     };
     finalTranscript.push(objectionEntry);
 
-    // Create judge ruling transcript entry
-    const rulingMessage = sustained
-      ? `The objection is SUSTAINED. ${objectionReason} ${objectionImpact}`
-      : `The objection is OVERRULED. ${objectionReason} ${objectionImpact}`;
-    
-    const rulingEntry: TranscriptEntry = {
-      id: `trans-ruling-${Date.now()}`,
-      speakerRole: 'judge',
-      speakerName: getParticipantName(state, 'judge'),
-      message: rulingMessage,
-      phase: state.currentPhase,
-      sequenceNumber: finalTranscript.length + 1,
-      timestamp: new Date().toISOString(),
-      providerUsed: 'mock',
-      modelUsed: 'judge-reasoner-v1',
-      responseSource: 'mock',
-      isComplete: true,
-    };
-    finalTranscript.push(rulingEntry);
+    if (isPending) {
+      // Interactive objection: trial pauses until ruleOnObjection is called
+      updatedObjections.push({
+        id: `obj-${Date.now()}`,
+        raisedBy,
+        type: objectionType,
+        targetEvidence: evidenceRefs[0],
+        status: 'pending',
+        timestamp: new Date().toISOString(),
+      });
+    } else {
+      const sustained = determineObjectionRuling(objectionType, state.currentPhase);
+      const objectionReason = sustained
+        ? 'Objection deemed relevant and impacts evidence admissibility.'
+        : 'Objection not pertinent; evidence remains admissible.';
+      const objectionImpact = sustained ? 'Evidence excluded or limited.' : 'Evidence admitted.';
 
-    // Update target evidence status based on ruling
-    if (evidenceRefs.length > 0) {
-      const targetEvidence = evidenceRefs[0];
-      const evidenceRef = targetEvidence.toUpperCase().replace(/[-\s]/g, '');
-      const idx = updatedEvidence.findIndex(e => e.id.toUpperCase() === evidenceRef);
-      if (idx >= 0) {
-        updatedEvidence[idx] = { 
-          ...updatedEvidence[idx], 
-          status: sustained ? 'disputed' : 'admitted' 
-        };
+      updatedObjections.push({
+        id: `obj-${Date.now()}`,
+        raisedBy,
+        type: objectionType,
+        targetEvidence: evidenceRefs[0],
+        status: sustained ? 'sustained' : 'overruled',
+        reason: objectionReason,
+        impact: objectionImpact,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Create judge ruling transcript entry
+      const rulingMessage = sustained
+        ? `The objection is SUSTAINED. ${objectionReason} ${objectionImpact}`
+        : `The objection is OVERRULED. ${objectionReason} ${objectionImpact}`;
+
+      const rulingEntry: TranscriptEntry = {
+        id: `trans-ruling-${Date.now()}`,
+        speakerRole: 'judge',
+        speakerName: getParticipantName(state, 'judge'),
+        message: rulingMessage,
+        phase: state.currentPhase,
+        sequenceNumber: finalTranscript.length + 1,
+        timestamp: new Date().toISOString(),
+        providerUsed: 'mock',
+        modelUsed: 'judge-reasoner-v1',
+        responseSource: 'mock',
+        isComplete: true,
+      };
+      finalTranscript.push(rulingEntry);
+
+      // Update target evidence status based on ruling
+      if (evidenceRefs.length > 0) {
+        const targetEvidence = evidenceRefs[0];
+        const evidenceRef = targetEvidence.toUpperCase().replace(/[-\s]/g, '');
+        const idx = updatedEvidence.findIndex(e => e.id.toUpperCase() === evidenceRef);
+        if (idx >= 0) {
+          updatedEvidence[idx] = {
+            ...updatedEvidence[idx],
+            status: sustained ? 'disputed' : 'admitted'
+          };
+        }
       }
     }
   }
@@ -544,74 +620,164 @@ async function addTranscriptEntryAsync(state: CourtState, speakerRole: AgentRole
   };
 }
 
-export function generateDynamicVerdict(state: CourtState): Verdict {
-  const isPreset = state.case.caseSource === 'preset';
-  if (isPreset) {
-    return MOCK_VERDICT;
-  }
+/**
+ * Simulated jury panel: five jurors whose votes are derived deterministically
+ * from the trial record (evidence counts + objection outcomes), with one or
+ * two dissenters for realism.
+ */
+function generateJuryVotes(state: CourtState, decision: Verdict['decision']): Verdict['jurors'] {
+  const pSide = state.case.plaintiffSide || 'the Plaintiff';
+  const dSide = state.case.defenseSide || 'the Defendant';
+  const majority: 'plaintiff' | 'defense' = decision === 'defense_wins' ? 'defense' : 'plaintiff';
+  const minority: 'plaintiff' | 'defense' = majority === 'plaintiff' ? 'defense' : 'plaintiff';
 
-  // Count sustained objections
-  const prosecutorSustained = state.objectionHistory.filter(o => o.raisedBy === 'prosecutor' && o.status === 'sustained').length;
-  const defenseSustained = state.objectionHistory.filter(o => o.raisedBy === 'defense' && o.status === 'sustained').length;
-
-  // Admitted or offered evidence
-  const admittedItems = state.evidence.filter(e => e.status === 'admitted' || e.status === 'offered');
-  const plaintiffAdmitted = admittedItems.filter(e => e.introducedBy === 'prosecutor').length;
-  const defenseAdmitted = admittedItems.filter(e => e.introducedBy === 'defense').length;
-
-  // Decide winner based on trial metrics (fall back to title length hash if tied)
-  const plaintiffScore = plaintiffAdmitted + prosecutorSustained;
-  const defenseScore = defenseAdmitted + defenseSustained;
-  
-  let isPlaintiffWinner = true;
-  if (plaintiffScore !== defenseScore) {
-    isPlaintiffWinner = plaintiffScore > defenseScore;
-  } else {
-    isPlaintiffWinner = state.case.title.length % 2 === 0;
-  }
-
-  const winner = isPlaintiffWinner ? state.case.plaintiffSide : state.case.defenseSide;
-  const loser = isPlaintiffWinner ? state.case.defenseSide : state.case.plaintiffSide;
-  const decision = isPlaintiffWinner ? 'plaintiff_wins' : 'defense_wins';
-
-  // Extract transcript snippets to summarize evidence/facts considered
-  const keyReasons = [
-    `The court finds the arguments and evidence presented by ${winner} to be more compelling under the standard of proof.`,
-    isPlaintiffWinner 
-      ? `Plaintiff established that ${state.case.claimSummary.substring(0, 100)}... represents the correct operational priority.`
-      : `Defense successfully countered the plaintiff's assertions and proved that ${state.case.defenseSide}'s model offers superior contextual capability.`,
-    `A total of ${admittedItems.length} exhibits were admitted and weighed, with ${isPlaintiffWinner ? plaintiffAdmitted : defenseAdmitted} key files favoring the prevailing side.`
+  const personas = [
+    { name: 'Juror #1 — A. Sharma', persona: 'Retired schoolteacher' },
+    { name: 'Juror #2 — R. Iyer', persona: 'Software engineer' },
+    { name: 'Juror #3 — M. Fernandes', persona: 'Small business owner' },
+    { name: 'Juror #4 — K. Patel', persona: 'Nurse' },
+    { name: 'Juror #5 — S. Reddy', persona: 'Accountant' },
   ];
+
+  // Deterministic dissent count (1 or 2) from case title
+  const seed = (state.case.title || 'case').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const dissenters = 1 + (seed % 2);
+
+  const majorityReasons = [
+    `The exhibits admitted for ${majority === 'plaintiff' ? pSide : dSide} were more concrete and directly supported their claim.`,
+    `Their counsel answered the opposing arguments point by point without dodging.`,
+    `The burden of proof was met — the story held together across every phase of the trial.`,
+  ];
+  const minorityReasons = [
+    `The opposing side raised doubts that were never fully resolved for me.`,
+    `I felt the excluded and disputed material weakened the majority's reading of the record.`,
+  ];
+
+  return personas.map((p, i) => {
+    const isDissent = i >= personas.length - dissenters;
+    const vote = isDissent ? minority : majority;
+    return {
+      id: `juror-${i + 1}`,
+      name: p.name,
+      persona: p.persona,
+      vote,
+      reasoning: isDissent
+        ? minorityReasons[i % minorityReasons.length]
+        : majorityReasons[i % majorityReasons.length],
+    };
+  });
+}
+
+/**
+ * Verdict 2.0 (Phase 26): judgment is derived from the trial that actually
+ * happened. Argument quality is the dominant factor; evidence admission and
+ * objection outcomes weigh in; ties go to the defense because the plaintiff
+ * bears the burden of proof. Applies to preset and custom cases alike.
+ */
+export function generateDynamicVerdict(state: CourtState): Verdict {
+  const pSide = state.case.plaintiffSide || 'the Plaintiff';
+  const dSide = state.case.defenseSide || 'the Defendant';
+
+  // --- Evidence record ---
+  const evidencePoints = (side: 'prosecutor' | 'defense') =>
+    state.evidence
+      .filter(e => e.introducedBy === side)
+      .reduce((pts, e) => {
+        if (e.status === 'admitted') return pts + 15;
+        if (e.status === 'offered') return pts + 6;
+        if (e.status === 'disputed') return pts - 4;
+        if (e.status === 'excluded') return pts - 8;
+        return pts;
+      }, 0);
+
+  // --- Objection game ---
+  const objectionPoints = (side: 'prosecutor' | 'defense') =>
+    state.objectionHistory.filter(o => o.raisedBy === side && o.status === 'sustained').length * 8;
+
+  // --- Argument quality (the dominant factor) ---
+  const pArgs = aggregateSideScore(state.transcript, 'prosecutor');
+  const dArgs = aggregateSideScore(state.transcript, 'defense');
+
+  const plaintiffTotal = pArgs.totalPoints + evidencePoints('prosecutor') + objectionPoints('prosecutor');
+  const defenseTotal = dArgs.totalPoints + evidencePoints('defense') + objectionPoints('defense');
+
+  // Burden of proof: the plaintiff must EXCEED the defense — ties acquit.
+  const isPlaintiffWinner = plaintiffTotal > defenseTotal;
+
+  const winner = isPlaintiffWinner ? pSide : dSide;
+  const loser = isPlaintiffWinner ? dSide : pSide;
+  const decision = isPlaintiffWinner ? 'plaintiff_wins' as const : 'defense_wins' as const;
+  const winnerArgs = isPlaintiffWinner ? pArgs : dArgs;
+  const loserArgs = isPlaintiffWinner ? dArgs : pArgs;
+
+  const admittedItems = state.evidence.filter(e => e.status === 'admitted' || e.status === 'offered');
+
+  // Best argument per side — quoted in the judgment
+  const bestArgument = (side: 'prosecutor' | 'defense') =>
+    state.transcript
+      .filter(t => t.speakerRole === side && t.argumentScore)
+      .sort((a, b) => (b.argumentScore!.total) - (a.argumentScore!.total))[0];
+  const winnerBest = bestArgument(isPlaintiffWinner ? 'prosecutor' : 'defense');
+  const loserBest = bestArgument(isPlaintiffWinner ? 'defense' : 'prosecutor');
+
+  const keyReasons = [
+    `Argument quality favored ${winner}: ${winnerArgs.turns} scored arguments averaging ${winnerArgs.avgTotal}/40 against ${loserArgs.avgTotal}/40 for ${loser}.`,
+    winnerBest
+      ? `The court found this argument decisive: "${winnerBest.message.slice(0, 160)}${winnerBest.message.length > 160 ? '…' : ''}"`
+      : `${winner} maintained the more consistent line of argument across the proceedings.`,
+    `The evidentiary record weighed ${evidencePoints(isPlaintiffWinner ? 'prosecutor' : 'defense')} points for ${winner} against ${evidencePoints(isPlaintiffWinner ? 'defense' : 'prosecutor')} for ${loser}, across ${admittedItems.length} live exhibits.`,
+    ...(plaintiffTotal === defenseTotal ? [`With the record in equipoise, the burden of proof resolves the matter for the defense.`] : []),
+  ];
+
+  const sustainedByWinner = state.objectionHistory.filter(o => o.raisedBy === (isPlaintiffWinner ? 'prosecutor' : 'defense') && o.status === 'sustained').length;
 
   return {
     decision,
-    reasoningSummary: `Following careful deliberation, the Court enters judgment in favor of ${winner}. The trial proceedings demonstrated that ${winner}'s assertions are backed by concrete performance indicators. While ${loser} offered credible testimony, their core arguments failed to overcome the evidence submitted by the opposing side.`,
+    reasoningSummary: plaintiffTotal === defenseTotal
+      ? `The Court enters judgment for ${winner}. The record closed in exact balance (${defenseTotal} points each side); where the scales do not tip, the party bearing the burden of proof cannot prevail, and the claim is not established.`
+      : `The Court enters judgment for ${winner}. Judgment rests on the record as argued: ${winner}'s counsel out-argued the opposition (${winnerArgs.avgTotal}/40 vs ${loserArgs.avgTotal}/40 average argument score), supported by the stronger evidentiary posture${sustainedByWinner > 0 ? ` and ${sustainedByWinner} sustained objection${sustainedByWinner === 1 ? '' : 's'}` : ''}. ${loser}'s presentation, while heard in full, did not carry ${isPlaintiffWinner ? 'sufficient weight to defeat the claim' : "the plaintiff's burden of proof"}.`,
     plaintiffPoints: [
-      `Presented arguments on the primary capability claims for ${state.case.plaintiffSide}.`,
-      `Introduced evidence demonstrating the design strengths of the plaintiff's platform.`
+      `${pArgs.turns} scored arguments for ${pSide}, averaging ${pArgs.avgTotal}/40.`,
+      bestArgument('prosecutor')
+        ? `Strongest moment: "${bestArgument('prosecutor')!.message.slice(0, 120)}…"`
+        : `Relied primarily on the exhibit record.`,
     ],
     defensePoints: [
-      `Countered the plaintiff's assertions with architectural capability studies.`,
-      `Demonstrated the specialized advantages of ${state.case.defenseSide} during cross-examination.`
+      `${dArgs.turns} scored arguments for ${dSide}, averaging ${dArgs.avgTotal}/40.`,
+      bestArgument('defense')
+        ? `Strongest moment: "${bestArgument('defense')!.message.slice(0, 120)}…"`
+        : `Relied primarily on challenging admissibility.`,
     ],
     weaknesses: {
-      plaintiff: isPlaintiffWinner ? [] : [`Fails to address specialized long-form and safety benchmarks.`],
-      defense: isPlaintiffWinner ? [`Could not fully match the sheer raw throughput of the plaintiff.`] : [],
+      plaintiff: isPlaintiffWinner ? [] : [
+        loserBest && !isPlaintiffWinner ? `Peak argument scored only ${pArgs.avgTotal}/40 on average — below the defense's sustained quality.` : `Could not carry the burden of proof on the argued record.`,
+      ],
+      defense: isPlaintiffWinner ? [
+        `Average argument quality of ${dArgs.avgTotal}/40 fell short of the plaintiff's ${pArgs.avgTotal}/40.`,
+      ] : [],
     },
-    ruling: `Judgment is hereby entered for the ${isPlaintiffWinner ? 'Plaintiff' : 'Defendant'}. The ${winner} is declared the prevailing party.`,
-    witnessImpact: `The testimony of both technical experts was evaluated. The court notes that the credibility of the prevailing side's expert remained intact through cross-examination.`,
-    juryInstructionSummary: 'Burden of proof: preponderance of evidence. Jury was instructed to prioritize factual benchmarks over marketing claims.',
-    motionImpact: 'Admissibility motions for Exhibit P-1 and Exhibit D-1 were decided in accordance with relevance guidelines.',
-    deliberationSummary: `The court deliberated on: ${state.case.title}. After weighing all elements, the balance of proof favors the ${isPlaintiffWinner ? 'Plaintiff' : 'Defendant'}.`,
+    ruling: `Judgment is hereby entered for the ${isPlaintiffWinner ? 'Plaintiff' : 'Defendant'}. On the strength of the arguments and exhibits actually presented, ${winner} is declared the prevailing party.`,
+    witnessImpact: state.witnesses.length > 0
+      ? `Expert testimony from ${state.witnesses.map(w => w.name).join(' and ')} was weighed; credibility findings stand as recorded during examination.`
+      : 'No witness testimony was taken in these proceedings.',
+    juryInstructionSummary: 'Burden of proof: preponderance of evidence. The jury was instructed to weigh arguments as made in court, not assertions outside the record.',
+    motionImpact: state.motionHistory.length > 0
+      ? state.motionHistory.map(m => `${m.motionType.replace(/_/g, ' ')} (${m.raisedBy}): ${m.status.toUpperCase()}`).join('; ') + '.'
+      : 'No formal motions were filed during these proceedings.',
+    deliberationSummary: `The court deliberated on ${state.case.title}, scoring ${pArgs.turns + dArgs.turns} counsel arguments and weighing ${state.evidence.length} exhibits. Final tally: ${pSide} ${plaintiffTotal} — ${dSide} ${defenseTotal}.`,
     appealGrounds: [
-      `Benchmarking: Disagreement on whether simulated performance metrics constitute sufficient proof of superiority.`,
-      `Objection rulings: Challenging the admissibility of technical reports over direct testimony.`
+      `Whether the rubric weighting of argument quality against the documentary record was applied correctly.`,
+      ...(state.objectionHistory.length > 0 ? [`Whether the court's objection rulings prejudiced the ${loser} presentation.`] : []),
+      ...(plaintiffTotal === defenseTotal ? [`Whether resolving an evenly balanced record on burden of proof was proper.`] : []),
     ],
     winnerName: winner,
-    whyWinnerWon: `${winner} proved superior performance and capability benchmarks through admitted exhibits and consistent expert testimony.`,
-    whyLoserLost: `${loser} failed to substantiate its superiority claims and was unable to impeach the credibility of the opposing expert.`,
+    whyWinnerWon: plaintiffTotal === defenseTotal
+      ? `${winner} prevails on the burden of proof: with the record in exact balance (${defenseTotal} points each), the plaintiff failed to tip the scales, and an unproven claim fails.`
+      : `${winner} won on the record as argued: ${winnerArgs.avgTotal > loserArgs.avgTotal ? `higher average argument quality (${winnerArgs.avgTotal}/40 vs ${loserArgs.avgTotal}/40)` : `the stronger overall record`}, supported by the exhibit posture, for a total tally of ${isPlaintiffWinner ? plaintiffTotal : defenseTotal} to ${isPlaintiffWinner ? defenseTotal : plaintiffTotal}.`,
+    whyLoserLost: `${loser} lost on the same record: ${loserArgs.turns > 0 ? `${loserArgs.turns} arguments averaging ${loserArgs.avgTotal}/40 did not overcome the opposition` : 'no scored arguments were entered'}${isPlaintiffWinner ? '' : ', and the plaintiff bears the burden when the scales do not tip'}.`,
     keyReasons,
-    evidenceConsidered: admittedItems.map(e => `${e.id}: ${e.title}`)
+    evidenceConsidered: admittedItems.map(e => `${e.id}: ${e.title}`),
+    jurors: generateJuryVotes(state, decision),
   };
 }
 
@@ -687,28 +853,163 @@ function advanceToNextPhase(state: CourtState): CourtState {
   
   const nextSpeakers = getSpeakersForPhase(nextPhase);
   const firstSpeaker = nextSpeakers.length > 0 ? nextSpeakers[0] : null;
-  
+
+  let updatedMotions = [...state.motionHistory];
+  const updatedEvidenceForMotions = [...state.evidence];
+  const motionEntries: TranscriptEntry[] = [];
+
+  // Leaving motion_hearing: the judge rules on any motions still pending
+  if (state.currentPhase === 'motion_hearing' && updatedMotions.some(m => m.status === 'pending')) {
+    updatedMotions = updatedMotions.map(motion => {
+      if (motion.status !== 'pending') return motion;
+      const granted = motion.motionType === 'motion_to_admit_evidence';
+      const rulingNote = granted
+        ? 'Motion GRANTED. The material is properly before the court.'
+        : 'Motion DENIED. The court finds insufficient grounds; the record stands.';
+      motionEntries.push({
+        id: `trans-motion-ruling-${Date.now()}-${motion.id}`,
+        speakerRole: 'judge',
+        speakerName: getParticipantName(state, 'judge'),
+        message: `On the ${motion.motionType.replace(/_/g, ' ')} filed by the ${motion.raisedBy}: ${rulingNote}`,
+        phase: state.currentPhase,
+        sequenceNumber: state.transcript.length + motionEntries.length + 1,
+        timestamp: new Date().toISOString(),
+        providerUsed: 'mock',
+        modelUsed: 'judge-reasoner-v1',
+        responseSource: 'mock',
+        isComplete: true,
+      });
+      if (granted && motion.motionType === 'motion_to_admit_evidence' && motion.targetEvidence) {
+        const idx = updatedEvidenceForMotions.findIndex(e => e.id === motion.targetEvidence);
+        if (idx >= 0 && updatedEvidenceForMotions[idx].status !== 'disputed') {
+          updatedEvidenceForMotions[idx] = { ...updatedEvidenceForMotions[idx], status: 'admitted' };
+        }
+      }
+      return { ...motion, status: granted ? 'granted' as const : 'denied' as const, rulingNote, rulingReason: rulingNote };
+    });
+  }
+
+  // Entering motion_hearing: counsel file case-derived motions for the court to rule on
+  if (nextPhase === 'motion_hearing' && updatedMotions.length === 0) {
+    const pSide = state.case.plaintiffSide || 'the Plaintiff';
+    const dSide = state.case.defenseSide || 'the Defendant';
+    const pExhibit = state.evidence.find(e => e.introducedBy === 'prosecutor');
+    const dExhibit = state.evidence.find(e => e.introducedBy === 'defense');
+
+    updatedMotions.push({
+      id: `mot-${Date.now()}-p`,
+      motionType: 'motion_to_admit_evidence',
+      raisedBy: 'prosecutor',
+      reason: `Formal admission of ${pExhibit ? pExhibit.title : 'plaintiff exhibits'} into the trial record.`,
+      argumentSummary: `Counsel for ${pSide} argues the exhibit is authenticated, relevant, and central to proving the claim.`,
+      oppositionResponse: `Counsel for ${dSide} contends the exhibit is self-serving and lacks independent verification.`,
+      targetEvidence: pExhibit?.id,
+      status: 'pending',
+      phase: 'motion_hearing',
+    });
+    updatedMotions.push({
+      id: `mot-${Date.now()}-d`,
+      motionType: 'motion_to_exclude_evidence',
+      raisedBy: 'defense',
+      reason: `Exclusion of ${pExhibit ? pExhibit.title : "the plaintiff's key exhibit"} for lack of foundation.`,
+      argumentSummary: `Counsel for ${dSide} argues the plaintiff's exhibit was prepared for litigation and lacks proper foundation.`,
+      oppositionResponse: `Counsel for ${pSide} responds the exhibit is a business record with established provenance.`,
+      targetEvidence: pExhibit?.id || dExhibit?.id,
+      status: 'pending',
+      phase: 'motion_hearing',
+    });
+
+    motionEntries.push({
+      id: `trans-motion-filed-${Date.now()}`,
+      speakerRole: 'prosecutor',
+      speakerName: getParticipantName(state, 'prosecutor'),
+      message: `Your Honor, ${pSide} moves to admit ${pExhibit ? pExhibit.title : 'our exhibits'} into the record. The defense has filed a competing motion to exclude. We ask the court to rule.`,
+      phase: nextPhase,
+      sequenceNumber: state.transcript.length + motionEntries.length + 2,
+      timestamp: new Date().toISOString(),
+      providerUsed: 'mock',
+      modelUsed: 'motion-engine-v1',
+      responseSource: 'mock',
+      isComplete: true,
+    });
+  }
+
   if (nextPhase === 'verdict') {
     const calculatedVerdict = generateDynamicVerdict(state);
     const verdictEntry: TranscriptEntry = {
       ...transitionEntry,
       message: calculatedVerdict.ruling || `The Court finds in favour of ${calculatedVerdict.decision === 'plaintiff_wins' ? 'the plaintiff' : 'the defendant'}.`,
     };
-    return { 
-      ...state, 
-      currentPhase: nextPhase, 
+    return {
+      ...state,
+      currentPhase: nextPhase,
       currentSpeaker: firstSpeaker,
-      transcript: [...state.transcript, transitionEntry, verdictEntry],
+      transcript: [...state.transcript, ...motionEntries, transitionEntry, verdictEntry],
+      motionHistory: updatedMotions,
+      evidence: updatedEvidenceForMotions,
       verdict: calculatedVerdict
     };
   }
-  
+
   // Normal phase transition with judge announcement
-  return { 
-    ...state, 
-    currentPhase: nextPhase, 
+  return {
+    ...state,
+    currentPhase: nextPhase,
     currentSpeaker: firstSpeaker,
-    transcript: [...state.transcript, transitionEntry]
+    transcript: [...state.transcript, ...motionEntries, transitionEntry],
+    motionHistory: updatedMotions,
+    evidence: updatedEvidenceForMotions,
+  };
+}
+
+/**
+ * Rule on a pending motion (manual ruling from the bench / the user).
+ */
+export function ruleOnMotion(
+  state: CourtState,
+  motionId: string,
+  granted: boolean,
+  rulingNote?: string
+): CourtState {
+  const motion = state.motionHistory.find(m => m.id === motionId);
+  if (!motion || motion.status !== 'pending') return state;
+
+  const note = rulingNote || (granted
+    ? 'Motion GRANTED. The material is properly before the court.'
+    : 'Motion DENIED. The court finds insufficient grounds; the record stands.');
+
+  const rulingEntry: TranscriptEntry = {
+    id: `trans-motion-ruling-${Date.now()}`,
+    speakerRole: 'judge',
+    speakerName: getParticipantName(state, 'judge'),
+    message: `On the ${motion.motionType.replace(/_/g, ' ')} filed by the ${motion.raisedBy}: ${note}`,
+    phase: state.currentPhase,
+    sequenceNumber: state.transcript.length + 1,
+    timestamp: new Date().toISOString(),
+    providerUsed: 'mock',
+    modelUsed: 'judge-reasoner-v1',
+    responseSource: 'mock',
+    isComplete: true,
+  };
+
+  // Apply evidence effects of the ruling
+  const updatedEvidence = [...state.evidence];
+  if (granted && motion.targetEvidence) {
+    const idx = updatedEvidence.findIndex(e => e.id === motion.targetEvidence);
+    if (idx >= 0) {
+      const newStatus: Evidence['status'] =
+        motion.motionType === 'motion_to_exclude_evidence' ? 'excluded' : 'admitted';
+      updatedEvidence[idx] = { ...updatedEvidence[idx], status: newStatus };
+    }
+  }
+
+  return {
+    ...state,
+    transcript: [...state.transcript, rulingEntry],
+    evidence: updatedEvidence,
+    motionHistory: state.motionHistory.map(m =>
+      m.id === motionId ? { ...m, status: granted ? 'granted' : 'denied', rulingNote: note, rulingReason: note } : m
+    ),
   };
 }
 
@@ -723,6 +1024,48 @@ export function updateEvidenceStatus(state: CourtState, evidenceId: string, stat
 export function introduceEvidence(state: CourtState, evidenceId: string): CourtState {
   return updateEvidenceStatus(state, evidenceId, 'offered');
 }
+/**
+ * Phase 25: a human player (play-a-role mode) raises an objection against the
+ * last statement. Creates a pending objection plus the counsel outburst in the
+ * transcript; the AI judge (or the user) rules on it via ruleOnObjection.
+ */
+export function recordPlayerObjection(
+  state: CourtState,
+  raisedBy: AgentRole,
+  objectionType: ObjectionType
+): CourtState {
+  if (state.objectionHistory.some(o => o.status === 'pending')) return state;
+
+  const objectionEntry: TranscriptEntry = {
+    id: `trans-objection-${Date.now()}`,
+    speakerRole: raisedBy,
+    speakerName: getParticipantName(state, raisedBy),
+    message: getObjectionText(objectionType),
+    phase: state.currentPhase,
+    sequenceNumber: state.transcript.length + 1,
+    timestamp: new Date().toISOString(),
+    providerUsed: 'human',
+    modelUsed: 'you',
+    responseSource: 'real',
+    isComplete: true,
+  };
+
+  return {
+    ...state,
+    transcript: [...state.transcript, objectionEntry],
+    objectionHistory: [
+      ...state.objectionHistory,
+      {
+        id: `obj-player-${Date.now()}`,
+        raisedBy,
+        type: objectionType,
+        status: 'pending',
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  };
+}
+
 // Objection management
 export function recordObjection(
   state: CourtState,
@@ -774,7 +1117,7 @@ export function ruleOnObjection(
   };
   
   // Update evidence status if target evidence exists
-  let updatedEvidence = [...state.evidence];
+  const updatedEvidence = [...state.evidence];
   if (targetEvidence) {
     const evidenceRef = targetEvidence.toUpperCase().replace(/[-\s]/g, '');
     const idx = state.evidence.findIndex(e => e.id.toUpperCase() === evidenceRef);

@@ -13,7 +13,7 @@ function getAgentColor(role: AgentRole): string {
   switch (role) {
     case 'judge': return 'text-yellow-500 border-yellow-500';
     case 'prosecutor': return 'text-blue-500 border-blue-500';
-    case 'defense': return 'text-green-500 border-green-500';
+    case 'defense': return 'text-rose-400 border-rose-400';
     default: return 'text-gray-400 border-gray-400';
   }
 }
@@ -25,7 +25,7 @@ function getAgentBg(role: AgentRole): string {
   switch (role) {
     case 'judge': return 'bg-yellow-500/20';
     case 'prosecutor': return 'bg-blue-500/20';
-    case 'defense': return 'bg-green-500/20';
+    case 'defense': return 'bg-rose-500/20';
     default: return 'bg-gray-500/20';
   }
 }
@@ -78,7 +78,7 @@ export function CourtroomAvatar({
         ${isSpeaking ? (
           role === 'judge' ? 'ring-4 ring-yellow-500 shadow-lg shadow-yellow-500/50' :
           role === 'prosecutor' ? 'ring-4 ring-blue-500 shadow-lg shadow-blue-500/50' :
-          'ring-4 ring-green-500 shadow-lg shadow-green-500/50'
+          'ring-4 ring-rose-500 shadow-lg shadow-rose-500/50'
         ) : 'border border-gray-700'}
         transition-all duration-300
       `}>
@@ -89,7 +89,7 @@ export function CourtroomAvatar({
           <div className={`absolute inset-0 rounded-full animate-ping opacity-25 ${
             role === 'judge' ? 'bg-yellow-500' :
             role === 'prosecutor' ? 'bg-blue-500' :
-            'bg-green-500'
+            'bg-rose-500'
           }`} />
         )}
         
@@ -432,7 +432,7 @@ export function PhaseBanner({ phase }: { phase: string }) {
 export function SpeakingIndicator({ role }: { role: AgentRole | null }) {
   if (!role) return null;
   
-  const colorClass = role === 'judge' ? 'text-yellow-400' : role === 'prosecutor' ? 'text-blue-400' : 'text-green-400';
+  const colorClass = role === 'judge' ? 'text-yellow-400' : role === 'prosecutor' ? 'text-sky-400' : 'text-rose-400';
   
   return (
     <div className={`flex items-center gap-2 ${colorClass} animate-pulse`}>
@@ -767,9 +767,9 @@ export function SpeakingPulseRing({ active, role }: { active: boolean; role: Age
   if (!active) return null;
   
   const colors: Record<AgentRole, string> = {
-    judge: 'rgba(234, 179, 8, 0.4)',
-    prosecutor: 'rgba(59, 130, 246, 0.4)',
-    defense: 'rgba(34, 197, 94, 0.4)',
+    judge: 'rgba(201, 162, 39, 0.4)',
+    prosecutor: 'rgba(56, 189, 248, 0.4)',
+    defense: 'rgba(251, 113, 133, 0.4)',
   };
   const color = colors[role] || colors.judge;
   
@@ -907,7 +907,7 @@ export function EvidenceChipImproved({
     sealed: { bg: 'bg-purple-900/40', text: 'text-purple-400', icon: '🔒' },
   };
   const config = statusConfig[status] || statusConfig.pending;
-  const sideColor = side === 'plaintiff' ? 'border-l-blue-400' : 'border-l-green-400';
+  const sideColor = side === 'plaintiff' ? 'border-l-sky-400' : 'border-l-rose-400';
   
   if (compact) {
     return (

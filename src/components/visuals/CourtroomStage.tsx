@@ -112,7 +112,7 @@ interface CourtroomStageProps {
 }
 
 export function AudioVisualizerWave({ role }: { role: AgentRole }) {
-  const barColor = role === 'judge' ? '#EAB308' : role === 'prosecutor' ? '#3B82F6' : '#22C55E';
+  const barColor = role === 'judge' ? '#C9A227' : role === 'prosecutor' ? '#38BDF8' : '#FB7185';
   
   return (
     <div className="flex items-end justify-center gap-[2px] h-3 px-1 py-0.5 bg-gray-950/80 rounded-full border border-gray-800">
@@ -141,9 +141,9 @@ export function AudioVisualizerWave({ role }: { role: AgentRole }) {
  */
 function getRoleBg(role: AgentRole): string {
   switch (role) {
-    case 'judge': return 'bg-yellow-500/20';
-    case 'prosecutor': return 'bg-blue-500/20';
-    case 'defense': return 'bg-green-500/20';
+    case 'judge': return 'bg-brass-500/20';
+    case 'prosecutor': return 'bg-sky-500/20';
+    case 'defense': return 'bg-rose-500/20';
     default: return 'bg-gray-500/20';
   }
 }
@@ -636,9 +636,9 @@ export function CourtroomStage({
             <div className="flex items-center justify-between border-b border-gray-800 pb-1.5 mb-1.5">
               <div className="flex items-center gap-2">
                 <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold text-white ${
-                  latestEntry.speakerRole === 'judge' ? 'bg-yellow-600' :
-                  latestEntry.speakerRole === 'prosecutor' ? 'bg-blue-600' :
-                  'bg-green-600'
+                  latestEntry.speakerRole === 'judge' ? 'bg-brass-600' :
+                  latestEntry.speakerRole === 'prosecutor' ? 'bg-sky-600' :
+                  'bg-rose-600'
                 }`}>
                   {getRoleLabel(latestEntry.speakerRole as AgentRole, languageMode)}
                 </span>
@@ -701,9 +701,9 @@ export function CourtroomStage({
 function SpeakerSpotlight({ role, active }: { role: AgentRole; active: boolean }) {
   if (!active) return null;
   const colors = {
-    judge: 'bg-yellow-500/20',
-    prosecutor: 'bg-blue-500/20',
-    defense: 'bg-green-500/20'
+    judge: 'bg-brass-500/20',
+    prosecutor: 'bg-sky-500/20',
+    defense: 'bg-rose-500/20'
   };
   return (
     <div className="absolute inset-0 pointer-events-none z-0 overflow-visible">
@@ -712,7 +712,7 @@ function SpeakerSpotlight({ role, active }: { role: AgentRole; active: boolean }
         <defs>
           <linearGradient id={`spotlight-cone-${role}`} x1="0.5" y1="0" x2="0.5" y2="1">
             <stop offset="0%" stopColor="rgba(255, 255, 255, 0.45)" />
-            <stop offset="25%" stopColor={role === 'judge' ? 'rgba(234,179,8,0.22)' : role === 'prosecutor' ? 'rgba(59,130,246,0.22)' : 'rgba(34,197,94,0.22)'} />
+            <stop offset="25%" stopColor={role === 'judge' ? 'rgba(201,162,39,0.22)' : role === 'prosecutor' ? 'rgba(56,189,248,0.22)' : 'rgba(251,113,133,0.22)'} />
             <stop offset="100%" stopColor="rgba(0, 0, 0, 0)" />
           </linearGradient>
         </defs>
@@ -872,10 +872,12 @@ function AttorneyStation({
   simulationSpeaker?: AgentRole | null;
   isGenerating?: boolean;
 }) {
-  const roleColor = role === 'prosecutor' ? 'blue' : 'green';
   const { mode: languageMode } = useLanguage();
-    const roleLabel = getRoleLabel(role, languageMode);
-  const accentColor = role === 'prosecutor' ? '#3B82F6' : '#22C55E';
+  const roleLabel = getRoleLabel(role, languageMode);
+  const accentColor = role === 'prosecutor' ? '#38BDF8' : '#FB7185';
+  const activeRingClass = role === 'prosecutor'
+    ? 'ring-2 ring-sky-500 shadow-[0_0_20px_rgba(56,189,248,0.4)]'
+    : 'ring-2 ring-rose-500 shadow-[0_0_20px_rgba(251,113,133,0.4)]';
   
   const isActive = (currentSpeaker === role && isSpeaking) || (simulationSpeaker === role && !!isGenerating);
   const hasActive = (currentSpeaker !== null && isSpeaking) || (simulationSpeaker !== null && isGenerating);
@@ -889,7 +891,7 @@ function AttorneyStation({
       {/* Station card container */}
       <div className={`
         relative w-40 h-52 bg-gradient-to-b from-[#2d1b10] to-[#1c120c] border border-amber-950/80 rounded-xl overflow-hidden flex flex-col justify-end items-center shadow-lg
-        ${isActive ? `ring-2 ring-${roleColor}-500 shadow-[0_0_20px_rgba(${role === 'prosecutor' ? '59,130,246' : '34,197,94'},0.4)] z-20 scale-[1.03]` : ''}
+        ${isActive ? `${activeRingClass} z-20 scale-[1.03]` : ''}
         ${isDimmed ? 'opacity-40 blur-[0.5px] scale-95 saturate-[0.7]' : 'opacity-100 scale-100'}
         transition-all duration-500 ease-in-out
       `}>

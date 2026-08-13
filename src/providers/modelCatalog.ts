@@ -48,11 +48,11 @@ interface OpenRouterModelsResponse {
 }
 
 export const OPENROUTER_FREE_MODELS: ModelInfo[] = [
-  { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B Instruct (free)', provider: 'Meta', isFree: true },
-  { id: 'meta-llama/llama-3.2-3b-instruct:free', name: 'Llama 3.2 3B Instruct (free)', provider: 'Meta', isFree: true },
-  { id: 'nousresearch/hermes-3-llama-3.1-405b:free', name: 'Hermes 3 405B Instruct (free)', provider: 'Nous', isFree: true },
   { id: 'google/gemma-4-31b-it:free', name: 'Gemma 4 31B (free)', provider: 'Google', isFree: true },
-  { id: 'deepseek/deepseek-v4-flash:free', name: 'DeepSeek V4 Flash (free)', provider: 'DeepSeek', isFree: true },
+  { id: 'openai/gpt-oss-20b:free', name: 'GPT-OSS 20B (free)', provider: 'OpenAI', isFree: true },
+  { id: 'google/gemma-4-26b-a4b-it:free', name: 'Gemma 4 26B A4B (free)', provider: 'Google', isFree: true },
+  { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'Nemotron 3 Super 120B (free)', provider: 'NVIDIA', isFree: true },
+  { id: 'nvidia/nemotron-3-nano-30b-a3b:free', name: 'Nemotron 3 Nano 30B (free)', provider: 'NVIDIA', isFree: true },
 ];
 
 /**
@@ -210,18 +210,8 @@ export async function fetchOpenAIModels(apiKey: string): Promise<ModelInfo[]> {
  */
 export const ANTHROPIC_MODELS: ModelInfo[] = [
   {
-    id: 'claude-sonnet-4-20250514',
-    name: 'Claude Sonnet 4.0',
-    provider: 'anthropic',
-    contextLength: 200000,
-    inputPrice: 0.003,
-    outputPrice: 0.015,
-    isFree: false,
-    isVision: false,
-  },
-  {
-    id: 'claude-sonnet-3-5-20241022',
-    name: 'Claude 3.5 Sonnet',
+    id: 'claude-sonnet-5',
+    name: 'Claude Sonnet 5',
     provider: 'anthropic',
     contextLength: 200000,
     inputPrice: 0.003,
@@ -230,8 +220,8 @@ export const ANTHROPIC_MODELS: ModelInfo[] = [
     isVision: true,
   },
   {
-    id: 'claude-3-opus-20240229',
-    name: 'Claude 3 Opus',
+    id: 'claude-opus-4-8',
+    name: 'Claude Opus 4.8',
     provider: 'anthropic',
     contextLength: 200000,
     inputPrice: 0.015,
@@ -240,8 +230,18 @@ export const ANTHROPIC_MODELS: ModelInfo[] = [
     isVision: true,
   },
   {
-    id: 'claude-3-sonnet-20240229',
-    name: 'Claude 3 Sonnet',
+    id: 'claude-haiku-4-5-20251001',
+    name: 'Claude Haiku 4.5',
+    provider: 'anthropic',
+    contextLength: 200000,
+    inputPrice: 0.001,
+    outputPrice: 0.005,
+    isFree: false,
+    isVision: true,
+  },
+  {
+    id: 'claude-sonnet-4-20250514',
+    name: 'Claude Sonnet 4 (legacy)',
     provider: 'anthropic',
     contextLength: 200000,
     inputPrice: 0.003,
@@ -261,8 +261,8 @@ export async function fetchAnthropicModels(_apiKey: string): Promise<ModelInfo[]
  */
 export const GEMINI_MODELS: ModelInfo[] = [
   {
-    id: 'gemini-2.0-flash-exp',
-    name: 'Gemini 2.0 Flash (Experimental)',
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
     provider: 'gemini',
     contextLength: 1000000,
     inputPrice: 0,
@@ -271,18 +271,18 @@ export const GEMINI_MODELS: ModelInfo[] = [
     isVision: true,
   },
   {
-    id: 'gemini-1.5-pro',
-    name: 'Gemini 1.5 Pro',
+    id: 'gemini-2.5-pro',
+    name: 'Gemini 2.5 Pro',
     provider: 'gemini',
     contextLength: 2000000,
     inputPrice: 0,
     outputPrice: 0,
-    isFree: true,
+    isFree: false,
     isVision: true,
   },
   {
-    id: 'gemini-1.5-flash-8b',
-    name: 'Gemini 1.5 Flash-8B',
+    id: 'gemini-2.5-flash-lite',
+    name: 'Gemini 2.5 Flash-Lite',
     provider: 'gemini',
     contextLength: 1000000,
     inputPrice: 0,
@@ -291,8 +291,8 @@ export const GEMINI_MODELS: ModelInfo[] = [
     isVision: true,
   },
   {
-    id: 'gemini-1.5-flash',
-    name: 'Gemini 1.5 Flash',
+    id: 'gemini-2.0-flash',
+    name: 'Gemini 2.0 Flash (legacy)',
     provider: 'gemini',
     contextLength: 1000000,
     inputPrice: 0,

@@ -94,7 +94,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderInfo> = {
     name: 'Anthropic Claude',
     description: 'Claude 3.5 Sonnet and Opus (planned)',
     status: 'planned',
-    models: ['claude-3-5-sonnet-20241022', 'claude-3-opus-20240229'],
+    models: ['claude-sonnet-5', 'claude-opus-4-8', 'claude-haiku-4-5-20251001'],
     setupNotes: 'Requires ANTHROPIC_API_KEY in environment',
   },
   gemini: {

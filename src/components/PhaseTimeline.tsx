@@ -1,8 +1,9 @@
 /**
- * PhaseTimeline — Visual timeline showing all courtroom phases
- * Phase 15: Improved visual timeline with icons
+ * PhaseTimeline — Animated proceeding progress rail.
+ * Brass progress bar + phase chips with spring transitions.
  */
 
+import { motion } from 'framer-motion';
 import { COURT_PHASES, PHASE_LABELS } from '../types/courtroom';
 import type { CourtPhase } from '../types/courtroom';
 
@@ -10,76 +11,92 @@ interface PhaseTimelineProps {
   currentPhase: CourtPhase;
 }
 
+const PHASE_ICONS: Record<string, string> = {
+  case_setup: '📁',
+  court_opening: '🏛️',
+  plaintiff_opening: '⚔️',
+  defense_opening: '🛡️',
+  evidence_presentation: '📑',
+  objection_ruling: '✋',
+  cross_examination: '🔍',
+  witness_testimony: '🗣️',
+  motion_hearing: '📜',
+  jury_instructions: '👥',
+  rebuttal: '↩️',
+  closing_arguments: '🎤',
+  judge_deliberation: '🤔',
+  verdict: '🔨',
+  case_summary: '📋',
+};
+
 export function PhaseTimeline({ currentPhase }: PhaseTimelineProps) {
   const currentIndex = COURT_PHASES.indexOf(currentPhase);
+  const progressPct = Math.round(((currentIndex + 1) / COURT_PHASES.length) * 100);
 
   return (
-    <div className="bg-courtroom-card rounded-lg p-4 border border-gray-700">
-      <h3 className="text-sm font-medium text-yellow-500 mb-3 uppercase tracking-wider">
-        Proceeding Timeline
-      </h3>
+    <div className="glass-panel p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-xs font-bold text-brass-300 uppercase tracking-widest">
+          Proceeding Timeline
+        </h3>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">
+            Trial Progress
+          </span>
+          <span className="text-xs font-black text-brass-200 tabular-nums">{progressPct}%</span>
+        </div>
+      </div>
+
+      {/* Progress rail */}
+      <div className="relative h-1.5 rounded-full bg-white/5 overflow-hidden mb-4">
+        <motion.div
+          className="absolute inset-y-0 left-0 rounded-full"
+          style={{
+            background: 'linear-gradient(90deg, #8a6d1d, #c9a227, #f5d47a)',
+            boxShadow: '0 0 12px rgba(201,162,39,0.6)',
+          }}
+          initial={false}
+          animate={{ width: `${progressPct}%` }}
+          transition={{ type: 'spring', stiffness: 90, damping: 20 }}
+        />
+      </div>
+
       <div className="flex flex-wrap gap-1.5">
         {COURT_PHASES.map((phase, index) => {
           const isActive = phase === currentPhase;
           const isPast = index < currentIndex;
 
-          let statusClass = 'bg-gray-800 text-gray-500 border-gray-700';
-          let iconOpacity = 'opacity-40';
-          
-          if (isActive) {
-            statusClass = 'bg-yellow-600 text-white border-yellow-500 shadow-lg shadow-yellow-500/30';
-            iconOpacity = 'opacity-100';
-          } else if (isPast) {
-            statusClass = 'bg-green-900/50 text-green-400 border-green-600';
-            iconOpacity = 'opacity-75';
-          }
-
           return (
-            <span
+            <motion.span
               key={phase}
               title={PHASE_LABELS[phase]}
+              layout
+              animate={
+                isActive
+                  ? { scale: 1.06 }
+                  : { scale: 1 }
+              }
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               className={`
-                inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium
-                border transition-all duration-200
-                ${statusClass}
-                ${isActive ? 'animate-pulse ring-2 ring-yellow-500/50' : ''}
-                hover:brightness-110 cursor-default
+                inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold
+                border transition-colors duration-300 cursor-default select-none
+                ${
+                  isActive
+                    ? 'bg-brass-500/20 text-brass-100 border-brass-400/50 shadow-glow-brass animate-pulse-glow'
+                    : isPast
+                    ? 'bg-emerald-950/30 text-emerald-400/90 border-emerald-700/30'
+                    : 'bg-white/[0.02] text-gray-500 border-white/5'
+                }
               `}
             >
-              <PhaseDotIcon phase={phase} className={`w-3 h-3 ${iconOpacity}`} />
+              <span className={isActive ? '' : isPast ? 'opacity-80' : 'opacity-35 grayscale'}>
+                {isPast ? '✓' : PHASE_ICONS[phase] || '•'}
+              </span>
               {PHASE_LABELS[phase]}
-            </span>
+            </motion.span>
           );
         })}
       </div>
     </div>
-  );
-}
-
-/**
- * Simple visual for phase state
- */
-function PhaseDotIcon({ phase, className }: { phase: CourtPhase; className?: string }) {
-  // Simple colored dot
-  const colors: Record<string, string> = {
-    case_setup: 'bg-blue-400',
-    court_opening: 'bg-yellow-400',
-    plaintiff_opening: 'bg-blue-400',
-    defense_opening: 'bg-green-400',
-    evidence_presentation: 'bg-purple-400',
-    objection_ruling: 'bg-red-400',
-    cross_examination: 'bg-cyan-400',
-    witness_testimony: 'bg-orange-400',
-    motion_hearing: 'bg-pink-400',
-    jury_instructions: 'bg-indigo-400',
-    rebuttal: 'bg-teal-400',
-    closing_arguments: 'bg-violet-400',
-    judge_deliberation: 'bg-amber-400',
-    verdict: 'bg-emerald-400',
-    case_summary: 'bg-slate-400',
-  };
-  
-  return (
-    <span className={`inline-block rounded-full w-2 h-2 ${colors[phase] || 'bg-gray-400'} ${className || ''}`} />
   );
 }

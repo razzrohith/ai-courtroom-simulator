@@ -2,20 +2,34 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
+/* ============================================================
+   JudgeBench "Gilded Verdict" design system
+   Deep-ink courtroom noir + brass accents + glass panels
+   ============================================================ */
+
 :root {
   font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --jb-bg: #070a10;
+  --jb-brass: #c9a227;
+  --jb-brass-bright: #f5d47a;
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #0f1419;
   color: #e8eaed;
+  background-color: var(--jb-bg);
+  background-image:
+    radial-gradient(1200px 600px at 15% -10%, rgba(201, 162, 39, 0.07), transparent 60%),
+    radial-gradient(1000px 500px at 110% 15%, rgba(56, 130, 246, 0.05), transparent 55%),
+    radial-gradient(900px 700px at 50% 120%, rgba(201, 162, 39, 0.04), transparent 60%);
+  background-attachment: fixed;
 }
 
 #root {
@@ -30,19 +44,83 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1a2332;
+  background: rgba(255, 255, 255, 0.02);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3d4f6a;
+  background: rgba(201, 162, 39, 0.25);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #4d5f7a;
+  background: rgba(201, 162, 39, 0.45);
 }
 
-/* Phase badge styles */
+::selection {
+  background: rgba(201, 162, 39, 0.35);
+  color: #fff;
+}
+
+/* ---------- Glass panel primitives ---------- */
+.glass-panel {
+  @apply rounded-2xl border;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015) 45%, rgba(255, 255, 255, 0.03));
+  border-color: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+}
+
+.glass-panel-brass {
+  @apply rounded-2xl border;
+  background: linear-gradient(160deg, rgba(201, 162, 39, 0.10), rgba(201, 162, 39, 0.02) 50%, rgba(201, 162, 39, 0.06));
+  border-color: rgba(201, 162, 39, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(245, 212, 122, 0.12);
+  backdrop-filter: blur(12px);
+}
+
+/* Brass gradient text — for display headings */
+.text-brass-gradient {
+  background: linear-gradient(120deg, #f5d47a 0%, #c9a227 45%, #e9c05a 70%, #8a6d1d 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Brass primary button */
+.btn-brass {
+  @apply relative inline-flex items-center justify-center gap-2 font-bold rounded-xl transition-all duration-200 active:scale-[0.97] select-none;
+  color: #1a1405;
+  background: linear-gradient(160deg, #f5d47a 0%, #d9ae3e 45%, #c9a227 100%);
+  box-shadow: 0 4px 18px rgba(201, 162, 39, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.btn-brass:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 6px 26px rgba(201, 162, 39, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.btn-brass:disabled {
+  filter: grayscale(0.9) brightness(0.55);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Ghost secondary button */
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 font-semibold rounded-xl border transition-all duration-200 active:scale-[0.97] select-none;
+  color: #cbd2dc;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+/* ---------- Legacy compat classes (kept for older components) ---------- */
 .phase-badge {
   @apply px-3 py-1 rounded-full text-xs font-medium;
 }
@@ -59,7 +137,6 @@ body {
   @apply bg-gray-700 text-gray-400;
 }
 
-/* Speaker indicator */
 .speaker-active {
   @apply ring-2 ring-yellow-500 ring-offset-2 ring-offset-courtroom-bg;
 }
@@ -68,7 +145,6 @@ body {
   @apply opacity-60;
 }
 
-/* Transcript entry */
 .transcript-entry {
   @apply p-3 rounded-lg mb-2;
 }
@@ -85,7 +161,6 @@ body {
   @apply bg-rose-900/30 border-l-4 border-rose-500;
 }
 
-/* Evidence card */
 .evidence-card {
   @apply bg-courtroom-card rounded-lg p-3 border border-gray-700;
 }
@@ -102,13 +177,13 @@ body {
   @apply border-gray-600;
 }
 
-/* Animation utilities */
+/* ---------- Animation utilities ---------- */
 @keyframes pulse-glow {
   0%, 100% {
     box-shadow: 0 0 5px rgba(201, 162, 39, 0.3);
   }
   50% {
-    box-shadow: 0 0 15px rgba(201, 162, 39, 0.6);
+    box-shadow: 0 0 18px rgba(201, 162, 39, 0.65);
   }
 }
 
@@ -116,7 +191,47 @@ body {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-/* Smooth transitions */
+/* Speaking bars (audio-wave style indicator) */
+@keyframes speak-bar {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}
+
+.speak-bar {
+  transform-origin: center bottom;
+  animation: speak-bar 0.9s ease-in-out infinite;
+}
+
+.speak-bar:nth-child(2) { animation-delay: 0.15s; }
+.speak-bar:nth-child(3) { animation-delay: 0.3s; }
+.speak-bar:nth-child(4) { animation-delay: 0.45s; }
+.speak-bar:nth-child(5) { animation-delay: 0.6s; }
+
+/* Blinking typewriter caret */
+@keyframes caret-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.typewriter-caret {
+  animation: caret-blink 0.85s step-end infinite;
+}
+
+/* Shimmering brass divider line */
+.brass-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201, 162, 39, 0.55), transparent);
+}
+
 .transition-smooth {
   @apply transition-all duration-300 ease-in-out;
+}
+
+/* Reduced motion: soften everything */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

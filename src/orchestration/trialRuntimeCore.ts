@@ -1,4 +1,4 @@
-// trialRuntimeCore.ts – Pure Node‑only core for Phase 5 runtime QA
+// trialRuntimeCore.ts – Pure Node‑only core for Phase 5 runtime QA
 // This file deliberately avoids any UI, Vite, React, or provider imports.
 // It defines a minimal courtroom state and pure functions that exercise the
 // orchestration logic required for the QA harness.
@@ -164,7 +164,7 @@ export function restartRuntimeCase(state: CourtState): CourtState {
   return resetRuntimeTrial(state);
 }
 
-/** Validate invariants required by Phase 5 QA. */
+/** Validate invariants required by Phase 5 QA. */
 export function validateRuntimeTrialState(state: CourtState): boolean {
   // 1. No duplicate final summary
   const summaryCount = state.transcript.filter((t) => t.id.startsWith("trans-summary-")).length;
